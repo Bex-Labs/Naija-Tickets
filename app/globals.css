@@ -1,0 +1,625 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@view-transition {
+  navigation: auto;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: #fff;
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: var(--primary);
+  --color-destructive: #b42318;
+  --font-sans: var(--font-geist-sans);
+  --font-heading: var(--font-geist-sans);
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+}
+
+:root {
+  --background: #fffaf0;
+  --foreground: #241b3f;
+  --card: #ffffff;
+  --primary: #079669;
+  --secondary: #fff0bb;
+  --muted: #f5efff;
+  --muted-foreground: #655d78;
+  --accent: #ff6b4a;
+  --border: #ded6e8;
+}
+
+* {
+  border-color: var(--border);
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  overflow-x: hidden;
+}
+button,
+a,
+input,
+select {
+  outline-offset: 3px;
+}
+button,
+a {
+  touch-action: manipulation;
+}
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary) 70%, white);
+}
+[class*='rounded-'] {
+  border-radius: 0.375rem;
+}
+
+@layer components {
+  .eyebrow {
+    @apply text-xs font-bold uppercase tracking-[.15em] text-emerald-700;
+  }
+  .brand-wordmark {
+    font-family: var(--font-naija-brand), var(--font-geist-sans), sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.055em;
+  }
+  .section-title {
+    @apply mt-2 font-heading text-3xl font-black tracking-tight sm:text-4xl;
+  }
+  .filter-label {
+    @apply mb-2 block text-sm font-extrabold;
+  }
+  .filter-control {
+    @apply h-12 w-full rounded-xl border border-[#241b3f]/15 bg-white px-3 text-sm text-[#241b3f] outline-none;
+  }
+  .auth-label {
+    @apply mb-2 block text-sm font-bold text-[#241b3f];
+  }
+  .auth-input {
+    @apply h-12 border-[#241b3f]/15 bg-white text-[#241b3f] placeholder:text-slate-400;
+    min-height: 3rem;
+  }
+  .detail-section {
+    @apply mt-10 border-t border-[#241b3f]/10 pt-9;
+  }
+  .detail-section h2 {
+    @apply text-2xl font-black tracking-tight;
+  }
+  .detail-section > p {
+    @apply mt-4 max-w-3xl leading-7 text-slate-600;
+  }
+}
+
+@media (max-width: 63.999rem) {
+  input,
+  select,
+  textarea {
+    font-size: 1rem;
+  }
+
+  .auth-shell {
+    position: relative;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+  }
+  .auth-login-shell {
+    background-image:
+      linear-gradient(rgba(18, 13, 35, 0.46), rgba(18, 13, 35, 0.62)),
+      url('/auth-login-cartoon.png');
+  }
+  .auth-signup-shell {
+    background-image:
+      linear-gradient(rgba(18, 13, 35, 0.42), rgba(18, 13, 35, 0.64)),
+      url('/auth-signup-cartoon.png');
+    background-position: 52% center;
+  }
+  .auth-content {
+    align-items: flex-start;
+  }
+  .auth-form-surface {
+    margin-block: auto;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    background: rgba(255, 250, 240, 0.94);
+    padding: 1.25rem;
+    box-shadow: 0 28px 80px rgba(18, 13, 35, 0.3);
+    backdrop-filter: blur(16px);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-rise {
+  animation: rise-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.animate-rise-delay {
+  animation: rise-in 0.7s 0.14s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.issued-ticket {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18rem;
+  overflow: hidden;
+  border: 1px solid rgba(36, 27, 63, 0.15);
+  background: #fffaf0;
+  box-shadow: 0 22px 55px rgba(36, 27, 63, 0.14);
+}
+
+.issued-ticket__main {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  padding: clamp(1.35rem, 3.5vw, 2.75rem);
+}
+
+.issued-ticket__main::before,
+.issued-ticket__main::after {
+  position: absolute;
+  z-index: -1;
+  border: 2px solid rgba(7, 150, 105, 0.42);
+  border-radius: 999px;
+  content: '';
+}
+
+.issued-ticket__main::before {
+  bottom: -8rem;
+  left: -8rem;
+  width: 18rem;
+  height: 18rem;
+  box-shadow:
+    0 0 0 13px #fffaf0,
+    0 0 0 15px rgba(7, 150, 105, 0.3),
+    0 0 0 28px #fffaf0,
+    0 0 0 30px rgba(7, 150, 105, 0.22);
+}
+
+.issued-ticket__main::after {
+  top: -5rem;
+  right: 2rem;
+  width: 12rem;
+  height: 12rem;
+  opacity: 0.28;
+}
+
+.issued-ticket__brand-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.issued-ticket__art {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 7rem;
+  color: rgba(7, 150, 105, 0.08);
+  transform: rotate(-12deg);
+}
+
+.issued-ticket__art svg {
+  width: clamp(7rem, 14vw, 12rem);
+  height: clamp(7rem, 14vw, 12rem);
+  stroke-width: 1;
+}
+
+.issued-ticket__title {
+  max-width: 12ch;
+  margin-top: clamp(2.2rem, 5vw, 4rem);
+  font-size: clamp(2.5rem, 6vw, 5.4rem);
+  font-weight: 950;
+  line-height: 0.88;
+  letter-spacing: -0.065em;
+  text-transform: uppercase;
+}
+
+.issued-ticket__details {
+  display: grid;
+  grid-template-columns: 1.15fr 0.8fr 1.15fr;
+  gap: 1rem;
+  margin-top: clamp(2rem, 5vw, 3.5rem);
+  padding-block: 1rem;
+  border-block: 1px solid rgba(36, 27, 63, 0.22);
+}
+
+.issued-ticket__details > div {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.issued-ticket__details > div + div {
+  padding-left: 1rem;
+  border-left: 1px solid rgba(36, 27, 63, 0.18);
+}
+
+.issued-ticket__details svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: none;
+  color: #079669;
+}
+
+.issued-ticket__details dt,
+.issued-ticket__admission span {
+  font-size: 0.63rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #655d78;
+}
+
+.issued-ticket__details dd {
+  margin-top: 0.22rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.issued-ticket__address {
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #655d78;
+}
+
+.issued-ticket__admission {
+  display: grid;
+  grid-template-columns: 0.85fr 1.3fr 0.65fr;
+  gap: 1rem;
+  margin-top: 1.6rem;
+}
+
+.issued-ticket__admission > div {
+  min-width: 0;
+}
+
+.issued-ticket__admission strong {
+  display: flex;
+  margin-top: 0.3rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.issued-ticket__stub {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  border-left: 2px dashed rgba(255, 250, 240, 0.8);
+  background:
+    radial-gradient(
+      circle at 88% 12%,
+      rgba(255, 255, 255, 0.13),
+      transparent 28%
+    ),
+    #079669;
+  padding: 2rem;
+}
+
+.issued-ticket__stub::before,
+.issued-ticket__stub::after {
+  position: absolute;
+  left: -0.8rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: #fffaf0;
+  content: '';
+}
+
+.issued-ticket__stub::before {
+  top: -0.75rem;
+}
+
+.issued-ticket__stub::after {
+  bottom: -0.75rem;
+}
+
+.issued-ticket__qr {
+  margin-top: 2rem;
+  background: #fffaf0;
+  padding: 0.85rem;
+  text-align: center;
+}
+
+.issued-ticket__qr svg {
+  width: min(100%, 9.25rem);
+  height: auto;
+}
+
+@media (max-width: 47.999rem) {
+  .issued-ticket {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .issued-ticket__brand-row {
+    flex-direction: column;
+  }
+
+  .issued-ticket__title {
+    margin-top: 2.25rem;
+    font-size: clamp(2.5rem, 15vw, 4.2rem);
+  }
+
+  .issued-ticket__details,
+  .issued-ticket__admission {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .issued-ticket__details > div + div {
+    padding-top: 0.8rem;
+    padding-left: 0;
+    border-top: 1px solid rgba(36, 27, 63, 0.12);
+    border-left: 0;
+  }
+
+  .issued-ticket__stub {
+    border-top: 2px dashed rgba(255, 250, 240, 0.8);
+    border-left: 0;
+  }
+
+  .issued-ticket__stub::before,
+  .issued-ticket__stub::after {
+    top: -0.8rem;
+    left: auto;
+  }
+
+  .issued-ticket__stub::before {
+    right: -0.75rem;
+  }
+
+  .issued-ticket__stub::after {
+    bottom: auto;
+    left: -0.75rem;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  html,
+  body {
+    width: 100% !important;
+    min-width: 0 !important;
+    background: white !important;
+  }
+
+  body,
+  body * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print,
+  .payment-status-page > header,
+  .payment-status-page > footer {
+    display: none !important;
+  }
+
+  .payment-status-page,
+  .ticket-print-sheet {
+    background: white !important;
+  }
+
+  .payment-status-page > section {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .ticket-print-sheet {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .ticket-print-sheet > .issued-ticket {
+    margin-block: 0 !important;
+  }
+
+  .issued-ticket {
+    grid-template-columns: minmax(0, 1fr) 64mm !important;
+    width: 100% !important;
+    height: 160mm !important;
+    min-height: 0 !important;
+    max-height: 160mm !important;
+    margin-inline: auto !important;
+    overflow: hidden !important;
+    border: 0.35mm solid rgba(36, 27, 63, 0.22) !important;
+    background: #fffaf0 !important;
+    break-before: auto;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+  }
+
+  .issued-ticket:not(:last-child) {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .issued-ticket:last-child {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .issued-ticket__main {
+    padding: 9mm !important;
+  }
+
+  .issued-ticket__brand-row {
+    gap: 5mm !important;
+  }
+
+  .issued-ticket__title {
+    max-width: calc(100% - 34mm) !important;
+    margin-top: 10mm !important;
+    overflow-wrap: anywhere !important;
+    font-size: 12mm !important;
+    line-height: 0.95 !important;
+  }
+
+  .issued-ticket__art {
+    right: 6mm !important;
+    bottom: 32mm !important;
+  }
+
+  .issued-ticket__art svg {
+    width: 30mm !important;
+    height: 30mm !important;
+  }
+
+  .issued-ticket__details {
+    grid-template-columns: 1.15fr 0.8fr 1.15fr !important;
+    gap: 4mm !important;
+    margin-top: 9mm !important;
+    padding-block: 4mm !important;
+  }
+
+  .issued-ticket__details > div + div {
+    padding-top: 0 !important;
+    padding-left: 4mm !important;
+    border-top: 0 !important;
+    border-left: 0.25mm solid rgba(36, 27, 63, 0.18) !important;
+  }
+
+  .issued-ticket__address {
+    margin-top: 3mm !important;
+  }
+
+  .issued-ticket__admission {
+    grid-template-columns: 0.85fr 1.3fr 0.65fr !important;
+    gap: 4mm !important;
+    margin-top: 6mm !important;
+  }
+
+  .issued-ticket__stub {
+    padding: 8mm !important;
+    border-top: 0 !important;
+    border-left: 0.6mm dashed rgba(255, 250, 240, 0.85) !important;
+    background:
+      radial-gradient(
+        circle at 88% 12%,
+        rgba(255, 255, 255, 0.13),
+        transparent 28%
+      ),
+      #079669 !important;
+  }
+
+  .issued-ticket__stub::before,
+  .issued-ticket__stub::after {
+    top: auto !important;
+    right: auto !important;
+    left: -3mm !important;
+    width: 6mm !important;
+    height: 6mm !important;
+    background: white !important;
+  }
+
+  .issued-ticket__stub::before {
+    top: -3mm !important;
+  }
+
+  .issued-ticket__stub::after {
+    bottom: -3mm !important;
+  }
+
+  .issued-ticket__qr {
+    margin-top: 6mm !important;
+    padding: 4mm !important;
+    background: #fffaf0 !important;
+  }
+
+  .issued-ticket__qr svg {
+    width: 32mm !important;
+    max-width: 100% !important;
+    height: 32mm !important;
+  }
+}
+
+@media (min-width: 64rem) {
+  .auth-visual {
+    view-transition-name: auth-visual;
+  }
+  .auth-content {
+    view-transition-name: auth-content;
+  }
+  ::view-transition-group(auth-visual) {
+    animation-duration: 760ms;
+    animation-timing-function: cubic-bezier(0.76, 0, 0.24, 1);
+  }
+  ::view-transition-old(auth-visual),
+  ::view-transition-new(auth-visual) {
+    animation-duration: 760ms;
+    animation-timing-function: cubic-bezier(0.76, 0, 0.24, 1);
+  }
+  ::view-transition-group(auth-content) {
+    animation-duration: 620ms;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  ::view-transition-old(auth-content) {
+    animation: auth-content-out 220ms ease both;
+  }
+  ::view-transition-new(auth-content) {
+    animation: auth-content-in 460ms 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@keyframes auth-content-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+  }
+}
+
+@keyframes auth-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
