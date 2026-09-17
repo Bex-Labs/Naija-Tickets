@@ -80,13 +80,7 @@ The administrator's **Guest buyers** section lists guest purchases with their co
 
 The database operation anonymises purchaser and attendee data in the order, order items, tickets, payment provider payloads and email delivery record in one transaction. It keeps order totals, payment reconciliation, ticket validity, private ticket codes and the audit trail. It never hard-deletes the purchase, and the customer and organiser workspaces cannot call the operation.
 
-## Phase status
 
-- Phase 1 complete: foundation, visual system, schema, homepage, database-backed discovery and event details.
-- Phase 2 substantially complete: live signup, email confirmation, login and password recovery, plus database-backed organiser drafts, complete public event information, multi-tier ticket pricing, event submissions, administrator approvals, and immediate public catalogue publishing.
-- Phase 3 substantially complete: guest checkout with optional account linking, attendee details, server-calculated totals, transactional inventory reservations, hosted Paystack checkout, callback verification, signed webhooks, atomic payment finalization, exactly-once ticket issuance, immediate QR ticket passes, browser print or PDF saving and idempotent email delivery are implemented. Customer booking history remains.
-- Phase 4 planned: atomic check-in, reports, refund workflow and automated payout operations.
-- Phase 5 planned: full security review, accessibility audit and focused end-to-end verification.
 
 ## Useful commands
 
@@ -97,15 +91,4 @@ npm run lint
 npm test
 ```
 
-## Image credits
 
-The homepage hero uses a real daytime festival photograph by Mae Gregorio from [Pexels](https://www.pexels.com/photo/group-of-people-standing-in-front-of-cm-stage-1776151/).
-
-## Important MVP rules
-
-- Money uses integer kobo values in the database and application domain model.
-- Stored timestamps use `timestamptz`; event display defaults to `Africa/Lagos`.
-- Users cannot assign themselves privileged roles.
-- A browser redirect will never be sufficient proof of payment.
-- Ticket issuance, inventory conversion and check-in will be trusted, atomic server operations.
-- Automated organiser transfers are deliberately outside the MVP; payouts are administrative records.
