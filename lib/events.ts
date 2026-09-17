@@ -3,6 +3,8 @@ export type TicketType = {
   name: string;
   description?: string;
   price: number;
+  earlyBirdPrice?: number;
+  earlyBirdEndsAt?: string;
   remaining: number;
   minPerOrder?: number;
   maxPerOrder?: number;
@@ -120,5 +122,18 @@ export const formatNaira = (kobo: number) =>
         maximumFractionDigits: 0,
       }).format(kobo / 100);
 
+export const isEarlyBirdTicket = (
+  ticket: TicketType,
+  at = Date.now(),
+): boolean =>
+  ticket.earlyBirdPrice !== undefined &&
+  Boolean(ticket.earlyBirdEndsAt) &&
+  new Date(ticket.earlyBirdEndsAt || '').getTime() > at;
+
+export const ticketPrice = (ticket: TicketType, at = Date.now()) =>
+  isEarlyBirdTicket(ticket, at)
+    ? (ticket.earlyBirdPrice ?? ticket.price)
+    : ticket.price;
+
 export const eventPrice = (event: Event) =>
-  Math.min(...event.ticketTypes.map((ticket) => ticket.price));
+  Math.min(...event.ticketTypes.map((ticket) => ticketPrice(ticket)));

@@ -50,6 +50,8 @@ function blankEvent(profile?: OrganiserProfile): EventEditorValue {
         name: 'General admission',
         description: '',
         priceNaira: 0,
+        earlyBirdPriceNaira: null,
+        earlyBirdEnd: '',
         quantityTotal: 100,
         quantitySold: 0,
         quantityReserved: 0,

@@ -10,8 +10,13 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d$/;
 
-type ParsedTicket = Omit<OrganiserTicketType, 'priceNaira'> & {
+type ParsedTicket = Omit<
+  OrganiserTicketType,
+  'priceNaira' | 'earlyBirdPriceNaira'
+> & {
   priceKobo: number;
+  earlyBirdPriceKobo: number | null;
+  earlyBirdEndAt: string | null;
   salesStartAt: string | null;
   salesEndAt: string | null;
 };
@@ -229,6 +234,15 @@ export function parseOrganiserEventInput(
     const ticketDescription =
       typeof ticket.description === 'string' ? ticket.description.trim() : '';
     const priceNaira = Number(ticket.priceNaira);
+    const earlyBirdPriceInput = ticket.earlyBirdPriceNaira;
+    const earlyBirdEnd =
+      typeof ticket.earlyBirdEnd === 'string' ? ticket.earlyBirdEnd.trim() : '';
+    const earlyBirdEnabled =
+      earlyBirdPriceInput !== null && earlyBirdPriceInput !== undefined;
+    const earlyBirdPriceNaira = earlyBirdEnabled
+      ? Number(earlyBirdPriceInput)
+      : null;
+    const earlyBirdEndAt = optionalLocalIso(earlyBirdEnd);
     const quantityTotal = Number(ticket.quantityTotal);
     const quantitySold = Number(ticket.quantitySold || 0);
     const quantityReserved = Number(ticket.quantityReserved || 0);
@@ -270,6 +284,27 @@ export function parseOrganiserEventInput(
     ) {
       return { error: 'Ticket prices must be valid non-negative NGN amounts.' };
     }
+    const earlyBirdPriceKobo = earlyBirdEnabled
+      ? Math.round((earlyBirdPriceNaira ?? 0) * 100)
+      : null;
+    const earlyBirdPriceIsValid =
+      earlyBirdPriceNaira !== null &&
+      Number.isFinite(earlyBirdPriceNaira) &&
+      earlyBirdPriceNaira >= 0 &&
+      earlyBirdPriceKobo !== null &&
+      Number.isSafeInteger(earlyBirdPriceKobo) &&
+      Math.abs(earlyBirdPriceKobo / 100 - earlyBirdPriceNaira) <= 0.000001 &&
+      earlyBirdPriceKobo < priceKobo;
+    if (
+      earlyBirdEnabled !== Boolean(earlyBirdEnd) ||
+      earlyBirdEndAt === undefined ||
+      (earlyBirdEnabled && !earlyBirdPriceIsValid)
+    ) {
+      return {
+        error:
+          'Early bird pricing needs a valid discounted price and end date.',
+      };
+    }
     if (
       !Number.isSafeInteger(quantityTotal) ||
       quantityTotal < 0 ||
@@ -301,6 +336,19 @@ export function parseOrganiserEventInput(
     ) {
       return { error: 'Ticket sales must end after they start.' };
     }
+    const effectiveSalesStart = ticketSalesStartAt || salesStartAt;
+    const effectiveSalesEnd = ticketSalesEndAt || salesEndAt;
+    if (
+      earlyBirdEndAt &&
+      ((effectiveSalesStart &&
+        new Date(earlyBirdEndAt) <= new Date(effectiveSalesStart)) ||
+        (effectiveSalesEnd &&
+          new Date(earlyBirdEndAt) >= new Date(effectiveSalesEnd)))
+    ) {
+      return {
+        error: 'The early bird deadline must fall within the sales window.',
+      };
+    }
     if (!inclusionInput || inclusionInput.length > 20) {
       return { error: 'Add no more than 20 benefits to a ticket tier.' };
     }
@@ -316,6 +364,9 @@ export function parseOrganiserEventInput(
       name,
       description: ticketDescription,
       priceKobo,
+      earlyBirdPriceKobo,
+      earlyBirdEnd,
+      earlyBirdEndAt,
       quantityTotal,
       quantitySold,
       quantityReserved,

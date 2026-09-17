@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     }
 
     const { data: savedId, error: saveError } = await client.rpc(
-      'save_organiser_event',
+      'save_organiser_event_v2',
       {
         p_user_id: user.id,
         p_event_id: values.id,
@@ -149,6 +149,8 @@ export async function POST(request: Request) {
           name: ticket.name,
           description: ticket.description,
           price_kobo: ticket.priceKobo,
+          early_bird_price_kobo: ticket.earlyBirdPriceKobo,
+          early_bird_ends_at: ticket.earlyBirdEndAt,
           quantity_total: ticket.quantityTotal,
           min_per_order: ticket.minPerOrder,
           max_per_order: ticket.maxPerOrder,
@@ -178,6 +180,8 @@ export async function POST(request: Request) {
       'capacity',
       'inventory',
       'ticket tier',
+      'early bird',
+      'standard price',
       'sales end',
       'event end',
       'Event not found',

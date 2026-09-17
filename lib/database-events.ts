@@ -63,6 +63,9 @@ export type DatabaseEventRow = {
     name: string;
     description?: string | null;
     price_kobo: number | string;
+    standard_price_kobo?: number | string | null;
+    early_bird_price_kobo?: number | string | null;
+    early_bird_ends_at?: string | null;
     quantity_total: number;
     quantity_sold: number;
     quantity_reserved: number;
@@ -77,7 +80,7 @@ export type DatabaseEventRow = {
 };
 
 export const publicEventSelect =
-  'id,title,slug,presenter_line,description,venue_name,address,directions_url,city,state,timezone,timezone_label,starts_at,ends_at,sales_start_at,sales_end_at,status,featured,image_path,rejection_reason,organisers(name,description,slug,contact_email,website_url,instagram_url,x_url,facebook_url,tiktok_url),categories(name),event_schedule_items(id,start_time,item_label,sort_order),event_policies(id,policy_text,sort_order),ticket_types(id,name,description,price_kobo,quantity_total,quantity_sold,quantity_reserved,min_per_order,max_per_order,sales_start_at,sales_end_at,inclusions,active,sort_order)';
+  'id,title,slug,presenter_line,description,venue_name,address,directions_url,city,state,timezone,timezone_label,starts_at,ends_at,sales_start_at,sales_end_at,status,featured,image_path,rejection_reason,organisers(name,description,slug,contact_email,website_url,instagram_url,x_url,facebook_url,tiktok_url),categories(name),event_schedule_items(id,start_time,item_label,sort_order),event_policies(id,policy_text,sort_order),ticket_types(id,name,description,price_kobo,standard_price_kobo,early_bird_price_kobo,early_bird_ends_at,quantity_total,quantity_sold,quantity_reserved,min_per_order,max_per_order,sales_start_at,sales_end_at,inclusions,active,sort_order)';
 
 export function isRetiredSeedEvent(row: DatabaseEventRow) {
   const organiser = Array.isArray(row.organisers)
@@ -206,7 +209,14 @@ export function databaseRowToOrganiserEvent(
         id: ticket.id,
         name: ticket.name,
         description: ticket.description || '',
-        priceNaira: Number(ticket.price_kobo) / 100,
+        priceNaira:
+          Number(ticket.standard_price_kobo ?? ticket.price_kobo) / 100,
+        earlyBirdPriceNaira:
+          ticket.early_bird_price_kobo === null ||
+          ticket.early_bird_price_kobo === undefined
+            ? null
+            : Number(ticket.early_bird_price_kobo) / 100,
+        earlyBirdEnd: formDateTime(ticket.early_bird_ends_at, timeZone),
         quantityTotal: ticket.quantity_total,
         quantitySold: ticket.quantity_sold,
         quantityReserved: ticket.quantity_reserved,
@@ -250,7 +260,13 @@ export function databaseRowToPublicEvent(row: DatabaseEventRow): Event {
         id: ticket.id,
         name: ticket.name,
         description: ticket.description || undefined,
-        price: Number(ticket.price_kobo),
+        price: Number(ticket.standard_price_kobo ?? ticket.price_kobo),
+        earlyBirdPrice:
+          ticket.early_bird_price_kobo === null ||
+          ticket.early_bird_price_kobo === undefined
+            ? undefined
+            : Number(ticket.early_bird_price_kobo),
+        earlyBirdEndsAt: ticket.early_bird_ends_at || undefined,
         remaining,
         minPerOrder: ticket.min_per_order,
         maxPerOrder: ticket.max_per_order,

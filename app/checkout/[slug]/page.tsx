@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { CheckoutFlow, type CheckoutLine } from '@/components/checkout-flow';
 import { SiteFooter, SiteHeader } from '@/components/site-header';
 import { calculatePlatformFee, getPlatformFeeRule } from '@/lib/checkout';
-import type { TicketType } from '@/lib/events';
+import { ticketPrice, type TicketType } from '@/lib/events';
 import { getPublishedEventBySlug } from '@/lib/supabase/public-events-server';
 
 type Props = {
@@ -46,12 +46,13 @@ function selectedLines(ticketTypes: TicketType[], selection = '') {
     )
     .map(([index, quantity]): CheckoutLine => {
       const ticket = ticketTypes[index];
+      const unitPriceKobo = ticketPrice(ticket);
       return {
         ticketTypeId: ticket.id,
         name: ticket.name,
         quantity,
-        unitPriceKobo: ticket.price,
-        lineTotalKobo: ticket.price * quantity,
+        unitPriceKobo,
+        lineTotalKobo: unitPriceKobo * quantity,
       };
     });
 }

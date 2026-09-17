@@ -53,6 +53,8 @@ function ticketTemplate(): OrganiserTicketType {
     name: '',
     description: '',
     priceNaira: 0,
+    earlyBirdPriceNaira: null,
+    earlyBirdEnd: '',
     quantityTotal: 100,
     quantitySold: 0,
     quantityReserved: 0,
@@ -755,7 +757,7 @@ export function OrganiserEventEditor({
                         className="auth-label"
                         htmlFor={`ticket-price-${index}`}
                       >
-                        Price (NGN)
+                        Standard price (NGN)
                       </label>
                       <Input
                         id={`ticket-price-${index}`}
@@ -764,16 +766,109 @@ export function OrganiserEventEditor({
                         step="0.01"
                         required
                         value={ticket.priceNaira}
-                        onChange={(event) =>
-                          updateTicket('priceNaira', Number(event.target.value))
-                        }
+                        onChange={(event) => {
+                          const priceNaira = Number(event.target.value);
+                          const next = [...value.ticketTypes];
+                          next[index] = {
+                            ...ticket,
+                            priceNaira,
+                            ...(priceNaira <= 0
+                              ? {
+                                  earlyBirdPriceNaira: null,
+                                  earlyBirdEnd: '',
+                                }
+                              : {}),
+                          };
+                          update('ticketTypes', next);
+                        }}
                         className="auth-input"
                       />
                       <p className="mt-1 text-xs text-slate-500">
                         {ticket.priceNaira === 0
                           ? 'Free ticket'
-                          : 'Charged in naira'}
+                          : 'Applied automatically after any early bird offer'}
                       </p>
+                    </div>
+                    <div className="border border-amber-300/60 bg-amber-50 p-4 sm:col-span-2 lg:col-span-3">
+                      <label className="flex min-h-11 items-center gap-3 text-sm font-black text-amber-950">
+                        <input
+                          type="checkbox"
+                          checked={ticket.earlyBirdPriceNaira !== null}
+                          disabled={ticket.priceNaira <= 0}
+                          onChange={(event) => {
+                            const next = [...value.ticketTypes];
+                            next[index] = {
+                              ...ticket,
+                              earlyBirdPriceNaira: event.target.checked
+                                ? Math.floor(ticket.priceNaira * 0.8 * 100) /
+                                  100
+                                : null,
+                              earlyBirdEnd: '',
+                            };
+                            update('ticketTypes', next);
+                          }}
+                          className="h-5 w-5 accent-amber-600"
+                        />
+                        Offer early bird pricing
+                      </label>
+                      {ticket.priceNaira <= 0 && (
+                        <p className="mt-1 text-xs text-amber-800">
+                          Set a paid standard price before enabling a discount.
+                        </p>
+                      )}
+                      {ticket.earlyBirdPriceNaira !== null && (
+                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <label
+                              className="auth-label"
+                              htmlFor={`ticket-early-bird-price-${index}`}
+                            >
+                              Early bird price (NGN)
+                            </label>
+                            <Input
+                              id={`ticket-early-bird-price-${index}`}
+                              type="number"
+                              min={0}
+                              max={Math.max(0, ticket.priceNaira - 0.01)}
+                              step="0.01"
+                              required
+                              value={ticket.earlyBirdPriceNaira}
+                              onChange={(event) =>
+                                updateTicket(
+                                  'earlyBirdPriceNaira',
+                                  Number(event.target.value),
+                                )
+                              }
+                              className="auth-input bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label
+                              className="auth-label"
+                              htmlFor={`ticket-early-bird-end-${index}`}
+                            >
+                              Early bird ends
+                            </label>
+                            <Input
+                              id={`ticket-early-bird-end-${index}`}
+                              type="datetime-local"
+                              required
+                              min={ticket.salesStart || value.salesStart}
+                              max={ticket.salesEnd || value.salesEnd}
+                              value={ticket.earlyBirdEnd}
+                              onChange={(event) =>
+                                updateTicket('earlyBirdEnd', event.target.value)
+                              }
+                              className="auth-input bg-white"
+                            />
+                          </div>
+                          <p className="text-xs leading-5 text-amber-900 sm:col-span-2">
+                            The discounted price runs from the ticket sales
+                            start until this deadline. The standard price takes
+                            over automatically when it ends.
+                          </p>
+                        </div>
+                      )}
                     </div>
                     <div className="sm:col-span-2 lg:col-span-3">
                       <label

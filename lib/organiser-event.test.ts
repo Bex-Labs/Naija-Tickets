@@ -35,6 +35,8 @@ function validEvent() {
         name: 'Community pass',
         description: 'General event admission.',
         priceNaira: 0,
+        earlyBirdPriceNaira: null as number | null,
+        earlyBirdEnd: '',
         quantityTotal: 100,
         quantitySold: 0,
         quantityReserved: 0,
@@ -49,6 +51,8 @@ function validEvent() {
         name: 'Palmwine VIP',
         description: 'Priority event access.',
         priceNaira: 35000,
+        earlyBirdPriceNaira: null as number | null,
+        earlyBirdEnd: '',
         quantityTotal: 20,
         quantitySold: 2,
         quantityReserved: 1,
@@ -95,6 +99,43 @@ void test('rejects capacity below sold and reserved inventory', () => {
   assert.match(
     parseOrganiserEventInput(input).error || '',
     /below sold and reserved inventory/,
+  );
+});
+
+void test('parses an early bird discount and its deadline', () => {
+  const input = validEvent();
+  input.ticketTypes[1].earlyBirdPriceNaira = 25000;
+  input.ticketTypes[1].earlyBirdEnd = '2026-09-01T09:00';
+
+  const result = parseOrganiserEventInput(input);
+  assert.ok(result.value);
+  assert.equal(result.value.ticketTypes[1].priceKobo, 3_500_000);
+  assert.equal(result.value.ticketTypes[1].earlyBirdPriceKobo, 2_500_000);
+  assert.equal(
+    result.value.ticketTypes[1].earlyBirdEndAt,
+    '2026-09-01T08:00:00.000Z',
+  );
+});
+
+void test('rejects an early bird price that is not discounted', () => {
+  const input = validEvent();
+  input.ticketTypes[1].earlyBirdPriceNaira = 35000;
+  input.ticketTypes[1].earlyBirdEnd = '2026-09-01T09:00';
+
+  assert.match(
+    parseOrganiserEventInput(input).error || '',
+    /valid discounted price and end date/,
+  );
+});
+
+void test('rejects an early bird deadline outside the sales window', () => {
+  const input = validEvent();
+  input.ticketTypes[1].earlyBirdPriceNaira = 25000;
+  input.ticketTypes[1].earlyBirdEnd = '2026-09-19T17:00';
+
+  assert.match(
+    parseOrganiserEventInput(input).error || '',
+    /deadline must fall within the sales window/,
   );
 });
 
