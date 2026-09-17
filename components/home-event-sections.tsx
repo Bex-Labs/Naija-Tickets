@@ -6,7 +6,31 @@ import {
   selectFeaturedEvents,
   selectUpcomingEvents,
 } from '@/lib/featured-events';
+import { selectTrendingEvents } from '@/lib/trending-events';
 import { usePublishedEvents } from '@/lib/use-published-events';
+
+export function TrendingEvents() {
+  const trending = selectTrendingEvents(usePublishedEvents());
+
+  if (!trending.length) {
+    return (
+      <div className="border border-dashed border-[#241b3f]/15 bg-white p-8 text-center md:col-span-2 lg:col-span-4">
+        <h3 className="text-xl font-black">Trending events are coming soon</h3>
+        <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-600">
+          New popular experiences will appear here as the community books.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {trending.map((event) => (
+        <EventCard key={event.slug} event={event} />
+      ))}
+    </div>
+  );
+}
 
 export function FeaturedEvents() {
   const catalogue = usePublishedEvents();

@@ -35,6 +35,7 @@ export type Event = {
   description: string;
   featured?: boolean;
   soldOut?: boolean;
+  ticketsSold?: number;
   ticketTypes: TicketType[];
   schedule: { time: string; title: string }[];
   policies: string[];

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { EventCard } from '@/components/event-card';
 import { SiteFooter, SiteHeader } from '@/components/site-header';
 import { categories, cityOptions, eventPrice, type Event } from '@/lib/events';
+import { compareTrendingEvents } from '@/lib/trending-events';
 import { usePublishedEvents } from '@/lib/use-published-events';
 
 type Filters = {
@@ -67,8 +68,8 @@ export default function EventsPage() {
     return () => window.clearTimeout(task);
   }, []);
 
-  const update = (key: keyof Filters, value: string) => {
-    const next = { ...filters, [key]: value };
+  const updateFilters = (changes: Partial<Filters>) => {
+    const next = { ...filters, ...changes };
     setFilters(next);
     setPage(1);
     const params = new URLSearchParams();
@@ -81,6 +82,8 @@ export default function EventsPage() {
       `/events${params.size ? `?${params}` : ''}`,
     );
   };
+  const update = (key: keyof Filters, value: string) =>
+    updateFilters({ [key]: value });
 
   const results = useMemo(
     () =>
@@ -108,6 +111,9 @@ export default function EventsPage() {
           );
         })
         .sort((a, b) => {
+          if (filters.sort === 'trending') {
+            return compareTrendingEvents(a, b);
+          }
           if (filters.sort === 'price-asc') {
             return eventPrice(a) - eventPrice(b);
           }
@@ -142,113 +148,179 @@ export default function EventsPage() {
     window.history.replaceState({}, '', '/events');
   };
 
-  const filterPanel = (
-    <div className="space-y-6">
-      <div>
-        <label htmlFor="city" className="filter-label">
-          City
-        </label>
-        <select
-          id="city"
-          value={filters.city}
-          onChange={(e) => update('city', e.target.value)}
-          className="filter-control"
-        >
-          <option value="">All Nigeria</option>
-          {cityOptions.map(({ city }) => (
-            <option key={city} value={city}>
-              {city}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label htmlFor="category" className="filter-label">
-          Category
-        </label>
-        <select
-          id="category"
-          value={filters.category}
-          onChange={(e) => update('category', e.target.value)}
-          className="filter-control"
-        >
-          <option value="">All categories</option>
-          {categories.map((category) => (
-            <option key={category}>{category}</option>
-          ))}
-        </select>
-      </div>
-      <fieldset className="space-y-3">
-        <legend className="filter-label">Date</legend>
-        <div>
-          <label htmlFor="date-from" className="text-xs text-slate-500">
-            From
-          </label>
-          <input
-            id="date-from"
-            type="date"
-            value={filters.dateFrom}
-            max={filters.dateTo || undefined}
-            onChange={(e) => update('dateFrom', e.target.value)}
-            className="filter-control mt-1"
-          />
+  const filterPanel = (idPrefix: string) => (
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-[#241b3f]/10 bg-white p-4 shadow-sm">
+        <div className="mb-4">
+          <p className="text-sm font-black">Place &amp; type</p>
+          <p className="text-xs text-slate-500">Choose your scene</p>
         </div>
-        <div>
-          <label htmlFor="date-to" className="text-xs text-slate-500">
-            To
-          </label>
-          <input
-            id="date-to"
-            type="date"
-            value={filters.dateTo}
-            min={filters.dateFrom || undefined}
-            onChange={(e) => update('dateTo', e.target.value)}
-            className="filter-control mt-1"
-          />
+        <div className="space-y-3">
+          <div>
+            <label
+              htmlFor={`${idPrefix}-city`}
+              className="mb-1.5 block text-xs font-bold text-slate-600"
+            >
+              City
+            </label>
+            <select
+              id={`${idPrefix}-city`}
+              value={filters.city}
+              onChange={(e) => update('city', e.target.value)}
+              className="filter-control rounded-xl border-[#241b3f]/10 bg-[#fffaf0]"
+            >
+              <option value="">All Nigeria</option>
+              {cityOptions.map(({ city }) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label
+              htmlFor={`${idPrefix}-category`}
+              className="mb-1.5 block text-xs font-bold text-slate-600"
+            >
+              Category
+            </label>
+            <select
+              id={`${idPrefix}-category`}
+              value={filters.category}
+              onChange={(e) => update('category', e.target.value)}
+              className="filter-control rounded-xl border-[#241b3f]/10 bg-[#fffaf0]"
+            >
+              <option value="">All categories</option>
+              {categories.map((category) => (
+                <option key={category}>{category}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <fieldset className="rounded-2xl border border-[#241b3f]/10 bg-white p-4 shadow-sm">
+        <legend className="sr-only">Date range</legend>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <p className="text-sm font-black">Date range</p>
+          {(filters.dateFrom || filters.dateTo) && (
+            <button
+              type="button"
+              onClick={() => updateFilters({ dateFrom: '', dateTo: '' })}
+              className="text-xs font-bold text-emerald-700"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label
+              htmlFor={`${idPrefix}-date-from`}
+              className="mb-1.5 block text-xs font-bold text-slate-600"
+            >
+              From
+            </label>
+            <input
+              id={`${idPrefix}-date-from`}
+              type="date"
+              value={filters.dateFrom}
+              max={filters.dateTo || undefined}
+              onChange={(e) => update('dateFrom', e.target.value)}
+              className="filter-control min-w-0 rounded-xl border-[#241b3f]/10 bg-[#fffaf0] px-2 text-xs"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor={`${idPrefix}-date-to`}
+              className="mb-1.5 block text-xs font-bold text-slate-600"
+            >
+              To
+            </label>
+            <input
+              id={`${idPrefix}-date-to`}
+              type="date"
+              value={filters.dateTo}
+              min={filters.dateFrom || undefined}
+              onChange={(e) => update('dateTo', e.target.value)}
+              className="filter-control min-w-0 rounded-xl border-[#241b3f]/10 bg-[#fffaf0] px-2 text-xs"
+            />
+          </div>
         </div>
       </fieldset>
-      <fieldset className="space-y-3">
-        <legend className="filter-label">Price</legend>
-        <div>
-          <label htmlFor="minimum-price" className="text-xs text-slate-500">
-            Minimum price (₦)
-          </label>
-          <input
-            id="minimum-price"
-            type="number"
-            inputMode="numeric"
-            min="0"
-            step="500"
-            placeholder="0"
-            value={filters.minPrice}
-            onChange={(e) => update('minPrice', e.target.value)}
-            className="filter-control mt-1"
-          />
+
+      <fieldset className="rounded-2xl border border-[#241b3f]/10 bg-white p-4 shadow-sm">
+        <legend className="sr-only">Price range</legend>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-black">Price</p>
+            <p className="text-xs text-slate-500">Prices in naira</p>
+          </div>
+          {(filters.minPrice || filters.maxPrice) && (
+            <button
+              type="button"
+              onClick={() => updateFilters({ minPrice: '', maxPrice: '' })}
+              className="text-xs font-bold text-emerald-700"
+            >
+              Reset
+            </button>
+          )}
         </div>
-        <div>
-          <label htmlFor="maximum-price" className="text-xs text-slate-500">
-            Maximum price (₦)
-          </label>
-          <input
-            id="maximum-price"
-            type="number"
-            inputMode="numeric"
-            min={filters.minPrice || '0'}
-            step="500"
-            placeholder="Any"
-            value={filters.maxPrice}
-            onChange={(e) => update('maxPrice', e.target.value)}
-            className="filter-control mt-1"
-          />
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label
+              htmlFor={`${idPrefix}-minimum-price`}
+              className="mb-1.5 block text-xs font-bold text-slate-600"
+            >
+              Minimum
+            </label>
+            <div className="flex items-center rounded-xl border border-[#241b3f]/10 bg-[#fffaf0] pl-2.5 focus-within:border-emerald-500">
+              <span className="text-xs font-bold text-slate-400">₦</span>
+              <input
+                id={`${idPrefix}-minimum-price`}
+                type="number"
+                inputMode="numeric"
+                min="0"
+                step="500"
+                placeholder="0"
+                value={filters.minPrice}
+                onChange={(e) => update('minPrice', e.target.value)}
+                className="h-11 min-w-0 w-full bg-transparent px-1.5 text-sm outline-none placeholder:text-slate-400"
+              />
+            </div>
+          </div>
+          <div>
+            <label
+              htmlFor={`${idPrefix}-maximum-price`}
+              className="mb-1.5 block text-xs font-bold text-slate-600"
+            >
+              Maximum
+            </label>
+            <div className="flex items-center rounded-xl border border-[#241b3f]/10 bg-[#fffaf0] pl-2.5 focus-within:border-emerald-500">
+              <span className="text-xs font-bold text-slate-400">₦</span>
+              <input
+                id={`${idPrefix}-maximum-price`}
+                type="number"
+                inputMode="numeric"
+                min={filters.minPrice || '0'}
+                step="500"
+                placeholder="Any"
+                value={filters.maxPrice}
+                onChange={(e) => update('maxPrice', e.target.value)}
+                className="h-11 min-w-0 w-full bg-transparent px-1.5 text-sm outline-none placeholder:text-slate-400"
+              />
+            </div>
+          </div>
         </div>
       </fieldset>
+
       {activeCount > 0 && (
         <button
           onClick={clear}
-          className="flex min-h-11 items-center gap-2 text-sm font-bold text-emerald-700"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#241b3f]/10 bg-white text-sm font-bold text-[#241b3f] shadow-sm transition hover:border-[#ff6b4a]/50 hover:bg-[#fff0eb]"
         >
           <X className="h-4 w-4" />
-          Clear filters
+          Clear all filters
         </button>
       )}
     </div>
@@ -287,18 +359,21 @@ export default function EventsPage() {
           </div>
         </div>
       </section>
-      <div className="mx-auto grid max-w-7xl gap-10 px-5 py-10 md:px-10 lg:grid-cols-[14rem_1fr]">
+      <div className="mx-auto grid max-w-7xl gap-8 px-5 py-10 md:px-10 lg:grid-cols-[18rem_minmax(0,1fr)]">
         <aside className="hidden lg:block">
           <div className="sticky top-28">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="font-black">Filters</h2>
+            <div className="mb-4 flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4 text-emerald-700" />
+                <h2 className="font-black">Filters</h2>
+              </div>
               {activeCount > 0 && (
-                <span className="bg-emerald-500 px-2 py-0.5 text-xs font-bold text-emerald-950">
+                <span className="rounded-full bg-emerald-500 px-2.5 py-1 text-xs font-bold text-emerald-950">
                   {activeCount}
                 </span>
               )}
             </div>
-            {filterPanel}
+            {filterPanel('desktop')}
           </div>
         </aside>
         <section aria-live="polite">
@@ -310,7 +385,7 @@ export default function EventsPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setMobileFilters(true)}
-                className="flex min-h-11 items-center gap-2 border border-[#241b3f]/10 px-3 text-sm font-bold lg:hidden"
+                className="flex min-h-11 items-center gap-2 rounded-xl border border-[#241b3f]/10 bg-white px-3 text-sm font-bold shadow-sm lg:hidden"
               >
                 <SlidersHorizontal className="h-4 w-4" /> Filters{' '}
                 {activeCount > 0 && `(${activeCount})`}
@@ -320,9 +395,10 @@ export default function EventsPage() {
                 <select
                   value={filters.sort}
                   onChange={(e) => update('sort', e.target.value)}
-                  className="h-11 border border-[#241b3f]/10 bg-white px-3 font-semibold text-[#241b3f]"
+                  className="h-11 rounded-xl border border-[#241b3f]/10 bg-white px-3 font-semibold text-[#241b3f] shadow-sm"
                 >
                   <option value="relevance">Most relevant</option>
+                  <option value="trending">Trending</option>
                   <option value="date">Date: soonest</option>
                   <option value="date-desc">Date: latest</option>
                   <option value="price-asc">Price: lowest to highest</option>
@@ -386,21 +462,27 @@ export default function EventsPage() {
             className="absolute inset-0 h-full w-full bg-black/70"
             onClick={() => setMobileFilters(false)}
           />
-          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-auto border-t border-[#241b3f]/10 bg-[#fff3d8] p-6">
+          <div className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-auto rounded-t-3xl border-t border-[#241b3f]/10 bg-[#fffaf0] p-6 shadow-2xl">
+            <div className="mx-auto mb-5 h-1 w-12 rounded-full bg-[#241b3f]/15" />
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-black">Filters</h2>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+                  Refine your search
+                </p>
+                <h2 className="mt-1 text-xl font-black">Filters</h2>
+              </div>
               <button
                 aria-label="Close filters"
                 onClick={() => setMobileFilters(false)}
-                className="grid h-11 w-11 place-items-center"
+                className="grid h-11 w-11 place-items-center rounded-full bg-white shadow-sm"
               >
                 <X />
               </button>
             </div>
-            {filterPanel}
+            {filterPanel('mobile')}
             <button
               onClick={() => setMobileFilters(false)}
-              className="mt-7 w-full bg-emerald-500 px-5 py-3 font-bold text-emerald-950"
+              className="sticky bottom-0 mt-5 w-full rounded-xl bg-emerald-500 px-5 py-3.5 font-bold text-emerald-950 shadow-lg"
             >
               Show {results.length} events
             </button>

@@ -9,11 +9,11 @@ import {
 } from 'lucide-react';
 import {
   FeaturedEvents,
+  TrendingEvents,
   UpcomingEvents,
 } from '@/components/home-event-sections';
 import { SiteFooter, SiteHeader } from '@/components/site-header';
-import { cities, featuredCities, homeCategories } from '@/lib/events';
-import { cityImages } from '@/lib/cities';
+import { cities, homeCategories } from '@/lib/events';
 
 export default function Home() {
   return (
@@ -75,33 +75,21 @@ export default function Home() {
         </div>
       </section>
 
-      <section
-        id="cities"
-        className="border-b border-[#241b3f]/10 bg-[#fff1b8] py-14 md:py-20"
-      >
+      <section className="border-y border-[#241b3f]/10 bg-[#fff1b8] py-14 md:py-20">
         <div className="mx-auto max-w-7xl px-5 md:px-10">
-          <p className="eyebrow">Pick your scene</p>
-          <h2 className="section-title">Featured cities</h2>
-          <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-            {featuredCities.map((city) => (
-              <a
-                key={city}
-                href={`/events?city=${encodeURIComponent(city)}`}
-                className="group relative aspect-[4/3] overflow-hidden border-4 border-white shadow-sm"
-              >
-                <img
-                  src={cityImages[city]}
-                  alt={`${city} city`}
-                  className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-                <span className="absolute bottom-4 left-4 font-bold text-white">
-                  {city}
-                </span>
-              </a>
-            ))}
+          <div className="mb-8 flex items-end justify-between gap-4">
+            <div>
+              <p className="eyebrow">Popular right now</p>
+              <h2 className="section-title">Trending events</h2>
+            </div>
+            <a
+              href="/events?sort=trending"
+              className="hidden min-h-11 items-center gap-2 text-sm font-bold text-emerald-700 transition hover:text-emerald-600 sm:flex"
+            >
+              View all <ArrowRight className="h-4 w-4" />
+            </a>
           </div>
+          <TrendingEvents />
         </div>
       </section>
 
