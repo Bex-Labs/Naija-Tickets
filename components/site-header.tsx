@@ -10,9 +10,14 @@ export function SiteHeader() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [signedIn, setSignedIn] = useState(false);
+  const [pathname, setPathname] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const pathnameTask = window.setTimeout(
+      () => setPathname(window.location.pathname),
+      0,
+    );
     const client = getSupabaseBrowserClient();
     void client.auth.getSession().then(({ data }) => {
       setSignedIn(Boolean(data.session));
@@ -22,7 +27,10 @@ export function SiteHeader() {
         setSignedIn(Boolean(session));
       },
     );
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      window.clearTimeout(pathnameTask);
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
@@ -43,10 +51,30 @@ export function SiteHeader() {
       ? `/search?q=${encodeURIComponent(value)}`
       : '/search';
   };
+  const isActive = (href: string) =>
+    href === '/'
+      ? pathname === '/'
+      : pathname === href || pathname.startsWith(`${href}/`);
+  const desktopNavClass = (href: string) =>
+    `inline-flex min-h-11 items-center border-b-2 transition ${
+      isActive(href)
+        ? 'border-emerald-500 text-emerald-800'
+        : 'border-transparent hover:text-emerald-600'
+    }`;
+  const mobileNavClass = (href: string) =>
+    `block border-l-4 px-3 py-3 font-bold transition ${
+      isActive(href)
+        ? 'border-emerald-500 bg-emerald-50 text-emerald-900'
+        : 'border-transparent hover:bg-emerald-50'
+    }`;
   return (
     <header className="sticky top-0 z-40 border-b border-[#241b3f]/10 bg-[#fffaf0]/92 px-5 text-[#241b3f] backdrop-blur-xl md:px-10">
       <div className="mx-auto flex h-18 max-w-7xl items-center justify-between">
-        <a href="/" className="flex min-h-11 items-center gap-2 text-xl">
+        <a
+          href="/"
+          aria-current={isActive('/') ? 'page' : undefined}
+          className={`flex min-h-11 items-center gap-2 text-xl transition ${isActive('/') ? 'text-emerald-800' : ''}`}
+        >
           <span className="grid h-8 w-8 place-items-center bg-emerald-500 text-emerald-950">
             <Ticket className="h-4 w-4" />
           </span>
@@ -58,19 +86,22 @@ export function SiteHeader() {
         >
           <a
             href="/events"
-            className="inline-flex min-h-11 items-center transition hover:text-emerald-400"
+            aria-current={isActive('/events') ? 'page' : undefined}
+            className={desktopNavClass('/events')}
           >
             Find events
           </a>
           <a
             href="/cities"
-            className="inline-flex min-h-11 items-center transition hover:text-emerald-400"
+            aria-current={isActive('/cities') ? 'page' : undefined}
+            className={desktopNavClass('/cities')}
           >
             Browse cities
           </a>
           <a
             href="/about"
-            className="inline-flex min-h-11 items-center transition hover:text-emerald-400"
+            aria-current={isActive('/about') ? 'page' : undefined}
+            className={desktopNavClass('/about')}
           >
             About us
           </a>
@@ -85,7 +116,7 @@ export function SiteHeader() {
               onClick={toggleSearch}
               aria-label={searchOpen ? 'Close search' : 'Open site search'}
               aria-expanded={searchOpen}
-              className="grid h-11 w-11 shrink-0 place-items-center transition hover:text-emerald-400"
+              className={`grid h-11 w-11 shrink-0 place-items-center transition hover:text-emerald-600 ${isActive('/search') ? 'bg-emerald-50 text-emerald-800' : ''}`}
             >
               {searchOpen ? (
                 <X className="h-4 w-4" />
@@ -109,7 +140,8 @@ export function SiteHeader() {
             <>
               <a
                 href="/organiser"
-                className="inline-flex min-h-11 items-center px-1 text-sm font-bold transition hover:text-emerald-400"
+                aria-current={isActive('/organiser') ? 'page' : undefined}
+                className={`inline-flex min-h-11 items-center border-b-2 px-1 text-sm font-bold transition ${isActive('/organiser') ? 'border-emerald-500 text-emerald-800' : 'border-transparent hover:text-emerald-600'}`}
               >
                 Organiser workspace
               </a>
@@ -126,13 +158,15 @@ export function SiteHeader() {
             <>
               <a
                 href="/login"
-                className="inline-flex min-h-11 items-center px-1 text-sm font-bold transition hover:text-emerald-400"
+                aria-current={isActive('/login') ? 'page' : undefined}
+                className={`inline-flex min-h-11 items-center border-b-2 px-1 text-sm font-bold transition ${isActive('/login') ? 'border-emerald-500 text-emerald-800' : 'border-transparent hover:text-emerald-600'}`}
               >
                 Log in
               </a>
               <a
                 href="/signup"
-                className="inline-flex min-h-11 items-center bg-[#ff6b4a] px-4 text-sm font-bold text-white transition hover:bg-[#ee5535]"
+                aria-current={isActive('/signup') ? 'page' : undefined}
+                className={`inline-flex min-h-11 items-center px-4 text-sm font-bold text-white transition ${isActive('/signup') ? 'bg-[#d9472a] ring-2 ring-[#ff6b4a]/30 ring-offset-2' : 'bg-[#ff6b4a] hover:bg-[#ee5535]'}`}
               >
                 Sign up
               </a>
@@ -173,19 +207,22 @@ export function SiteHeader() {
             </button>
           </form>
           <a
-            className="block px-3 py-3 font-bold hover:bg-emerald-50"
+            aria-current={isActive('/events') ? 'page' : undefined}
+            className={mobileNavClass('/events')}
             href="/events"
           >
             Find events
           </a>
           <a
-            className="block px-3 py-3 font-bold hover:bg-emerald-50"
+            aria-current={isActive('/cities') ? 'page' : undefined}
+            className={mobileNavClass('/cities')}
             href="/cities"
           >
             Browse cities
           </a>
           <a
-            className="block px-3 py-3 font-bold hover:bg-emerald-50"
+            aria-current={isActive('/about') ? 'page' : undefined}
+            className={mobileNavClass('/about')}
             href="/about"
           >
             About us
@@ -195,6 +232,7 @@ export function SiteHeader() {
               <a
                 className="bg-emerald-100 px-3 py-3 text-center font-bold text-emerald-900"
                 href="/organiser"
+                aria-current={isActive('/organiser') ? 'page' : undefined}
               >
                 Organiser workspace
               </a>
@@ -208,12 +246,17 @@ export function SiteHeader() {
             </div>
           ) : (
             <div className="mt-2 grid grid-cols-2 gap-2">
-              <a className="px-3 py-3 text-center font-bold" href="/login">
+              <a
+                className={`px-3 py-3 text-center font-bold ${isActive('/login') ? 'bg-emerald-50 text-emerald-900' : ''}`}
+                href="/login"
+                aria-current={isActive('/login') ? 'page' : undefined}
+              >
                 Log in
               </a>
               <a
                 className="bg-[#ff6b4a] px-3 py-3 text-center font-bold text-white"
                 href="/signup"
+                aria-current={isActive('/signup') ? 'page' : undefined}
               >
                 Sign up
               </a>

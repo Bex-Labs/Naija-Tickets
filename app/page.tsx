@@ -75,9 +75,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="border-y border-[#241b3f]/10 bg-[#fff1b8] py-14 md:py-20">
+      <section className="border-y border-[#241b3f]/10 bg-[#fff1b8] py-9 md:py-12">
         <div className="mx-auto max-w-7xl px-5 md:px-10">
-          <div className="mb-8 flex items-end justify-between gap-4">
+          <div className="mb-6 flex items-end justify-between gap-4">
             <div>
               <p className="eyebrow">Popular right now</p>
               <h2 className="section-title">Trending events</h2>

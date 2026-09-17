@@ -274,7 +274,7 @@ export default function EventsPage() {
             >
               Minimum
             </label>
-            <div className="flex items-center rounded-xl border border-[#241b3f]/10 bg-[#fffaf0] pl-2.5 focus-within:border-emerald-500">
+            <div className="flex items-center overflow-hidden rounded-xl border border-[#241b3f]/10 bg-[#fffaf0] pl-2.5 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/15">
               <span className="text-xs font-bold text-slate-400">₦</span>
               <input
                 id={`${idPrefix}-minimum-price`}
@@ -296,7 +296,7 @@ export default function EventsPage() {
             >
               Maximum
             </label>
-            <div className="flex items-center rounded-xl border border-[#241b3f]/10 bg-[#fffaf0] pl-2.5 focus-within:border-emerald-500">
+            <div className="flex items-center overflow-hidden rounded-xl border border-[#241b3f]/10 bg-[#fffaf0] pl-2.5 transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/15">
               <span className="text-xs font-bold text-slate-400">₦</span>
               <input
                 id={`${idPrefix}-maximum-price`}

@@ -26,7 +26,7 @@ export function TrendingEvents() {
   return (
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
       {trending.map((event) => (
-        <EventCard key={event.slug} event={event} />
+        <EventCard key={event.slug} event={event} compact />
       ))}
     </div>
   );

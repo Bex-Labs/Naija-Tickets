@@ -6,19 +6,22 @@ import {
   CalendarClock,
   CircleDollarSign,
   ClipboardList,
+  ImagePlus,
+  LoaderCircle,
   MapPin,
   Plus,
   Send,
   Trash2,
   UserRound,
 } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type {
   OrganiserEvent,
   OrganiserTicketType,
 } from '@/lib/organiser-types';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { categories, cities } from '@/lib/events';
 
 export type EventEditorValue = Omit<OrganiserEvent, 'id' | 'status' | 'reason'>;
@@ -141,6 +144,8 @@ export function OrganiserEventEditor({
   onSave,
 }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageNotice, setImageNotice] = useState('');
   const update = <K extends keyof EventEditorValue>(
     field: K,
     next: EventEditorValue[K],
@@ -148,6 +153,48 @@ export function OrganiserEventEditor({
   const save = (status: 'draft' | 'submitted') => {
     if (!formRef.current?.reportValidity()) return;
     onSave(status);
+  };
+  const uploadEventImage = async (file?: File) => {
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setImageNotice('Choose a JPEG, PNG or WebP image.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setImageNotice('Event images must be 5 MB or smaller.');
+      return;
+    }
+
+    setImageUploading(true);
+    setImageNotice('');
+    try {
+      const { data } = await getSupabaseBrowserClient().auth.getSession();
+      if (!data.session) {
+        throw new Error('Your session has expired. Log in again.');
+      }
+      const formData = new FormData();
+      formData.set('image', file);
+      const response = await fetch('/api/organiser/event-image', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${data.session.access_token}` },
+        body: formData,
+      });
+      const result = (await response.json()) as {
+        url?: string;
+        error?: string;
+      };
+      if (!response.ok || !result.url) {
+        throw new Error(result.error || 'Image could not be uploaded.');
+      }
+      update('imageName', result.url);
+      setImageNotice('Image uploaded and ready to use.');
+    } catch (error) {
+      setImageNotice(
+        error instanceof Error ? error.message : 'Image could not be uploaded.',
+      );
+    } finally {
+      setImageUploading(false);
+    }
   };
 
   return (
@@ -346,17 +393,81 @@ export function OrganiserEventEditor({
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="auth-label" htmlFor="eventImage">
-              Event image URL
+            <label className="auth-label" htmlFor="eventImageUpload">
+              Event image
             </label>
-            <Input
-              id="eventImage"
-              type="url"
-              value={value.imageName}
-              placeholder="https://example.com/event-photo.jpg"
-              onChange={(event) => update('imageName', event.target.value)}
-              className="auth-input"
-            />
+            <div className="grid gap-4 border border-[#241b3f]/10 bg-[#fffaf0] p-4 sm:grid-cols-[13rem_1fr] sm:items-center">
+              <div className="aspect-[16/10] overflow-hidden border border-[#241b3f]/10 bg-white">
+                {value.imageName ? (
+                  <img
+                    src={value.imageName}
+                    alt="Event preview"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="grid h-full place-items-center text-center text-slate-400">
+                    <div>
+                      <ImagePlus className="mx-auto h-7 w-7" />
+                      <p className="mt-2 text-xs font-bold">Image preview</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div>
+                <input
+                  id="eventImageUpload"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  disabled={imageUploading}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = '';
+                    void uploadEventImage(file);
+                  }}
+                  className="sr-only"
+                />
+                <label
+                  htmlFor="eventImageUpload"
+                  className={`inline-flex min-h-11 items-center gap-2 bg-[#241b3f] px-4 text-sm font-bold text-white transition hover:bg-[#362a58] ${imageUploading ? 'pointer-events-none opacity-60' : 'cursor-pointer'}`}
+                >
+                  {imageUploading ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ImagePlus className="h-4 w-4" />
+                  )}
+                  {imageUploading ? 'Uploading…' : 'Choose from computer'}
+                </label>
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  JPEG, PNG or WebP. Maximum file size 5 MB.
+                </p>
+                {imageNotice && (
+                  <p
+                    aria-live="polite"
+                    className={`mt-2 text-xs font-semibold ${imageNotice.startsWith('Image uploaded') ? 'text-emerald-700' : 'text-red-600'}`}
+                  >
+                    {imageNotice}
+                  </p>
+                )}
+                <div className="mt-4">
+                  <label
+                    className="mb-1.5 block text-xs font-bold text-slate-600"
+                    htmlFor="eventImageUrl"
+                  >
+                    Or paste an image URL
+                  </label>
+                  <Input
+                    id="eventImageUrl"
+                    type="url"
+                    value={value.imageName}
+                    placeholder="https://example.com/event-photo.jpg"
+                    onChange={(event) =>
+                      update('imageName', event.target.value)
+                    }
+                    className="auth-input bg-white"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -840,15 +951,19 @@ export function OrganiserEventEditor({
           <Button
             type="button"
             variant="outline"
-            disabled={saving}
+            disabled={saving || imageUploading}
             onClick={() => save('draft')}
             className="h-12 border-[#241b3f]/15 bg-white"
           >
-            {saving ? 'Saving...' : 'Save draft'}
+            {imageUploading
+              ? 'Waiting for image...'
+              : saving
+                ? 'Saving...'
+                : 'Save draft'}
           </Button>
           <Button
             type="button"
-            disabled={saving}
+            disabled={saving || imageUploading}
             onClick={() => save('submitted')}
             className="h-12 bg-emerald-500 font-black text-emerald-950"
           >
