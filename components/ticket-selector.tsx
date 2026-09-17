@@ -92,15 +92,16 @@ export function TicketSelector({
                     ))}
                   </ul>
                 )}
-                <p className="mt-2 text-xs text-slate-500">
-                  {ticket.status === 'not-on-sale'
-                    ? ticket.saleState === 'upcoming' && ticket.salesStartAt
-                      ? `Sales open ${new Date(ticket.salesStartAt).toLocaleString('en-NG')}`
-                      : 'Sales are closed'
-                    : ticket.status === 'sold-out'
-                      ? 'Sold out'
-                      : `${ticket.remaining} remaining · ${ticket.minPerOrder || 1} to ${ticket.maxPerOrder || 6} per order`}
-                </p>
+                {(ticket.status === 'not-on-sale' ||
+                  ticket.status === 'sold-out') && (
+                  <p className="mt-2 text-xs text-slate-500">
+                    {ticket.status === 'not-on-sale'
+                      ? ticket.saleState === 'upcoming' && ticket.salesStartAt
+                        ? `Sales open ${new Date(ticket.salesStartAt).toLocaleString('en-NG')}`
+                        : 'Sales are closed'
+                      : 'Sold out'}
+                  </p>
+                )}
               </div>
               <div className="flex shrink-0 items-center border border-[#241b3f]/10">
                 <button

@@ -11,14 +11,20 @@ type Filters = {
   q: string;
   city: string;
   category: string;
-  price: string;
+  dateFrom: string;
+  dateTo: string;
+  minPrice: string;
+  maxPrice: string;
   sort: string;
 };
 const defaults: Filters = {
   q: '',
   city: '',
   category: '',
-  price: '',
+  dateFrom: '',
+  dateTo: '',
+  minPrice: '',
+  maxPrice: '',
   sort: 'relevance',
 };
 
@@ -29,7 +35,10 @@ function fromUrl(): Filters {
     q: p.get('q') || '',
     city: p.get('city') || '',
     category: p.get('category') || '',
-    price: p.get('price') || '',
+    dateFrom: p.get('dateFrom') || '',
+    dateTo: p.get('dateTo') || '',
+    minPrice: p.get('minPrice') || '',
+    maxPrice: p.get('maxPrice') || '',
     sort: p.get('sort') || 'relevance',
   };
 }
@@ -81,19 +90,21 @@ export default function EventsPage() {
             `${event.title} ${event.organiser} ${event.category} ${event.city} ${event.state} ${event.venue} ${event.description}`.toLowerCase();
           const matchesSearch =
             !filters.q || haystack.includes(filters.q.toLowerCase());
-          const price = eventPrice(event);
+          const priceNaira = eventPrice(event) / 100;
+          const minPrice = Number(filters.minPrice);
+          const maxPrice = Number(filters.maxPrice);
           const matchesPrice =
-            !filters.price ||
-            (filters.price === 'free'
-              ? price === 0
-              : filters.price === 'under10'
-                ? price > 0 && price < 1000000
-                : price >= 1000000);
+            (!filters.minPrice || priceNaira >= minPrice) &&
+            (!filters.maxPrice || priceNaira <= maxPrice);
+          const matchesDate =
+            (!filters.dateFrom || event.date >= filters.dateFrom) &&
+            (!filters.dateTo || event.date <= filters.dateTo);
           return (
             matchesSearch &&
             (!filters.city || event.city === filters.city) &&
             (!filters.category || event.category === filters.category) &&
-            matchesPrice
+            matchesPrice &&
+            matchesDate
           );
         })
         .sort((a, b) => {
@@ -121,9 +132,10 @@ export default function EventsPage() {
   );
 
   const visible = results.slice((page - 1) * 4, page * 4);
-  const activeCount = [filters.city, filters.category, filters.price].filter(
-    Boolean,
-  ).length;
+  const activeCount =
+    [filters.city, filters.category].filter(Boolean).length +
+    (filters.dateFrom || filters.dateTo ? 1 : 0) +
+    (filters.minPrice || filters.maxPrice ? 1 : 0);
   const clear = () => {
     setFilters(defaults);
     setPage(1);
@@ -166,30 +178,68 @@ export default function EventsPage() {
           ))}
         </select>
       </div>
-      <fieldset>
+      <fieldset className="space-y-3">
+        <legend className="filter-label">Date</legend>
+        <div>
+          <label htmlFor="date-from" className="text-xs text-slate-500">
+            From
+          </label>
+          <input
+            id="date-from"
+            type="date"
+            value={filters.dateFrom}
+            max={filters.dateTo || undefined}
+            onChange={(e) => update('dateFrom', e.target.value)}
+            className="filter-control mt-1"
+          />
+        </div>
+        <div>
+          <label htmlFor="date-to" className="text-xs text-slate-500">
+            To
+          </label>
+          <input
+            id="date-to"
+            type="date"
+            value={filters.dateTo}
+            min={filters.dateFrom || undefined}
+            onChange={(e) => update('dateTo', e.target.value)}
+            className="filter-control mt-1"
+          />
+        </div>
+      </fieldset>
+      <fieldset className="space-y-3">
         <legend className="filter-label">Price</legend>
-        <div className="space-y-2">
-          {[
-            ['', 'Any price'],
-            ['free', 'Free events'],
-            ['under10', 'Under ₦10,000'],
-            ['over10', '₦10,000 and above'],
-          ].map(([value, label]) => (
-            <label
-              key={value}
-              className="flex min-h-11 cursor-pointer items-center gap-3 px-2 text-sm text-slate-700 transition hover:bg-emerald-50"
-            >
-              <input
-                type="radio"
-                name="price"
-                value={value}
-                checked={filters.price === value}
-                onChange={(e) => update('price', e.target.value)}
-                className="accent-emerald-500"
-              />
-              {label}
-            </label>
-          ))}
+        <div>
+          <label htmlFor="minimum-price" className="text-xs text-slate-500">
+            Minimum price (₦)
+          </label>
+          <input
+            id="minimum-price"
+            type="number"
+            inputMode="numeric"
+            min="0"
+            step="500"
+            placeholder="0"
+            value={filters.minPrice}
+            onChange={(e) => update('minPrice', e.target.value)}
+            className="filter-control mt-1"
+          />
+        </div>
+        <div>
+          <label htmlFor="maximum-price" className="text-xs text-slate-500">
+            Maximum price (₦)
+          </label>
+          <input
+            id="maximum-price"
+            type="number"
+            inputMode="numeric"
+            min={filters.minPrice || '0'}
+            step="500"
+            placeholder="Any"
+            value={filters.maxPrice}
+            onChange={(e) => update('maxPrice', e.target.value)}
+            className="filter-control mt-1"
+          />
         </div>
       </fieldset>
       {activeCount > 0 && (
