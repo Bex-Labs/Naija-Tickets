@@ -60,8 +60,6 @@ function ticketTemplate(): OrganiserTicketType {
     quantityReserved: 0,
     minPerOrder: 1,
     maxPerOrder: 6,
-    salesStart: '',
-    salesEnd: '',
     inclusions: [],
     active: true,
   };
@@ -78,7 +76,7 @@ function SectionHeading({
 }) {
   return (
     <div className="flex items-start gap-3 sm:col-span-2">
-      <span className="grid h-10 w-10 shrink-0 place-items-center bg-emerald-50 text-emerald-700">
+      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center text-emerald-700">
         <Icon className="h-5 w-5" />
       </span>
       <div>
@@ -358,11 +356,12 @@ export function OrganiserEventEditor({
           <div className="hidden sm:block" aria-hidden="true" />
           <div>
             <label className="auth-label" htmlFor="eventSalesStart">
-              Event sales start
+              Ticket sales start (all tiers)
             </label>
             <Input
               id="eventSalesStart"
               type="datetime-local"
+              required
               value={value.salesStart}
               onChange={(event) => update('salesStart', event.target.value)}
               className="auth-input"
@@ -370,11 +369,12 @@ export function OrganiserEventEditor({
           </div>
           <div>
             <label className="auth-label" htmlFor="eventSalesEnd">
-              Event sales end
+              Ticket sales end (all tiers)
             </label>
             <Input
               id="eventSalesEnd"
               type="datetime-local"
+              required
               value={value.salesEnd}
               onChange={(event) => update('salesEnd', event.target.value)}
               className="auth-input"
@@ -853,8 +853,8 @@ export function OrganiserEventEditor({
                               id={`ticket-early-bird-end-${index}`}
                               type="datetime-local"
                               required
-                              min={ticket.salesStart || value.salesStart}
-                              max={ticket.salesEnd || value.salesEnd}
+                              min={value.salesStart}
+                              max={value.salesEnd}
                               value={ticket.earlyBirdEnd}
                               onChange={(event) =>
                                 updateTicket('earlyBirdEnd', event.target.value)
@@ -962,40 +962,6 @@ export function OrganiserEventEditor({
                             'maxPerOrder',
                             Number(event.target.value),
                           )
-                        }
-                        className="auth-input"
-                      />
-                    </div>
-                    <div>
-                      <label
-                        className="auth-label"
-                        htmlFor={`ticket-sales-start-${index}`}
-                      >
-                        Sales start
-                      </label>
-                      <Input
-                        id={`ticket-sales-start-${index}`}
-                        type="datetime-local"
-                        value={ticket.salesStart}
-                        onChange={(event) =>
-                          updateTicket('salesStart', event.target.value)
-                        }
-                        className="auth-input"
-                      />
-                    </div>
-                    <div>
-                      <label
-                        className="auth-label"
-                        htmlFor={`ticket-sales-end-${index}`}
-                      >
-                        Sales end
-                      </label>
-                      <Input
-                        id={`ticket-sales-end-${index}`}
-                        type="datetime-local"
-                        value={ticket.salesEnd}
-                        onChange={(event) =>
-                          updateTicket('salesEnd', event.target.value)
                         }
                         className="auth-input"
                       />

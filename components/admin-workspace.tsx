@@ -168,11 +168,6 @@ export function AdminWorkspace() {
               </button>
             ))}
           </nav>
-          <div className="mt-6 border border-[#241b3f]/10 bg-white p-4 text-xs leading-5 text-slate-500">
-            <strong className="block text-emerald-700">Protected access</strong>
-            Account changes run through private server checks and are recorded
-            in the platform audit log.
-          </div>
         </aside>
 
         <section className="min-w-0 p-5 sm:p-8 lg:p-10">
@@ -193,7 +188,7 @@ export function AdminWorkspace() {
                   ['Customers', 'customers', 'Manage customer accounts'],
                   ['Guest buyers', 'guests', 'Review account-free purchases'],
                   ['Organisers', 'organisers', 'Manage organiser access'],
-                  ['Admins', 'admins', 'Up to three administrators'],
+                  ['Admins', 'admins', 'Manage administrator accounts'],
                   [
                     'Event approvals',
                     'events',

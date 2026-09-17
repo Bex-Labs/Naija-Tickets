@@ -22,6 +22,7 @@ export type Event = {
   organiser: string;
   presenterLine?: string;
   organiserAbout?: string;
+  organiserImage?: string;
   organiserSocials?: Array<{ label: string; url: string }>;
   city: string;
   state: string;

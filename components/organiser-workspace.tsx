@@ -57,8 +57,6 @@ function blankEvent(profile?: OrganiserProfile): EventEditorValue {
         quantityReserved: 0,
         minPerOrder: 1,
         maxPerOrder: 6,
-        salesStart: '',
-        salesEnd: '',
         inclusions: ['General admission'],
         active: true,
       },
@@ -198,11 +196,6 @@ export function OrganiserWorkspace() {
               </button>
             ))}
           </nav>
-          <div className="mt-6 border border-[#241b3f]/10 bg-white p-4 text-xs leading-5 text-slate-500">
-            <strong className="block text-emerald-700">Shared workspace</strong>
-            Drafts and submissions are saved securely and sent to the admin
-            review queue.
-          </div>
         </aside>
         <section className="min-w-0 p-5 sm:p-8 lg:p-10">
           {view === 'overview' && (

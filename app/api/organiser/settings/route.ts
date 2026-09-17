@@ -20,7 +20,7 @@ async function settingsForUser(
     client
       .from('organisers')
       .select(
-        'name,contact_email,phone,description,account_type,website_url,instagram_url,x_url,facebook_url,tiktok_url',
+        'name,contact_email,phone,description,account_type,logo_path,website_url,instagram_url,x_url,facebook_url,tiktok_url',
       )
       .eq('id', organiserId)
       .single(),
@@ -34,6 +34,7 @@ async function settingsForUser(
     phone: profileResult.data.phone || organiserResult.data.phone || '',
     accountType: organiserResult.data.account_type,
     organisationName: organiserResult.data.name,
+    profileImageUrl: organiserResult.data.logo_path || '',
     contactEmail: organiserResult.data.contact_email,
     description: organiserResult.data.description || '',
     websiteUrl: organiserResult.data.website_url || '',

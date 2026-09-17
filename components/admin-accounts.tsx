@@ -1,6 +1,6 @@
 'use client';
 
-import { KeyRound, Plus, ShieldCheck, Trash2, X } from 'lucide-react';
+import { KeyRound, Plus, Trash2, X } from 'lucide-react';
 import type { SyntheticEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -139,8 +139,7 @@ export function AdminAccounts() {
           <p className="eyebrow">Administration team</p>
           <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">Admins</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-            The primary admin can be joined by two additional administrators.
-            Every admin receives the same protected portal access.
+            Add and manage administrator access for the platform.
           </p>
         </div>
         <Button
@@ -158,7 +157,7 @@ export function AdminAccounts() {
         </Button>
       </div>
 
-      <div className="mt-7 grid gap-4 sm:grid-cols-3">
+      <div className="mt-7 grid gap-4 sm:grid-cols-2">
         <div className="border border-[#241b3f]/10 bg-white p-5">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
             Active admins
@@ -171,12 +170,6 @@ export function AdminAccounts() {
           </p>
           <p className="mt-3 text-3xl font-black">
             {Math.max(0, maximum - accounts.length)}
-          </p>
-        </div>
-        <div className="border border-[#241b3f]/10 bg-[#241b3f] p-5 text-white">
-          <ShieldCheck className="h-5 w-5 text-emerald-400" />
-          <p className="mt-3 text-sm font-bold">
-            Maximum {maximum} administrators
           </p>
         </div>
       </div>

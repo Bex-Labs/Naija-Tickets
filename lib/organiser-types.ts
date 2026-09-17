@@ -58,8 +58,6 @@ export type OrganiserTicketType = {
   quantityReserved: number;
   minPerOrder: number;
   maxPerOrder: number;
-  salesStart: string;
-  salesEnd: string;
   inclusions: string[];
   active: boolean;
 };

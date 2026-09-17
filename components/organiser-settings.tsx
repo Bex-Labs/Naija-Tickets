@@ -1,8 +1,18 @@
 'use client';
 
-import { CheckCircle2, Eye, EyeOff, KeyRound, Link2, Save } from 'lucide-react';
+import {
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  ImagePlus,
+  KeyRound,
+  Link2,
+  LoaderCircle,
+  Save,
+  UserRound,
+} from 'lucide-react';
 import type { SyntheticEvent } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { OrganiserPayoutSettings } from '@/components/organiser-payout-settings';
@@ -14,6 +24,7 @@ type OrganiserSettingsData = {
   phone: string;
   accountType: 'individual' | 'organisation';
   organisationName: string;
+  profileImageUrl: string;
   contactEmail: string;
   description: string;
   websiteUrl: string;
@@ -29,6 +40,7 @@ const emptySettings: OrganiserSettingsData = {
   phone: '',
   accountType: 'individual',
   organisationName: '',
+  profileImageUrl: '',
   contactEmail: '',
   description: '',
   websiteUrl: '',
@@ -48,6 +60,8 @@ export function OrganiserSettings() {
   const [settings, setSettings] = useState(emptySettings);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [profileNotice, setProfileNotice] = useState('');
   const [profileError, setProfileError] = useState('');
   const [passwordNotice, setPasswordNotice] = useState('');
@@ -84,6 +98,50 @@ export function OrganiserSettings() {
     };
     void load();
   }, []);
+
+  const uploadProfileImage = async (file?: File) => {
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setProfileError('Choose a JPEG, PNG or WebP image.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setProfileError('Profile images must be 5 MB or smaller.');
+      return;
+    }
+
+    setImageUploading(true);
+    setProfileError('');
+    setProfileNotice('');
+    try {
+      const token = await accessToken();
+      const formData = new FormData();
+      formData.set('image', file);
+      const response = await fetch('/api/organiser/profile-image', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const result = (await response.json()) as {
+        url?: string;
+        error?: string;
+      };
+      if (!response.ok || !result.url) {
+        throw new Error(result.error || 'Profile image could not be uploaded.');
+      }
+      update('profileImageUrl', result.url);
+      setProfileNotice('Profile image updated.');
+    } catch (error) {
+      setProfileError(
+        error instanceof Error
+          ? error.message
+          : 'Profile image could not be uploaded.',
+      );
+    } finally {
+      setImageUploading(false);
+      if (imageInputRef.current) imageInputRef.current.value = '';
+    }
+  };
 
   const saveProfile = async (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -181,9 +239,53 @@ export function OrganiserSettings() {
         <div className="sm:col-span-2">
           <h2 className="text-xl font-black">Organiser profile</h2>
           <p className="mt-2 text-sm text-slate-500">
-            Your organiser name, description and social links appear on approved
-            public event pages.
+            Your profile picture, organiser name, description and social links
+            appear on approved public event pages.
           </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-5 border-b border-[#241b3f]/10 pb-5 sm:col-span-2">
+          <div className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-full border border-[#241b3f]/10 bg-[#fffaf0] text-slate-400">
+            {settings.profileImageUrl ? (
+              <img
+                src={settings.profileImageUrl}
+                alt="Organiser profile"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <UserRound className="h-8 w-8" />
+            )}
+          </div>
+          <div>
+            <p className="text-sm font-black">Profile picture</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              Upload a JPEG, PNG or WebP image up to 5 MB.
+            </p>
+            <input
+              ref={imageInputRef}
+              id="organiser-profile-image"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={loading || imageUploading}
+              onChange={(event) =>
+                void uploadProfileImage(event.target.files?.[0])
+              }
+              className="sr-only"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading || imageUploading}
+              onClick={() => imageInputRef.current?.click()}
+              className="mt-3 min-h-11 border-[#241b3f]/15 bg-white"
+            >
+              {imageUploading ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <ImagePlus className="h-4 w-4" />
+              )}
+              {imageUploading ? 'Uploading...' : 'Choose picture'}
+            </Button>
+          </div>
         </div>
         <div>
           <label className="auth-label" htmlFor="settings-full-name">

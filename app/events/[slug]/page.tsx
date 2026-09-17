@@ -169,9 +169,17 @@ export default async function EventDetails({ params }: Props) {
           <section className="detail-section">
             <h2>About the organiser</h2>
             <div className="mt-4 flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center bg-emerald-500/10 text-emerald-400">
-                <UserRound className="h-5 w-5" />
-              </span>
+              {event.organiserImage ? (
+                <img
+                  src={event.organiserImage}
+                  alt={`${event.organiser} profile`}
+                  className="h-11 w-11 rounded-full object-cover"
+                />
+              ) : (
+                <span className="grid h-11 w-11 place-items-center rounded-full border border-[#241b3f]/10 text-emerald-600">
+                  <UserRound className="h-5 w-5" />
+                </span>
+              )}
               <div className="min-w-0">
                 <p className="font-black">{event.organiser}</p>
                 {event.organiserAbout && (

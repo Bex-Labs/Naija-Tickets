@@ -42,8 +42,6 @@ function validEvent() {
         quantityReserved: 0,
         minPerOrder: 1,
         maxPerOrder: 6,
-        salesStart: '2026-08-01T09:00',
-        salesEnd: '2026-09-19T17:00',
         inclusions: ['General admission'],
         active: true,
       },
@@ -58,8 +56,6 @@ function validEvent() {
         quantityReserved: 1,
         minPerOrder: 1,
         maxPerOrder: 4,
-        salesStart: '',
-        salesEnd: '',
         inclusions: ['Priority entry', 'Raised lounge access'],
         active: true,
       },
@@ -75,6 +71,17 @@ void test('parses structured event details and converts NGN prices to kobo', () 
   assert.equal(result.value.ticketTypes[1].priceKobo, 3_500_000);
   assert.equal(result.value.schedule[1].title, 'Headline performances');
   assert.equal(result.value.timezoneLabel, 'WAT');
+  assert.equal('salesStartAt' in result.value.ticketTypes[0], false);
+});
+
+void test('requires one event-wide sales window for every ticket tier', () => {
+  const input = validEvent();
+  input.salesStart = '';
+
+  assert.match(
+    parseOrganiserEventInput(input).error || '',
+    /valid event sales dates and times/,
+  );
 });
 
 void test('rejects negative prices and fractional kobo amounts', () => {

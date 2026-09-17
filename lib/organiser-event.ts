@@ -17,8 +17,6 @@ type ParsedTicket = Omit<
   priceKobo: number;
   earlyBirdPriceKobo: number | null;
   earlyBirdEndAt: string | null;
-  salesStartAt: string | null;
-  salesEndAt: string | null;
 };
 
 export type OrganiserEventInput = {
@@ -150,7 +148,7 @@ export function parseOrganiserEventInput(
   }
   const salesStartAt = optionalLocalIso(salesStart);
   const salesEndAt = optionalLocalIso(salesEnd);
-  if (salesStartAt === undefined || salesEndAt === undefined) {
+  if (!salesStartAt || !salesEndAt) {
     return { error: 'Use valid event sales dates and times.' };
   }
   if (
@@ -248,12 +246,6 @@ export function parseOrganiserEventInput(
     const quantityReserved = Number(ticket.quantityReserved || 0);
     const minPerOrder = Number(ticket.minPerOrder);
     const maxPerOrder = Number(ticket.maxPerOrder);
-    const ticketSalesStart =
-      typeof ticket.salesStart === 'string' ? ticket.salesStart.trim() : '';
-    const ticketSalesEnd =
-      typeof ticket.salesEnd === 'string' ? ticket.salesEnd.trim() : '';
-    const ticketSalesStartAt = optionalLocalIso(ticketSalesStart);
-    const ticketSalesEndAt = optionalLocalIso(ticketSalesEnd);
     const inclusionInput = array(ticket.inclusions);
     const active = ticket.active !== false;
 
@@ -326,24 +318,10 @@ export function parseOrganiserEventInput(
     ) {
       return { error: 'Check the ticket minimum and maximum per order.' };
     }
-    if (ticketSalesStartAt === undefined || ticketSalesEndAt === undefined) {
-      return { error: 'Use valid ticket sales dates and times.' };
-    }
-    if (
-      ticketSalesStartAt &&
-      ticketSalesEndAt &&
-      new Date(ticketSalesEndAt) <= new Date(ticketSalesStartAt)
-    ) {
-      return { error: 'Ticket sales must end after they start.' };
-    }
-    const effectiveSalesStart = ticketSalesStartAt || salesStartAt;
-    const effectiveSalesEnd = ticketSalesEndAt || salesEndAt;
     if (
       earlyBirdEndAt &&
-      ((effectiveSalesStart &&
-        new Date(earlyBirdEndAt) <= new Date(effectiveSalesStart)) ||
-        (effectiveSalesEnd &&
-          new Date(earlyBirdEndAt) >= new Date(effectiveSalesEnd)))
+      (new Date(earlyBirdEndAt) <= new Date(salesStartAt) ||
+        new Date(earlyBirdEndAt) >= new Date(salesEndAt))
     ) {
       return {
         error: 'The early bird deadline must fall within the sales window.',
@@ -372,10 +350,6 @@ export function parseOrganiserEventInput(
       quantityReserved,
       minPerOrder,
       maxPerOrder,
-      salesStart: ticketSalesStart,
-      salesEnd: ticketSalesEnd,
-      salesStartAt: ticketSalesStartAt,
-      salesEndAt: ticketSalesEndAt,
       inclusions,
       active,
     });
