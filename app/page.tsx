@@ -75,12 +75,14 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="border-y border-[#241b3f]/10 bg-[#fff1b8] py-9 md:py-12">
+      <section className="border-y border-[#241b3f]/10 bg-[#fff1b8] py-6 md:py-8">
         <div className="mx-auto max-w-7xl px-5 md:px-10">
-          <div className="mb-6 flex items-end justify-between gap-4">
+          <div className="mb-4 flex items-end justify-between gap-4">
             <div>
               <p className="eyebrow">Popular right now</p>
-              <h2 className="section-title">Trending events</h2>
+              <h2 className="mt-1 font-heading text-2xl font-black tracking-tight sm:text-3xl">
+                Trending events
+              </h2>
             </div>
             <a
               href="/events?sort=trending"
