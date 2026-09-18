@@ -274,7 +274,7 @@ export default function EventsPage() {
             >
               Minimum
             </label>
-            <div className="flex items-center overflow-hidden rounded-xl border border-[#241b3f]/10 bg-[#fffaf0] pl-2.5 transition-colors focus-within:border-emerald-500">
+            <div className="price-filter-control flex h-12 w-full items-center overflow-hidden rounded-xl border border-[#241b3f]/10 bg-[#fffaf0] pl-2.5 transition-colors">
               <span className="text-xs font-bold text-slate-400">₦</span>
               <input
                 id={`${idPrefix}-minimum-price`}
@@ -285,7 +285,7 @@ export default function EventsPage() {
                 placeholder="0"
                 value={filters.minPrice}
                 onChange={(e) => update('minPrice', e.target.value)}
-                className="h-11 min-w-0 w-full bg-transparent px-1.5 text-sm outline-none placeholder:text-slate-400"
+                className="price-filter-input h-full min-w-0 w-full bg-transparent px-1.5 text-sm placeholder:text-slate-400"
               />
             </div>
           </div>
@@ -296,7 +296,7 @@ export default function EventsPage() {
             >
               Maximum
             </label>
-            <div className="flex items-center overflow-hidden rounded-xl border border-[#241b3f]/10 bg-[#fffaf0] pl-2.5 transition-colors focus-within:border-emerald-500">
+            <div className="price-filter-control flex h-12 w-full items-center overflow-hidden rounded-xl border border-[#241b3f]/10 bg-[#fffaf0] pl-2.5 transition-colors">
               <span className="text-xs font-bold text-slate-400">₦</span>
               <input
                 id={`${idPrefix}-maximum-price`}
@@ -307,7 +307,7 @@ export default function EventsPage() {
                 placeholder="Any"
                 value={filters.maxPrice}
                 onChange={(e) => update('maxPrice', e.target.value)}
-                className="h-11 min-w-0 w-full bg-transparent px-1.5 text-sm outline-none placeholder:text-slate-400"
+                className="price-filter-input h-full min-w-0 w-full bg-transparent px-1.5 text-sm placeholder:text-slate-400"
               />
             </div>
           </div>

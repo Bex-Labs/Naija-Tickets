@@ -68,6 +68,12 @@ a {
 :focus-visible {
   outline: 3px solid color-mix(in srgb, var(--primary) 70%, white);
 }
+.price-filter-input:focus-visible {
+  outline: none;
+}
+.price-filter-control:focus-within {
+  border-color: #10b981;
+}
 [class*='rounded-'] {
   border-radius: 0.375rem;
 }
