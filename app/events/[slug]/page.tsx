@@ -212,6 +212,7 @@ export default async function EventDetails({ params }: Props) {
             <TicketSelector
               eventSlug={event.slug}
               tickets={event.ticketTypes}
+              pricingTime={event.pricingTime || 0}
               soldOut={event.soldOut}
             />
           </div>

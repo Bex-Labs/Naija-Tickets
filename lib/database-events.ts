@@ -324,6 +324,7 @@ export function databaseRowToPublicEvent(row: DatabaseEventRow): Event {
       (total, ticket) => total + Math.max(0, ticket.quantity_sold),
       0,
     ),
+    pricingTime: now,
     ticketTypes,
     schedule: (row.event_schedule_items || [])
       .sort((a, b) => a.sort_order - b.sort_order)

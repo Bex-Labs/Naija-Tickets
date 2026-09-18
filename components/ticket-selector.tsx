@@ -8,14 +8,16 @@ import { formatNaira, isEarlyBirdTicket, ticketPrice } from '@/lib/events';
 export function TicketSelector({
   eventSlug,
   tickets,
+  pricingTime,
   soldOut = false,
 }: {
   eventSlug: string;
   tickets: TicketType[];
+  pricingTime: number;
   soldOut?: boolean;
 }) {
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(pricingTime);
   useEffect(() => {
     const nextDeadline = Math.min(
       ...tickets
@@ -104,28 +106,11 @@ export function TicketSelector({
                       {formatNaira(currentPrice)}
                     </p>
                     {earlyBirdActive && (
-                      <>
-                        <span className="bg-amber-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-amber-900">
-                          Early bird
-                        </span>
-                        <del className="text-xs text-slate-400">
-                          {formatNaira(ticket.price)}
-                        </del>
-                      </>
+                      <span className="bg-amber-100 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-amber-900">
+                        Early bird
+                      </span>
                     )}
                   </div>
-                  {earlyBirdActive && ticket.earlyBirdEndsAt && (
-                    <p className="mt-1 text-xs font-semibold text-amber-800">
-                      Offer ends{' '}
-                      {new Date(ticket.earlyBirdEndsAt).toLocaleString(
-                        'en-NG',
-                        {
-                          dateStyle: 'medium',
-                          timeStyle: 'short',
-                        },
-                      )}
-                    </p>
-                  )}
                   {ticket.description && (
                     <p className="mt-2 text-xs leading-5 text-slate-500">
                       {ticket.description}
@@ -143,7 +128,7 @@ export function TicketSelector({
                     <p className="mt-2 text-xs text-slate-500">
                       {ticket.status === 'not-on-sale'
                         ? ticket.saleState === 'upcoming' && ticket.salesStartAt
-                          ? `Sales open ${new Date(ticket.salesStartAt).toLocaleString('en-NG')}`
+                          ? `Sales open ${new Date(ticket.salesStartAt).toLocaleString('en-NG', { timeZone: 'Africa/Lagos' })}`
                           : 'Sales are closed'
                         : 'Sold out'}
                     </p>
