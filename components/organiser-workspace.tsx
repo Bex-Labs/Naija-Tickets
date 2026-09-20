@@ -7,8 +7,10 @@ import {
   Plus,
   Settings,
   Ticket,
+  Users,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { OrganiserAttendees } from '@/components/organiser-attendees';
 import { AccountSignOut } from '@/components/account-sign-out';
 import { OrganiserSettings } from '@/components/organiser-settings';
 import {
@@ -18,7 +20,7 @@ import {
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { OrganiserEvent } from '@/lib/organiser-types';
 
-type View = 'overview' | 'events' | 'editor' | 'settings';
+type View = 'overview' | 'events' | 'editor' | 'settings' | 'attendees';
 type OrganiserProfile = { name: string; description: string };
 
 function blankEvent(profile?: OrganiserProfile): EventEditorValue {
@@ -67,6 +69,7 @@ function blankEvent(profile?: OrganiserProfile): EventEditorValue {
 export function OrganiserWorkspace() {
   const [events, setEvents] = useState<OrganiserEvent[]>([]);
   const [view, setView] = useState<View>('overview');
+  const [attendeeEventId, setAttendeeEventId] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [eventForm, setEventForm] = useState<EventEditorValue>(() =>
     blankEvent(),
@@ -147,6 +150,7 @@ export function OrganiserWorkspace() {
   const nav = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'events', label: 'My events', icon: CalendarDays },
+    { id: 'attendees', label: 'Attendees', icon: Users },
     { id: 'editor', label: 'Create event', icon: Plus },
     { id: 'settings', label: 'Settings', icon: Settings },
   ] as const;
@@ -284,13 +288,24 @@ export function OrganiserWorkspace() {
                           </p>
                         )}
                       </div>
-                      <button
-                        onClick={() => editEvent(event)}
-                        className="inline-flex items-center gap-2 text-sm font-bold text-emerald-400"
-                      >
-                        <Pencil className="h-4 w-4" />
-                        Edit
-                      </button>
+                      <div className="flex items-center gap-4">
+                        <button
+                          onClick={() => {
+                            setAttendeeEventId(event.id);
+                            setView('attendees');
+                          }}
+                          className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-emerald-700"
+                        >
+                          <Users className="h-4 w-4" /> Attendees
+                        </button>
+                        <button
+                          onClick={() => editEvent(event)}
+                          className="inline-flex items-center gap-2 text-sm font-bold text-emerald-400"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          Edit
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -313,6 +328,12 @@ export function OrganiserWorkspace() {
               saving={isSaving}
               onChange={setEventForm}
               onSave={(status) => void saveEvent(status)}
+            />
+          )}
+          {view === 'attendees' && (
+            <OrganiserAttendees
+              events={events}
+              initialEventId={attendeeEventId}
             />
           )}
           {view === 'settings' && <OrganiserSettings />}
