@@ -135,12 +135,7 @@ export default function Home() {
             </div>
           </div>
           <div>
-            <div className="mb-5 flex items-center justify-between">
-              <h3 className="text-xl font-black">Coming up soon</h3>
-              <span className="text-xs font-semibold text-slate-500">
-                Africa/Lagos time
-              </span>
-            </div>
+            <h3 className="mb-5 text-xl font-black">Coming up soon</h3>
             <UpcomingEvents />
           </div>
         </div>
