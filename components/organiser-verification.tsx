@@ -168,7 +168,7 @@ export function OrganiserVerification() {
                   </label>
                   <input
                     id="verification-legal-name"
-                    className="auth-input"
+                    className="auth-input block w-full rounded-md border border-[#241b3f]/25 bg-[#fffaf0] px-3 shadow-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                     required
                     minLength={2}
                     maxLength={120}
@@ -187,7 +187,7 @@ export function OrganiserVerification() {
                   </label>
                   <input
                     id="verification-reference"
-                    className="auth-input"
+                    className="auth-input block w-full rounded-md border border-[#241b3f]/25 bg-[#fffaf0] px-3 shadow-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                     type={
                       verification.accountType === 'individual'
                         ? 'password'
