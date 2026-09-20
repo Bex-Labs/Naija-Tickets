@@ -8,8 +8,10 @@ import {
   Settings,
   Ticket,
   Users,
+  Tag,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { OrganiserPromoCodes } from '@/components/organiser-promo-codes';
 import { OrganiserAttendees } from '@/components/organiser-attendees';
 import { AccountSignOut } from '@/components/account-sign-out';
 import { OrganiserSettings } from '@/components/organiser-settings';
@@ -20,7 +22,13 @@ import {
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import type { OrganiserEvent } from '@/lib/organiser-types';
 
-type View = 'overview' | 'events' | 'editor' | 'settings' | 'attendees';
+type View =
+  | 'overview'
+  | 'events'
+  | 'editor'
+  | 'settings'
+  | 'attendees'
+  | 'promos';
 type OrganiserProfile = { name: string; description: string };
 
 function blankEvent(profile?: OrganiserProfile): EventEditorValue {
@@ -150,6 +158,7 @@ export function OrganiserWorkspace() {
   const nav = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'events', label: 'My events', icon: CalendarDays },
+    { id: 'promos', label: 'Promo codes', icon: Tag },
     { id: 'attendees', label: 'Attendees', icon: Users },
     { id: 'editor', label: 'Create event', icon: Plus },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -336,6 +345,7 @@ export function OrganiserWorkspace() {
               initialEventId={attendeeEventId}
             />
           )}
+          {view === 'promos' && <OrganiserPromoCodes events={events} />}
           {view === 'settings' && <OrganiserSettings />}
         </section>
       </div>

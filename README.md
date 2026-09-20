@@ -68,9 +68,23 @@ An authenticated administrator can open **Settings → Service fee** and choose 
 
 The reservation transaction reads the active rule directly from `platform_settings`. It ignores fee values from the browser, applies percentage fees to the subtotal, multiplies fixed fees by ticket quantity, stores the final fee and total on the order, and defaults safely to 5% when the setting is absent or invalid. Paystack then charges that stored total. Every fee change is recorded in `audit_logs`.
 
+### Organiser promo codes
+
+Apply `supabase/migrations/202609200001_promo_codes.sql` to the target database before deploying this version of the app. Checkout now calls `create_checkout_reservation_v3`; the migration preserves the existing reservation and payment functions.
+
+Organisers can open **Promo codes** to create a case-insensitive code for one event, either across all ticket types (including subsequently added tiers) or selected tiers. The form requires a percentage or fixed NGN discount per eligible ticket, WAT start/end dates and a maximum number of bookings. Codes are private, and the database checks organiser membership and ticket ownership before creation.
+
+Customers enter one optional code before reserving tickets. The reservation transaction validates its event, dates, ticket scope and remaining uses, then shows the applied discount and final total before payment. Discounts apply to current prices, including early bird prices. Fixed discounts are capped at each ticket's price; percentage fees use the discounted subtotal and fixed fees remain payable.
+
+Each pending booking holds one use. Expired reservations release that use when checkout releases their inventory; paid and refunded bookings keep their redemption. A row lock serialises bookings for the same code, and remaining pending orders count against the limit to avoid overlooking an in-flight payment. Rejected reservations roll back both inventory and promo use.
+
+Orders retain the original `subtotal_kobo` and a separate `discount_kobo`; the payable amount is `subtotal_kobo - discount_kobo + fee_kobo`. Use the discounted ticket subtotal for organiser settlement. Paystack and free booking both use the stored final total.
+
+`npm test` includes embedded PostgreSQL tests using PGlite against the real reservation, promo and payment SQL, with no hosted database or payment service required.
+
 ### Organiser settlement
 
-Paystack currently settles the complete checkout charge into the platform owner's Paystack account. The order stores the organiser's ticket subtotal and the separately calculated platform service fee. Under the current buyer-fee model, the service fee is platform revenue; the organiser's starting balance is the paid ticket subtotal. Approved refunds, chargebacks and any disclosed settlement deductions reduce the amount due before the administrator records a payout.
+Paystack currently settles the complete checkout charge into the platform owner's Paystack account. The order stores the organiser's ticket subtotal and the separately calculated platform service fee. Under the current buyer-fee model, the service fee is platform revenue; the organiser's starting balance is the paid ticket subtotal less its recorded promo discount. Approved refunds, chargebacks and any disclosed settlement deductions reduce the amount due before the administrator records a payout.
 
 The existing `payouts` table stores a settlement period, gross ticket sales, fees, refunds, net amount and payout status. Automatic bank-recipient creation and Paystack Transfers are intentionally not enabled yet, so the administrator must reconcile the sales period, pay the organiser outside the app and mark the payout record paid. Before launch, add verified organiser bank details, transfer-recipient provisioning, approval controls, Paystack transfer webhooks and a complete payout audit trail if in-app automated settlement is required.
 

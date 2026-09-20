@@ -63,6 +63,7 @@ export function CheckoutFlow({
     'idle',
   );
   const [error, setError] = useState('');
+  const [promoCode, setPromoCode] = useState('');
   const [reservation, setReservation] = useState<{
     orderId: string;
     reference: string;
@@ -71,6 +72,8 @@ export function CheckoutFlow({
     feeKobo: number;
     totalKobo: number;
     checkoutToken: string;
+    discountKobo: number;
+    promoCode: string | null;
   } | null>(null);
 
   const updateAttendee = (key: string, field: keyof Attendee, value: string) =>
@@ -118,6 +121,7 @@ export function CheckoutFlow({
           eventId,
           items,
           purchaser: firstAttendee,
+          promoCode,
         }),
       });
       const result = (await response.json()) as {
@@ -129,6 +133,8 @@ export function CheckoutFlow({
           feeKobo: number;
           totalKobo: number;
           checkoutToken: string;
+          discountKobo: number;
+          promoCode: string | null;
         };
         error?: string;
       };
@@ -248,6 +254,22 @@ export function CheckoutFlow({
               </div>
               <CreditCard className="h-6 w-6 shrink-0 text-emerald-700" />
             </div>
+            <dl className="mt-5 space-y-3 text-sm">
+              <div className="flex justify-between">
+                <dt>Subtotal</dt>
+                <dd>{formatNaira(reservation.subtotalKobo)}</dd>
+              </div>
+              {reservation.promoCode && (
+                <div className="flex justify-between gap-3 text-emerald-700">
+                  <dt>Promo {reservation.promoCode}</dt>
+                  <dd>−{formatNaira(reservation.discountKobo)}</dd>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <dt>Service fee</dt>
+                <dd>{formatNaira(reservation.feeKobo)}</dd>
+              </div>
+            </dl>
             <div className="mt-5 flex items-center justify-between border-t border-[#241b3f]/10 pt-5">
               <span className="text-sm text-slate-600">Total to pay</span>
               <strong className="text-2xl">
@@ -404,6 +426,30 @@ export function CheckoutFlow({
                 <strong>{formatNaira(line.lineTotalKobo)}</strong>
               </div>
             ))}
+          </div>
+          <div className="mt-5">
+            <label className="auth-label" htmlFor="promo-code">
+              Promo code (optional)
+            </label>
+            <Input
+              id="promo-code"
+              value={promoCode}
+              maxLength={32}
+              disabled={status !== 'idle'}
+              autoComplete="off"
+              onChange={(event) =>
+                setPromoCode(event.target.value.toUpperCase())
+              }
+              className="auth-input"
+              aria-describedby="promo-code-help"
+            />
+            <p
+              id="promo-code-help"
+              className="mt-2 text-xs leading-5 text-slate-500"
+            >
+              Your code is checked when you reserve tickets. Review the discount
+              and final total before payment.
+            </p>
           </div>
           <dl className="mt-5 space-y-3 text-sm">
             <div className="flex justify-between">

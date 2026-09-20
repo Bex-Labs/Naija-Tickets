@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { promoCodePattern } from '@/lib/promo-codes';
 import { sha256Hex } from '@/lib/paystack';
 import {
   getAuthenticatedUser,
@@ -76,7 +77,21 @@ export async function POST(request: Request) {
     eventId?: unknown;
     items?: unknown;
     purchaser?: unknown;
+    promoCode?: unknown;
   };
+  const promoCode =
+    typeof values.promoCode === 'string'
+      ? values.promoCode.trim().toUpperCase()
+      : '';
+  if (
+    (values.promoCode !== undefined && typeof values.promoCode !== 'string') ||
+    (promoCode && !promoCodePattern.test(promoCode))
+  ) {
+    return NextResponse.json(
+      { error: 'Enter a valid promo code.' },
+      { status: 400 },
+    );
+  }
   if (
     typeof values.eventId !== 'string' ||
     !UUID_PATTERN.test(values.eventId) ||
@@ -112,8 +127,9 @@ export async function POST(request: Request) {
     const checkoutToken = createCheckoutToken();
     const checkoutTokenHash = await sha256Hex(checkoutToken);
     const { data, error } = await getSupabaseAdminClient().rpc(
-      'create_checkout_reservation_v2',
+      'create_checkout_reservation_v3',
       {
+        p_promo_code: promoCode || null,
         p_customer_id: user?.id || null,
         p_event_id: values.eventId,
         p_items: items.map((item) => ({
@@ -138,6 +154,8 @@ export async function POST(request: Request) {
         reference: row.reference,
         expiresAt: row.expires_at,
         subtotalKobo: Number(row.subtotal_kobo),
+        discountKobo: Number(row.discount_kobo),
+        promoCode: row.promo_code,
         feeKobo: Number(row.fee_kobo),
         totalKobo: Number(row.total_kobo),
         checkoutToken,
@@ -145,8 +163,15 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('Checkout reservation failed', error);
-    const message = error instanceof Error ? error.message : '';
+    const message =
+      error &&
+      typeof error === 'object' &&
+      'message' in error &&
+      typeof error.message === 'string'
+        ? error.message
+        : '';
     const safeMessage =
+      message.startsWith('Promo code ') ||
       message.includes('availability') ||
       message.includes('not available') ||
       message.includes('sales')
