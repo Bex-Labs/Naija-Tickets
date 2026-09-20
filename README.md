@@ -68,6 +68,12 @@ An authenticated administrator can open **Settings → Service fee** and choose 
 
 The reservation transaction reads the active rule directly from `platform_settings`. It ignores fee values from the browser, applies percentage fees to the subtotal, multiplies fixed fees by ticket quantity, stores the final fee and total on the order, and defaults safely to 5% when the setting is absent or invalid. Paystack then charges that stored total. Every fee change is recorded in `audit_logs`.
 
+### Organiser sales analytics
+
+The organiser overview displays tickets sold, ticket revenue, remaining inventory, sales by event category and a per-event breakdown. Sales count issued valid or used tickets on paid or partially refunded orders with a verified payment. Ticket revenue is the paid ticket subtotal after promo discounts and completed refunds, excluding service fees; fully refunded orders do not count. Remaining inventory excludes active holds and inactive ticket types, and expired holds are ignored.
+
+Apply migrations `202609200002` through `202609200004` before deploying the dashboard. The aggregation runs in a private database function that checks organiser membership; the API returns only aggregate figures and does not expose attendee or purchaser details. The permission migrations remove direct public access to analytics, promo, payment, and other server-only functions while preserving the role-check functions used by database policies.
+
 ### Organiser promo codes
 
 Apply `supabase/migrations/202609200001_promo_codes.sql` to the target database before deploying this version of the app. Checkout now calls `create_checkout_reservation_v3`; the migration preserves the existing reservation and payment functions.
@@ -98,11 +104,11 @@ The database operation anonymises purchaser and attendee data in the order, orde
 
 ## Useful commands
 
+The footer shows Instagram, Facebook, TikTok, and X links. Until official profile URLs are available, these links open each platform's homepage. Set `NEXT_PUBLIC_INSTAGRAM_URL`, `NEXT_PUBLIC_FACEBOOK_URL`, `NEXT_PUBLIC_TIKTOK_URL`, and `NEXT_PUBLIC_X_URL` to the official profile URLs when they are ready.
+
 ```bash
 npm run dev
 npm run build
 npm run lint
 npm test
 ```
-
-

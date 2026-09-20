@@ -87,10 +87,7 @@ export async function POST(request: Request) {
     (values.promoCode !== undefined && typeof values.promoCode !== 'string') ||
     (promoCode && !promoCodePattern.test(promoCode))
   ) {
-    return NextResponse.json(
-      { error: 'Enter a valid promo code.' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'Invalid Promo Code' }, { status: 400 });
   }
   if (
     typeof values.eventId !== 'string' ||
@@ -170,6 +167,12 @@ export async function POST(request: Request) {
       typeof error.message === 'string'
         ? error.message
         : '';
+    if (message === 'Promo code is not available for this event.') {
+      return NextResponse.json(
+        { error: 'Invalid Promo Code' },
+        { status: 409 },
+      );
+    }
     const safeMessage =
       message.startsWith('Promo code ') ||
       message.includes('availability') ||

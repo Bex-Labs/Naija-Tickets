@@ -268,12 +268,75 @@ export function SiteHeader() {
   );
 }
 
+function SocialIcon({ name }: { name: string }) {
+  if (name === 'Instagram')
+    return (
+      <svg
+        className="h-5 w-5"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        aria-hidden="true"
+      >
+        <rect x="2" y="2" width="20" height="20" rx="5" />
+        <circle cx="12" cy="12" r="4" />
+        <circle cx="18" cy="6" r="1" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  if (name === 'Facebook')
+    return (
+      <svg
+        className="h-5 w-5"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M14.5 22v-8h2.7l.4-3.2h-3.1V8.7c0-.9.3-1.6 1.6-1.6H18V4.2c-.7-.1-1.5-.2-2.4-.2-2.7 0-4.6 1.7-4.6 4.8v2H8.3V14H11v8h3.5Z" />
+      </svg>
+    );
+  return (
+    <svg
+      className="h-5 w-5"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M16 2c.4 2.3 1.7 3.8 4 4.2v3.2c-1.6 0-3.1-.5-4-1.4v7.4c0 4-2.6 6.6-6.3 6.6A6.2 6.2 0 0 1 3.5 16c0-3.6 2.8-6.3 6.2-6.3.5 0 .9 0 1.3.1v3.5c-.4-.2-.8-.3-1.3-.3-1.6 0-2.8 1.2-2.8 3s1.2 3 2.8 3c1.8 0 2.9-1.3 2.9-3V2H16Z" />
+    </svg>
+  );
+}
+
 export function SiteFooter() {
+  const socials = [
+    {
+      label: 'Instagram',
+      href:
+        process.env.NEXT_PUBLIC_INSTAGRAM_URL || 'https://www.instagram.com/',
+    },
+    {
+      label: 'Facebook',
+      href: process.env.NEXT_PUBLIC_FACEBOOK_URL || 'https://www.facebook.com/',
+    },
+    {
+      label: 'TikTok',
+      href: process.env.NEXT_PUBLIC_TIKTOK_URL || 'https://www.tiktok.com/',
+    },
+  ];
   return (
     <footer className="border-t border-[#241b3f]/10 bg-[#241b3f] px-5 py-10 text-white md:px-10">
-      <div className="mx-auto flex max-w-7xl flex-col justify-between gap-5 sm:flex-row sm:items-center">
+      <div className="mx-auto flex max-w-7xl flex-col justify-between gap-8 md:flex-row md:items-start">
         <div>
-          <p className="brand-wordmark text-lg">Naija Tickets</p>
+          <a
+            href="/"
+            className="inline-flex min-h-11 items-center gap-2 hover:text-emerald-300"
+            aria-label="Naija Tickets home"
+          >
+            <span className="grid h-8 w-8 place-items-center text-emerald-400">
+              <Ticket className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <span className="brand-wordmark text-lg">Naija Tickets</span>
+          </a>
           <p className="mt-1 text-sm text-violet-200">
             Good events. Clear tickets. Better memories.
           </p>
@@ -303,6 +366,33 @@ export function SiteFooter() {
           >
             Help
           </a>
+        </div>
+        <div>
+          <div className="flex flex-wrap items-center gap-1 text-violet-100">
+            {socials.map(({ label, href }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="grid h-11 w-11 place-items-center hover:text-emerald-400"
+                aria-label={label}
+              >
+                <SocialIcon name={label} />
+              </a>
+            ))}
+            <a
+              href={process.env.NEXT_PUBLIC_X_URL || 'https://x.com/'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="grid h-11 w-11 place-items-center hover:text-emerald-400"
+              aria-label="X"
+            >
+              <span className="text-xl" aria-hidden="true">
+                𝕏
+              </span>
+            </a>
+          </div>
         </div>
       </div>
     </footer>

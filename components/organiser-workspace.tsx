@@ -11,6 +11,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { OrganiserSalesAnalytics } from '@/components/organiser-sales-analytics';
 import { OrganiserPromoCodes } from '@/components/organiser-promo-codes';
 import { OrganiserAttendees } from '@/components/organiser-attendees';
 import { AccountSignOut } from '@/components/account-sign-out';
@@ -232,6 +233,7 @@ export function OrganiserWorkspace() {
                   </div>
                 ))}
               </div>
+              <OrganiserSalesAnalytics />
               <div className="mt-8 border border-[#241b3f]/10 bg-white p-6">
                 <p className="text-sm font-black">Publishing workflow</p>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
