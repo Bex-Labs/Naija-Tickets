@@ -68,6 +68,12 @@ An authenticated administrator can open **Settings → Service fee** and choose 
 
 The reservation transaction reads the active rule directly from `platform_settings`. It ignores fee values from the browser, applies percentage fees to the subtotal, multiplies fixed fees by ticket quantity, stores the final fee and total on the order, and defaults safely to 5% when the setting is absent or invalid. Paystack then charges that stored total. Every fee change is recorded in `audit_logs`.
 
+### Admin sales analytics
+
+The administrator overview shows verified bookings, tickets sold, ticket revenue, service fees charged, remaining inventory, sales by event category, and the top ten events by ticket revenue. Ticket revenue follows the organiser analytics definition: discounts and completed refunds are applied, service fees are excluded, and fully refunded orders do not count. Service fees are shown before any fee refunds. Active reservations reduce inventory; expired reservations and inactive ticket types do not.
+
+Apply `supabase/migrations/202609200005_admin_sales_analytics.sql` before deploying this dashboard. The analytics function returns one aggregate JSON result without purchaser or attendee details and can only be called with the server role. The HTTP endpoint also requires a valid administrator session.
+
 ### Organiser sales analytics
 
 The organiser overview displays tickets sold, ticket revenue, remaining inventory, sales by event category and a per-event breakdown. Sales count issued valid or used tickets on paid or partially refunded orders with a verified payment. Ticket revenue is the paid ticket subtotal after promo discounts and completed refunds, excluding service fees; fully refunded orders do not count. Remaining inventory excludes active holds and inactive ticket types, and expired holds are ignored.
