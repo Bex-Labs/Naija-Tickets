@@ -1,5 +1,8 @@
 'use client';
 
+import { readImageUploadResponse } from '@/lib/image-upload-response';
+import { EVENT_IMAGE_MAX_BYTES } from '@/lib/event-image';
+
 import {
   CheckCircle2,
   Eye,
@@ -105,7 +108,7 @@ export function OrganiserSettings() {
       setProfileError('Choose a JPEG, PNG or WebP image.');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > EVENT_IMAGE_MAX_BYTES) {
       setProfileError('Profile images must be 5 MB or smaller.');
       return;
     }
@@ -122,14 +125,8 @@ export function OrganiserSettings() {
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      const result = (await response.json()) as {
-        url?: string;
-        error?: string;
-      };
-      if (!response.ok || !result.url) {
-        throw new Error(result.error || 'Profile image could not be uploaded.');
-      }
-      update('profileImageUrl', result.url);
+      const url = await readImageUploadResponse(response);
+      update('profileImageUrl', url);
       setProfileNotice('Profile image updated.');
     } catch (error) {
       setProfileError(

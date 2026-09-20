@@ -1,5 +1,8 @@
 'use client';
 
+import { readImageUploadResponse } from '@/lib/image-upload-response';
+import { EVENT_IMAGE_MAX_BYTES } from '@/lib/event-image';
+
 import {
   ArrowDown,
   ArrowUp,
@@ -160,7 +163,7 @@ export function OrganiserEventEditor({
       setImageNotice('Choose a JPEG, PNG or WebP image.');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > EVENT_IMAGE_MAX_BYTES) {
       setImageNotice('Event images must be 5 MB or smaller.');
       return;
     }
@@ -179,14 +182,8 @@ export function OrganiserEventEditor({
         headers: { Authorization: `Bearer ${data.session.access_token}` },
         body: formData,
       });
-      const result = (await response.json()) as {
-        url?: string;
-        error?: string;
-      };
-      if (!response.ok || !result.url) {
-        throw new Error(result.error || 'Image could not be uploaded.');
-      }
-      update('imageName', result.url);
+      const url = await readImageUploadResponse(response);
+      update('imageName', url);
       setImageNotice('Image uploaded and ready to use.');
     } catch (error) {
       setImageNotice(
