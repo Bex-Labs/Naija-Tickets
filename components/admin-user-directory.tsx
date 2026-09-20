@@ -5,6 +5,7 @@ import type { SyntheticEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { VerifiedOrganiserBadge } from '@/components/verified-organiser-badge';
 
 type Customer = {
   id: string;
@@ -20,6 +21,7 @@ type Organiser = {
   organiserId: string;
   name: string;
   organisation: string;
+  verified: boolean;
   email: string;
   phone: string;
   createdAt: string;
@@ -315,7 +317,12 @@ export function AdminUserDirectory({
                   <td className="p-4 font-bold">{account.name}</td>
                   {isOrganiser && (
                     <td className="p-4">
-                      {(account as Organiser).organisation}
+                      <span className="inline-flex items-center gap-1.5">
+                        {(account as Organiser).organisation}
+                        <VerifiedOrganiserBadge
+                          verified={(account as Organiser).verified}
+                        />
+                      </span>
                     </td>
                   )}
                   <td className="p-4 text-slate-600">

@@ -20,6 +20,7 @@ export type Event = {
   slug: string;
   title: string;
   organiser: string;
+  organiserVerified?: boolean;
   presenterLine?: string;
   organiserAbout?: string;
   organiserImage?: string;

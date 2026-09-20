@@ -17,6 +17,7 @@ export type OrganiserEvent = {
   description: string;
   imageName: string;
   organiserDisplayName: string;
+  organiserVerified?: boolean;
   organiserAbout: string;
   featured: boolean;
   schedule: OrganiserScheduleItem[];

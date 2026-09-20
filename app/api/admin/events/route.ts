@@ -90,6 +90,25 @@ export async function PATCH(request: Request) {
       auditMetadata = { featured: body.featured };
     } else if (action === 'review' && typeof body.approved === 'boolean') {
       const approved = body.approved;
+      if (approved) {
+        const { data: event, error: eventError } = await client
+          .from('events')
+          .select('organisers!inner(verified_at)')
+          .eq('id', id)
+          .single();
+        if (eventError) throw eventError;
+        const relation = event.organisers as
+          | { verified_at: string | null }
+          | { verified_at: string | null }[];
+        const verifiedAt = Array.isArray(relation)
+          ? relation[0]?.verified_at
+          : relation?.verified_at;
+        if (!verifiedAt)
+          return NextResponse.json(
+            { error: 'Verify the organiser before publishing this event.' },
+            { status: 409 },
+          );
+      }
       const status = approved ? 'published' : 'rejected';
       const { data, error } = await client
         .from('events')

@@ -25,6 +25,7 @@ export type DatabaseEventRow = {
   organisers?:
     | {
         name: string;
+        verified_at?: string | null;
         description?: string | null;
         slug?: string | null;
         contact_email?: string | null;
@@ -37,6 +38,7 @@ export type DatabaseEventRow = {
       }
     | {
         name: string;
+        verified_at?: string | null;
         description?: string | null;
         slug?: string | null;
         contact_email?: string | null;
@@ -82,7 +84,7 @@ export type DatabaseEventRow = {
 };
 
 export const publicEventSelect =
-  'id,title,slug,presenter_line,description,venue_name,address,directions_url,city,state,timezone,timezone_label,starts_at,ends_at,sales_start_at,sales_end_at,status,featured,image_path,rejection_reason,organisers(name,description,slug,contact_email,logo_path,website_url,instagram_url,x_url,facebook_url,tiktok_url),categories(name),event_schedule_items(id,start_time,item_label,sort_order),event_policies(id,policy_text,sort_order),ticket_types(id,name,description,price_kobo,standard_price_kobo,early_bird_price_kobo,early_bird_ends_at,quantity_total,quantity_sold,quantity_reserved,min_per_order,max_per_order,sales_start_at,sales_end_at,inclusions,active,sort_order)';
+  'id,title,slug,presenter_line,description,venue_name,address,directions_url,city,state,timezone,timezone_label,starts_at,ends_at,sales_start_at,sales_end_at,status,featured,image_path,rejection_reason,organisers(name,verified_at,description,slug,contact_email,logo_path,website_url,instagram_url,x_url,facebook_url,tiktok_url),categories(name),event_schedule_items(id,start_time,item_label,sort_order),event_policies(id,policy_text,sort_order),ticket_types(id,name,description,price_kobo,standard_price_kobo,early_bird_price_kobo,early_bird_ends_at,quantity_total,quantity_sold,quantity_reserved,min_per_order,max_per_order,sales_start_at,sales_end_at,inclusions,active,sort_order)';
 
 export function isRetiredSeedEvent(row: DatabaseEventRow) {
   const organiser = Array.isArray(row.organisers)
@@ -122,6 +124,7 @@ function organiserDetails(row: DatabaseEventRow) {
     : row.organisers;
   return {
     name: organiser?.name || 'Independent organiser',
+    verified: Boolean(organiser?.verified_at),
     description: organiser?.description || '',
     image: organiser?.logo_path || '',
     socials: [
@@ -194,6 +197,7 @@ export function databaseRowToOrganiserEvent(
     description: row.description,
     imageName: row.image_path || '',
     organiserDisplayName: organiser.name,
+    organiserVerified: organiser.verified,
     organiserAbout: organiser.description,
     featured: row.featured === true,
     schedule: (row.event_schedule_items || [])
@@ -291,6 +295,7 @@ export function databaseRowToPublicEvent(row: DatabaseEventRow): Event {
     slug: row.slug,
     title: row.title,
     organiser: organiser.name,
+    organiserVerified: organiser.verified,
     presenterLine: row.presenter_line || `${organiser.name} presents`,
     organiserAbout: organiser.description,
     organiserImage: organiser.image || undefined,

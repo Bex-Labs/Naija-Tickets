@@ -22,6 +22,7 @@ type MembershipRow = {
         contact_email: string;
         phone: string | null;
         created_at: string;
+        verified_at: string | null;
       }
     | Array<{
         id: string;
@@ -29,6 +30,7 @@ type MembershipRow = {
         contact_email: string;
         phone: string | null;
         created_at: string;
+        verified_at: string | null;
       }>
     | null;
 };
@@ -46,7 +48,7 @@ async function listAccounts() {
       client
         .from('organiser_memberships')
         .select(
-          'user_id,organiser_id,organisers(id,name,contact_email,phone,created_at)',
+          'user_id,organiser_id,organisers(id,name,contact_email,phone,created_at,verified_at)',
         ),
     ]);
   if (authError) throw authError;
@@ -79,6 +81,7 @@ async function listAccounts() {
         organiserId: organisation.id,
         name: profile?.full_name || 'Organiser',
         organisation: organisation.name,
+        verified: Boolean(organisation.verified_at),
         email: user.email || organisation.contact_email,
         phone: profile?.phone || organisation.phone || '',
         createdAt: user.created_at,

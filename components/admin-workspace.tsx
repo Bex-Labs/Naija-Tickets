@@ -21,6 +21,8 @@ import { AdminGuestOrders } from '@/components/admin-guest-orders';
 import { AdminSettings } from '@/components/admin-settings';
 import { AdminSignOut } from '@/components/admin-sign-out';
 import { AdminUserDirectory } from '@/components/admin-user-directory';
+import { AdminOrganiserVerification } from '@/components/admin-organiser-verification';
+import { VerifiedOrganiserBadge } from '@/components/verified-organiser-badge';
 import type { OrganiserEvent } from '@/lib/organiser-types';
 
 type Tab =
@@ -52,7 +54,7 @@ export function AdminWorkspace() {
       setEvents(result.events || []);
     };
     void loadEvents();
-  }, []);
+  }, [tab]);
 
   const decideEvent = async (id: string, approved: boolean) => {
     setReviewingId(id);
@@ -226,7 +228,10 @@ export function AdminWorkspace() {
           {tab === 'customers' && <AdminUserDirectory accountKind="customer" />}
           {tab === 'guests' && <AdminGuestOrders />}
           {tab === 'organisers' && (
-            <AdminUserDirectory accountKind="organiser" />
+            <>
+              <AdminUserDirectory accountKind="organiser" />
+              <AdminOrganiserVerification />
+            </>
           )}
           {tab === 'admins' && <AdminAccounts />}
 
@@ -260,6 +265,12 @@ export function AdminWorkspace() {
                           <h2 className="mt-2 text-xl font-black">
                             {event.title}
                           </h2>
+                          <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-600">
+                            {event.organiserDisplayName}
+                            <VerifiedOrganiserBadge
+                              verified={event.organiserVerified}
+                            />
+                          </p>
                           <p className="mt-2 text-sm text-slate-500">
                             {event.category} · {event.city} · {event.date}
                           </p>
@@ -285,12 +296,20 @@ export function AdminWorkspace() {
                           </button>
                           <button
                             type="button"
-                            disabled={reviewingId === event.id}
+                            disabled={
+                              reviewingId === event.id ||
+                              !event.organiserVerified
+                            }
                             onClick={() => void decideEvent(event.id, true)}
                             className="inline-flex min-h-11 items-center gap-2 bg-emerald-500 px-4 text-sm font-bold text-emerald-950"
                           >
                             <Check className="h-4 w-4" /> Publish
                           </button>
+                          {!event.organiserVerified && (
+                            <span className="self-center text-xs text-amber-800">
+                              Verify organiser first
+                            </span>
+                          )}
                         </div>
                       )}
                       {event.status === 'published' && (

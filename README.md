@@ -100,6 +100,10 @@ Checkout uses a Paystack subaccount split when an organiser has connected a payo
 
 The organiser **Payouts** view shows recorded payout amounts, status, reference, settlement period and relevant dates. Its reconciliation uses verified sales, completed refunds and recorded payout deductions, and is restricted to the signed-in organiser's memberships. The `payouts` table is a manual payout ledger; Paystack split settlement is not confirmed by this ledger. No automatic transfer-status sync or administrator payout-entry workflow exists yet, so a missing payout record is an unassigned estimate rather than proof of unpaid funds. An administrator must reconcile and record transfers before marking them paid.
 
+### Organiser verification
+
+Individual organisers submit a legal name and 11-digit NIN; organisations submit a legal name and CAC registration number from Settings. The form displays the relevant official agency image. The private verification record is available only through authenticated organiser and administrator routes. Administrators review it from **Organisers**, record a decision and note, and may revoke verification. A persistent in-app alert tells the organiser about the decision until dismissed. A green tick appears beside the organiser's name only while verified. New event publication is blocked in PostgreSQL until the organiser is verified; existing published events remain visible. Changing an organiser's name, email, phone or account type removes verification until a new review. Number format checks are not automatic NIMC or CAC registry verification; administrators must confirm identity before approval.
+
 ### Guest purchase privacy
 
 The administrator's **Guest buyers** section lists guest purchases with their contact details, event, reference, status, amount, date and ticket count. Search is available across those fields. Personal-data removal requires the current administrator password and an explicit `ERASE` confirmation.

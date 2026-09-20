@@ -19,6 +19,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { OrganiserPayoutSettings } from '@/components/organiser-payout-settings';
+import { OrganiserVerification } from '@/components/organiser-verification';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 type OrganiserSettingsData = {
@@ -452,6 +453,7 @@ export function OrganiserSettings() {
         </Button>
       </form>
 
+      <OrganiserVerification />
       <OrganiserPayoutSettings />
 
       <form

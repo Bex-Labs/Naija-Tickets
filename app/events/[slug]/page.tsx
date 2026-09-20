@@ -7,6 +7,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { EventShareButton } from '@/components/event-share-button';
+import { VerifiedOrganiserBadge } from '@/components/verified-organiser-badge';
 import { SiteFooter, SiteHeader } from '@/components/site-header';
 import { TicketSelector } from '@/components/ticket-selector';
 import { getPublishedEventBySlug } from '@/lib/supabase/public-events-server';
@@ -181,7 +182,10 @@ export default async function EventDetails({ params }: Props) {
                 </span>
               )}
               <div className="min-w-0">
-                <p className="font-black">{event.organiser}</p>
+                <p className="flex items-center gap-1.5 font-black">
+                  {event.organiser}
+                  <VerifiedOrganiserBadge verified={event.organiserVerified} />
+                </p>
                 {event.organiserAbout && (
                   <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
                     {event.organiserAbout}

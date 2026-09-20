@@ -1,6 +1,7 @@
 import { ArrowUpRight, MapPin } from 'lucide-react';
 import type { Event } from '@/lib/events';
 import { eventPrice, formatNaira } from '@/lib/events';
+import { VerifiedOrganiserBadge } from '@/components/verified-organiser-badge';
 
 export function EventCard({
   event,
@@ -48,6 +49,10 @@ export function EventCard({
         >
           {event.title}
         </h3>
+        <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-slate-600">
+          {event.organiser}
+          <VerifiedOrganiserBadge verified={event.organiserVerified} />
+        </p>
         {!compact && (
           <p className="mt-2 flex items-center gap-2 text-sm text-slate-600">
             <MapPin className="h-4 w-4 shrink-0" />

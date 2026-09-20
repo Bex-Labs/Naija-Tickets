@@ -18,6 +18,7 @@ import { OrganiserPromoCodes } from '@/components/organiser-promo-codes';
 import { OrganiserAttendees } from '@/components/organiser-attendees';
 import { AccountSignOut } from '@/components/account-sign-out';
 import { OrganiserSettings } from '@/components/organiser-settings';
+import { OrganiserVerificationAlert } from '@/components/organiser-verification-alert';
 import {
   OrganiserEventEditor,
   type EventEditorValue,
@@ -216,6 +217,9 @@ export function OrganiserWorkspace() {
           </nav>
         </aside>
         <section className="min-w-0 p-5 sm:p-8 lg:p-10">
+          <OrganiserVerificationAlert
+            onOpenSettings={() => setView('settings')}
+          />
           {view === 'overview' && (
             <div className="animate-rise">
               <p className="eyebrow">Good morning</p>
