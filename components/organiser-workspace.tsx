@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   Pencil,
   Plus,
+  Wallet,
   Settings,
   Ticket,
   Users,
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { OrganiserSalesAnalytics } from '@/components/organiser-sales-analytics';
+import { OrganiserPayouts } from '@/components/organiser-payouts';
 import { OrganiserPromoCodes } from '@/components/organiser-promo-codes';
 import { OrganiserAttendees } from '@/components/organiser-attendees';
 import { AccountSignOut } from '@/components/account-sign-out';
@@ -29,7 +31,8 @@ type View =
   | 'editor'
   | 'settings'
   | 'attendees'
-  | 'promos';
+  | 'promos'
+  | 'payouts';
 type OrganiserProfile = { name: string; description: string };
 
 function blankEvent(profile?: OrganiserProfile): EventEditorValue {
@@ -160,6 +163,7 @@ export function OrganiserWorkspace() {
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'events', label: 'My events', icon: CalendarDays },
     { id: 'promos', label: 'Promo codes', icon: Tag },
+    { id: 'payouts', label: 'Payouts', icon: Wallet },
     { id: 'attendees', label: 'Attendees', icon: Users },
     { id: 'editor', label: 'Create event', icon: Plus },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -348,6 +352,7 @@ export function OrganiserWorkspace() {
             />
           )}
           {view === 'promos' && <OrganiserPromoCodes events={events} />}
+          {view === 'payouts' && <OrganiserPayouts />}
           {view === 'settings' && <OrganiserSettings />}
         </section>
       </div>

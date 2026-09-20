@@ -96,9 +96,9 @@ Orders retain the original `subtotal_kobo` and a separate `discount_kobo`; the p
 
 ### Organiser settlement
 
-Paystack currently settles the complete checkout charge into the platform owner's Paystack account. The order stores the organiser's ticket subtotal and the separately calculated platform service fee. Under the current buyer-fee model, the service fee is platform revenue; the organiser's starting balance is the paid ticket subtotal less its recorded promo discount. Approved refunds, chargebacks and any disclosed settlement deductions reduce the amount due before the administrator records a payout.
+Checkout uses a Paystack subaccount split when an organiser has connected a payout account; otherwise the charge goes to the platform Paystack account. The buyer service fee is platform revenue. The organiser's ticket proceeds start with verified ticket sales after promo discounts and completed refunds, excluding buyer service fees.
 
-The existing `payouts` table stores a settlement period, gross ticket sales, fees, refunds, net amount and payout status. Automatic bank-recipient creation and Paystack Transfers are intentionally not enabled yet, so the administrator must reconcile the sales period, pay the organiser outside the app and mark the payout record paid. Before launch, add verified organiser bank details, transfer-recipient provisioning, approval controls, Paystack transfer webhooks and a complete payout audit trail if in-app automated settlement is required.
+The organiser **Payouts** view shows recorded payout amounts, status, reference, settlement period and relevant dates. Its reconciliation uses verified sales, completed refunds and recorded payout deductions, and is restricted to the signed-in organiser's memberships. The `payouts` table is a manual payout ledger; Paystack split settlement is not confirmed by this ledger. No automatic transfer-status sync or administrator payout-entry workflow exists yet, so a missing payout record is an unassigned estimate rather than proof of unpaid funds. An administrator must reconcile and record transfers before marking them paid.
 
 ### Guest purchase privacy
 
