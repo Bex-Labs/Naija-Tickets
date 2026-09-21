@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
+import {
+  MAX_CHECKOUT_TICKET_TYPES,
+  UUID_PATTERN,
+  validReservationItem,
+} from '@/lib/checkout-reservation-validation';
 import { promoCodePattern } from '@/lib/promo-codes';
 import { sha256Hex } from '@/lib/paystack';
 import {
   getAuthenticatedUser,
   getSupabaseAdminClient,
 } from '@/lib/supabase/server';
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type ReservationItem = {
   ticketTypeId?: unknown;
@@ -42,25 +44,6 @@ function createCheckoutToken() {
   ).join('');
 }
 
-function validAttendees(value: unknown, quantity: number) {
-  if (!Array.isArray(value) || value.length !== quantity) return false;
-  return value.every((attendee) => {
-    if (!attendee || typeof attendee !== 'object') return false;
-    const fields = attendee as Record<string, unknown>;
-    return (
-      typeof fields.name === 'string' &&
-      fields.name.trim().length >= 2 &&
-      fields.name.trim().length <= 120 &&
-      typeof fields.email === 'string' &&
-      fields.email.length <= 254 &&
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email.trim()) &&
-      typeof fields.phone === 'string' &&
-      fields.phone.trim().length >= 7 &&
-      fields.phone.trim().length <= 40
-    );
-  });
-}
-
 export async function POST(request: Request) {
   const user = await getAuthenticatedUser(request);
 
@@ -92,27 +75,24 @@ export async function POST(request: Request) {
   if (
     typeof values.eventId !== 'string' ||
     !UUID_PATTERN.test(values.eventId) ||
-    !Array.isArray(values.items) ||
-    !validPurchaser(values.purchaser)
+    !Array.isArray(values.items)
   ) {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }
-  if (!values.items.length || values.items.length > 10) {
+  if (!validPurchaser(values.purchaser)) {
+    return NextResponse.json(
+      { error: 'Check the first attendee’s name, email and phone number.' },
+      { status: 400 },
+    );
+  }
+  if (!values.items.length || values.items.length > MAX_CHECKOUT_TICKET_TYPES) {
     return NextResponse.json(
       { error: 'Choose at least one valid ticket type.' },
       { status: 400 },
     );
   }
   const items = values.items as ReservationItem[];
-  const valid = items.every(
-    (item) =>
-      typeof item.ticketTypeId === 'string' &&
-      UUID_PATTERN.test(item.ticketTypeId) &&
-      Number.isSafeInteger(item.quantity) &&
-      Number(item.quantity) > 0 &&
-      Number(item.quantity) <= 6 &&
-      validAttendees(item.attendees, Number(item.quantity)),
-  );
+  const valid = items.every(validReservationItem);
   if (!valid) {
     return NextResponse.json(
       { error: 'Check the ticket quantities and attendee details.' },

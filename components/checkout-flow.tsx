@@ -356,6 +356,7 @@ export function CheckoutFlow({
                   id={`${admission.key}-name`}
                   required
                   minLength={2}
+                  maxLength={120}
                   autoComplete="name"
                   value={attendees[admission.key]?.name || ''}
                   onChange={(event) =>
@@ -375,6 +376,8 @@ export function CheckoutFlow({
                   id={`${admission.key}-email`}
                   required
                   type="email"
+                  maxLength={254}
+                  pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
                   autoComplete="email"
                   value={attendees[admission.key]?.email || ''}
                   onChange={(event) =>
@@ -394,6 +397,8 @@ export function CheckoutFlow({
                   id={`${admission.key}-phone`}
                   required
                   type="tel"
+                  minLength={7}
+                  maxLength={40}
                   autoComplete="tel"
                   value={attendees[admission.key]?.phone || ''}
                   onChange={(event) =>
