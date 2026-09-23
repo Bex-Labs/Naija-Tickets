@@ -13,6 +13,10 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { GoogleAuthButton } from '@/components/google-auth-button';
 import { Input } from '@/components/ui/input';
+import {
+  accountHomeFromMetadata,
+  authenticatedDestination,
+} from '@/lib/auth-destination';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
@@ -46,11 +50,15 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
         const pending = window.localStorage.getItem(
           'naija-tickets-google-profile',
         );
+        let accountHome = accountHomeFromMetadata(
+          data.session.user.user_metadata,
+        );
         if (pending) {
           const profile = JSON.parse(pending) as {
             full_name: string;
             phone: string;
             account_type: 'individual' | 'organisation';
+            account_purpose?: 'customer' | 'organiser';
             organisation_name: string | null;
           };
           const { error: metadataError } = await client.auth.updateUser({
@@ -66,15 +74,13 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
             })
             .eq('id', data.session.user.id);
           if (profileError) throw profileError;
+          accountHome = accountHomeFromMetadata(profile);
           window.localStorage.removeItem('naija-tickets-google-profile');
         }
 
-        setNotice('Google login successful. Opening your workspace...');
-        const requestedPath = params.get('next');
+        setNotice('Google login successful. Opening your account...');
         window.location.replace(
-          requestedPath?.startsWith('/checkout/')
-            ? requestedPath
-            : '/organiser',
+          authenticatedDestination(params.get('next'), accountHome),
         );
       } catch (oauthError) {
         setError(
@@ -96,14 +102,17 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
       const requestedPath = new URLSearchParams(window.location.search).get(
         'next',
       );
-      const next = requestedPath?.startsWith('/checkout/')
-        ? requestedPath
-        : '/organiser';
+      const next = requestedPath
+        ? authenticatedDestination(requestedPath)
+        : null;
+      const callback = new URL('/login', window.location.origin);
+      callback.searchParams.set('oauth', '1');
+      if (next) callback.searchParams.set('next', next);
       const { error: oauthError } =
         await getSupabaseBrowserClient().auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: `${window.location.origin}/login?oauth=1&next=${encodeURIComponent(next)}`,
+            redirectTo: callback.toString(),
           },
         });
       if (oauthError) throw oauthError;
@@ -155,20 +164,21 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
         return;
       }
 
-      const { error: authError } =
+      const { data: authData, error: authError } =
         await getSupabaseBrowserClient().auth.signInWithPassword({
           email: identifier,
           password,
         });
 
       if (authError) throw authError;
-      setNotice('Login successful. Opening your workspace...');
+      setNotice('Login successful. Opening your account...');
       const requestedPath = new URLSearchParams(window.location.search).get(
         'next',
       );
-      window.location.href = requestedPath?.startsWith('/checkout/')
-        ? requestedPath
-        : '/organiser';
+      window.location.href = authenticatedDestination(
+        requestedPath,
+        accountHomeFromMetadata(authData.user.user_metadata),
+      );
     } catch (authError) {
       setError(
         authError instanceof Error
@@ -267,14 +277,35 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
         </div>
       </div>
       {isSignup && (
-        <label className="flex gap-3 text-sm leading-6 text-slate-600">
+        <div className="flex gap-3 text-sm leading-6 text-slate-600">
           <input
             type="checkbox"
             required
+            aria-label="I agree to the Terms of Service and Privacy Policy"
             className="mt-1 h-4 w-4 accent-emerald-500"
           />
-          I agree to the Terms of Service and Privacy Policy.
-        </label>
+          <p>
+            I agree to the{' '}
+            <a
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold text-emerald-700 underline"
+            >
+              Terms of Service
+            </a>{' '}
+            and{' '}
+            <a
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold text-emerald-700 underline"
+            >
+              Privacy Policy
+            </a>
+            .
+          </p>
+        </div>
       )}
       <Button
         type="submit"

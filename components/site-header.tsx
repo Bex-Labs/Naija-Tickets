@@ -3,6 +3,7 @@
 import { LogOut, Menu, Search, Ticket, X } from 'lucide-react';
 import type { SyntheticEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { accountHomeFromMetadata } from '@/lib/auth-destination';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export function SiteHeader() {
@@ -10,6 +11,7 @@ export function SiteHeader() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [signedIn, setSignedIn] = useState(false);
+  const [accountHome, setAccountHome] = useState('/account');
   const [pathname, setPathname] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -21,10 +23,18 @@ export function SiteHeader() {
     const client = getSupabaseBrowserClient();
     void client.auth.getSession().then(({ data }) => {
       setSignedIn(Boolean(data.session));
+      if (data.session) {
+        setAccountHome(
+          accountHomeFromMetadata(data.session.user.user_metadata),
+        );
+      }
     });
     const { data: listener } = client.auth.onAuthStateChange(
       (_event, session) => {
         setSignedIn(Boolean(session));
+        if (session) {
+          setAccountHome(accountHomeFromMetadata(session.user.user_metadata));
+        }
       },
     );
     return () => {
@@ -138,13 +148,23 @@ export function SiteHeader() {
           </form>
           {signedIn ? (
             <>
-              <a
-                href="/organiser"
-                aria-current={isActive('/organiser') ? 'page' : undefined}
-                className={`inline-flex min-h-11 items-center border-b-2 px-1 text-sm font-bold transition ${isActive('/organiser') ? 'border-emerald-500 text-emerald-800' : 'border-transparent hover:text-emerald-600'}`}
-              >
-                Organiser workspace
-              </a>
+              {accountHome === '/account' ? (
+                <a
+                  href="/account"
+                  aria-current={isActive('/account') ? 'page' : undefined}
+                  className={`inline-flex min-h-11 items-center border-b-2 px-1 text-sm font-bold transition ${isActive('/account') ? 'border-emerald-500 text-emerald-800' : 'border-transparent hover:text-emerald-600'}`}
+                >
+                  My tickets
+                </a>
+              ) : (
+                <a
+                  href="/organiser"
+                  aria-current={isActive('/organiser') ? 'page' : undefined}
+                  className={`inline-flex min-h-11 items-center border-b-2 px-1 text-sm font-bold transition ${isActive('/organiser') ? 'border-emerald-500 text-emerald-800' : 'border-transparent hover:text-emerald-600'}`}
+                >
+                  Organiser workspace
+                </a>
+              )}
               <button
                 type="button"
                 onClick={signOut}
@@ -231,10 +251,12 @@ export function SiteHeader() {
             <div className="mt-2 grid gap-2">
               <a
                 className="bg-emerald-100 px-3 py-3 text-center font-bold text-emerald-900"
-                href="/organiser"
-                aria-current={isActive('/organiser') ? 'page' : undefined}
+                href={accountHome}
+                aria-current={isActive(accountHome) ? 'page' : undefined}
               >
-                Organiser workspace
+                {accountHome === '/account'
+                  ? 'My tickets'
+                  : 'Organiser workspace'}
               </a>
               <button
                 type="button"
@@ -359,6 +381,18 @@ export function SiteFooter() {
             href="/about"
           >
             About us
+          </a>
+          <a
+            className="inline-flex min-h-11 items-center px-2 hover:text-emerald-400"
+            href="/terms"
+          >
+            Terms
+          </a>
+          <a
+            className="inline-flex min-h-11 items-center px-2 hover:text-emerald-400"
+            href="/privacy"
+          >
+            Privacy
           </a>
           <a
             className="inline-flex min-h-11 items-center px-2 hover:text-emerald-400"

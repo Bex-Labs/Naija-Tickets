@@ -20,6 +20,9 @@ export async function organiserIdsForUser(userId: string) {
 }
 
 export async function ensureOrganiser(user: User) {
+  if (user.user_metadata?.account_purpose === 'customer') {
+    throw new Error('An organiser account is required.');
+  }
   const client = getSupabaseAdminClient();
   const existing = await organiserIdsForUser(user.id);
   if (existing[0]) return existing[0];

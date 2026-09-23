@@ -3,6 +3,7 @@
 import { LockKeyhole } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { OrganiserWorkspace } from '@/components/organiser-workspace';
+import { accountHomeFromMetadata } from '@/lib/auth-destination';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 type AccessState = 'loading' | 'signed-out' | 'signed-in';
@@ -14,11 +15,25 @@ export function OrganiserAccess() {
     const client = getSupabaseBrowserClient();
 
     void client.auth.getSession().then(({ data }) => {
+      if (
+        data.session &&
+        accountHomeFromMetadata(data.session.user.user_metadata) === '/account'
+      ) {
+        window.location.replace('/account');
+        return;
+      }
       setAccess(data.session ? 'signed-in' : 'signed-out');
     });
 
     const { data: listener } = client.auth.onAuthStateChange(
       (_event, session) => {
+        if (
+          session &&
+          accountHomeFromMetadata(session.user.user_metadata) === '/account'
+        ) {
+          window.location.replace('/account');
+          return;
+        }
         setAccess(session ? 'signed-in' : 'signed-out');
       },
     );

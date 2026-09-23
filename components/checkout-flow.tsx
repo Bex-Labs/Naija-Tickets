@@ -10,9 +10,10 @@ import {
   TicketCheck,
 } from 'lucide-react';
 import type { SyntheticEvent } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { accountHomeFromMetadata } from '@/lib/auth-destination';
 import { formatNaira } from '@/lib/events';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
@@ -64,6 +65,12 @@ export function CheckoutFlow({
   );
   const [error, setError] = useState('');
   const [promoCode, setPromoCode] = useState('');
+  const [accountPrefill, setAccountPrefill] = useState('');
+  const [accountState, setAccountState] = useState<
+    'checking' | 'guest' | 'signed-in'
+  >('checking');
+  const [checkoutLoginUrl, setCheckoutLoginUrl] = useState('/login');
+  const [signedInCustomer, setSignedInCustomer] = useState(false);
   const [reservation, setReservation] = useState<{
     orderId: string;
     reference: string;
@@ -75,6 +82,51 @@ export function CheckoutFlow({
     discountKobo: number;
     promoCode: string | null;
   } | null>(null);
+
+  useEffect(() => {
+    const firstAdmission = admissions[0];
+    if (!firstAdmission) return;
+    let active = true;
+    void (async () => {
+      const client = getSupabaseBrowserClient();
+      const { data } = await client.auth.getSession();
+      const user = data.session?.user;
+      if (!user || !active) {
+        if (active) {
+          setAccountState('guest');
+          setCheckoutLoginUrl(
+            `/login?next=${encodeURIComponent(`${window.location.pathname}${window.location.search}`)}`,
+          );
+        }
+        return;
+      }
+      const { data: profile } = await client
+        .from('profiles')
+        .select('full_name,phone')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (!active) return;
+      const name = profile?.full_name || user.user_metadata.full_name || '';
+      const email = user.email || '';
+      const phone = profile?.phone || user.user_metadata.phone || '';
+      setAttendees((current) => ({
+        ...current,
+        [firstAdmission.key]: {
+          name: current[firstAdmission.key]?.name || name,
+          email: current[firstAdmission.key]?.email || email,
+          phone: current[firstAdmission.key]?.phone || phone,
+        },
+      }));
+      setAccountPrefill(email);
+      setSignedInCustomer(
+        accountHomeFromMetadata(user.user_metadata) === '/account',
+      );
+      setAccountState('signed-in');
+    })();
+    return () => {
+      active = false;
+    };
+  }, [admissions]);
 
   const updateAttendee = (key: string, field: keyof Attendee, value: string) =>
     setAttendees((current) => ({
@@ -338,6 +390,24 @@ export function CheckoutFlow({
             Add every attendee on this page. These details will be used on the
             tickets after payment is verified.
           </p>
+          {accountPrefill && (
+            <p className="mt-3 border border-emerald-500/20 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900">
+              Signed in as {accountPrefill}. Your details were added to the
+              first ticket
+              {signedInCustomer
+                ? ', and this purchase will be saved to My tickets.'
+                : '.'}
+            </p>
+          )}
+          {accountState === 'guest' && (
+            <p className="mt-3 border border-amber-400/30 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950">
+              <a href={checkoutLoginUrl} className="font-black underline">
+                Log in before checkout
+              </a>{' '}
+              to prefill your details and save this purchase and its tickets to
+              your account.
+            </p>
+          )}
         </div>
         <div className="mt-8 space-y-4">
           {admissions.map((admission, index) => (

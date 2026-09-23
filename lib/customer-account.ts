@@ -1,0 +1,144 @@
+export type CustomerTicket = {
+  id: string;
+  attendeeName: string;
+  displayCode: string;
+  status: string;
+  issuedAt: string;
+  ticketType: string;
+};
+
+export type CustomerPurchase = {
+  id: string;
+  reference: string;
+  status: string;
+  currency: string;
+  subtotalKobo: number;
+  discountKobo: number;
+  feeKobo: number;
+  totalKobo: number;
+  createdAt: string;
+  paidAt: string | null;
+  event: {
+    title: string;
+    slug: string;
+    startsAt: string;
+    timezone: string;
+    timezoneLabel: string;
+    venue: string;
+    city: string;
+    image: string;
+  } | null;
+  quantity: number;
+  tickets: CustomerTicket[];
+};
+
+export type CustomerAccount = {
+  profile: { name: string; email: string; phone: string };
+  purchases: CustomerPurchase[];
+};
+
+type OrderRow = {
+  id: string;
+  reference: string;
+  status: string;
+  currency: string;
+  subtotal_kobo: string | number;
+  discount_kobo?: string | number | null;
+  fee_kobo: string | number;
+  total_kobo: string | number;
+  created_at: string;
+  paid_at: string | null;
+  event_id: string;
+};
+
+type EventRow = {
+  id: string;
+  title: string;
+  slug: string;
+  starts_at: string;
+  timezone: string;
+  timezone_label: string | null;
+  venue_name: string;
+  city: string;
+  image_path: string | null;
+};
+
+type ItemRow = {
+  id: string;
+  order_id: string;
+  quantity: number;
+  ticketType: string;
+};
+
+type TicketRow = {
+  id: string;
+  order_item_id: string;
+  attendee_name: string;
+  display_code: string;
+  status: string;
+  issued_at: string;
+};
+
+export function buildCustomerPurchases(
+  orders: OrderRow[],
+  events: EventRow[],
+  items: ItemRow[],
+  tickets: TicketRow[],
+): CustomerPurchase[] {
+  const eventById = new Map(events.map((event) => [event.id, event]));
+  const itemById = new Map(items.map((item) => [item.id, item]));
+  const itemsByOrder = new Map<string, ItemRow[]>();
+  for (const item of items) {
+    itemsByOrder.set(item.order_id, [
+      ...(itemsByOrder.get(item.order_id) || []),
+      item,
+    ]);
+  }
+  const ticketsByOrder = new Map<string, CustomerTicket[]>();
+  for (const ticket of tickets) {
+    const item = itemById.get(ticket.order_item_id);
+    if (!item) continue;
+    ticketsByOrder.set(item.order_id, [
+      ...(ticketsByOrder.get(item.order_id) || []),
+      {
+        id: ticket.id,
+        attendeeName: ticket.attendee_name,
+        displayCode: ticket.display_code,
+        status: ticket.status,
+        issuedAt: ticket.issued_at,
+        ticketType: item.ticketType,
+      },
+    ]);
+  }
+
+  return orders.map((order) => {
+    const event = eventById.get(order.event_id);
+    const orderItems = itemsByOrder.get(order.id) || [];
+    return {
+      id: order.id,
+      reference: order.reference,
+      status: order.status,
+      currency: order.currency,
+      subtotalKobo: Number(order.subtotal_kobo),
+      discountKobo: Number(order.discount_kobo || 0),
+      feeKobo: Number(order.fee_kobo),
+      totalKobo: Number(order.total_kobo),
+      createdAt: order.created_at,
+      paidAt: order.paid_at,
+      event: event
+        ? {
+            title: event.title,
+            slug: event.slug,
+            startsAt: event.starts_at,
+            timezone: event.timezone || 'Africa/Lagos',
+            timezoneLabel: event.timezone_label || 'WAT',
+            venue: event.venue_name,
+            city: event.city,
+            image: event.image_path || '',
+          }
+        : null,
+      quantity: orderItems.reduce((total, item) => total + item.quantity, 0),
+      tickets: ticketsByOrder.get(order.id) || [],
+    };
+  });
+}
