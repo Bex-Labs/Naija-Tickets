@@ -43,9 +43,22 @@ void test('customer purchases include account-linked tickets and totals', () => 
         issued_at: '2026-09-20T10:05:00Z',
       },
     ],
+    [
+      {
+        order_id: 'order-1',
+        status: 'pending',
+        created_at: '2026-09-20T10:01:00Z',
+      },
+      {
+        order_id: 'order-1',
+        status: 'verified',
+        created_at: '2026-09-20T10:05:00Z',
+      },
+    ],
   );
   assert.equal(purchases[0].quantity, 2);
   assert.equal(purchases[0].tickets[0].ticketType, 'VIP');
   assert.equal(purchases[0].totalKobo, 95000);
   assert.equal(purchases[0].event?.slug, 'lagos-live');
+  assert.equal(purchases[0].paymentStatus, 'verified');
 });

@@ -39,9 +39,7 @@ function statusLabel(status: string) {
 }
 
 function PurchaseCard({ purchase }: { purchase: CustomerPurchase }) {
-  const successful = ['paid', 'partially_refunded', 'refunded'].includes(
-    purchase.status,
-  );
+  const successful = ['verified', 'refunded'].includes(purchase.paymentStatus);
   return (
     <article className="overflow-hidden border border-[#241b3f]/10 bg-white shadow-sm">
       <div className="grid md:grid-cols-[11rem_1fr]">
@@ -88,22 +86,22 @@ function PurchaseCard({ purchase }: { purchase: CustomerPurchase }) {
                 {formatAmount(purchase.totalKobo, purchase.currency)}
               </p>
               <span
-                className={`mt-2 inline-block px-2 py-1 text-xs font-bold ${successful ? 'bg-emerald-100 text-emerald-900' : 'bg-[#fff3d8] text-[#241b3f]'}`}
+                className={`mt-2 inline-block px-2 py-1 text-xs font-bold ${successful ? 'bg-transparent text-emerald-800' : 'bg-[#fff3d8] text-[#241b3f]'}`}
               >
-                {statusLabel(purchase.status)}
+                Payment {statusLabel(purchase.paymentStatus)}
               </span>
             </div>
           </div>
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#241b3f]/10 pt-4 text-xs text-slate-500">
-            <span>Order {purchase.reference}</span>
-            <span>{formatDate(purchase.paidAt || purchase.createdAt)}</span>
+            <span>Order reference: {purchase.reference}</span>
+            <span>Order date: {formatDate(purchase.createdAt)}</span>
           </div>
           {purchase.tickets.length > 0 && (
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {purchase.tickets.map((ticket) => (
                 <div
                   key={ticket.id}
-                  className="border border-emerald-500/20 bg-emerald-50 p-4"
+                  className="border border-emerald-500/20 bg-transparent p-4"
                 >
                   <p className="text-xs font-bold text-emerald-800">
                     {ticket.ticketType} · {statusLabel(ticket.status)}
@@ -257,6 +255,15 @@ export function CustomerDashboard() {
         </div>
       </section>
       <section className="mx-auto max-w-7xl px-5 py-12 md:px-10 md:py-16">
+        <div className="mb-7">
+          <p className="eyebrow">Orders</p>
+          <h2 className="mt-2 text-3xl font-black tracking-[-.03em]">
+            Purchase history
+          </h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Review your previous ticket transactions and payment status.
+          </p>
+        </div>
         {account.purchases.length ? (
           <div className="space-y-5">
             {account.purchases.map((purchase) => (

@@ -12,6 +12,7 @@ function event(slug: string, date: string, featured = true): Event {
     slug,
     title: slug,
     organiser: 'Organiser',
+    organiserVerified: true,
     city: 'Lagos',
     state: 'Lagos',
     venue: 'Venue',
@@ -52,6 +53,14 @@ void test('deduplicates featured records and respects the display limit', () => 
     ['first'],
   );
   assert.deepEqual(selectFeaturedEvents([], 3), []);
+});
+
+void test('excludes unverified organiser events from featured placement', () => {
+  const unverified = {
+    ...event('unverified', '2026-09-20'),
+    organiserVerified: false,
+  };
+  assert.deepEqual(selectFeaturedEvents([unverified]), []);
 });
 
 void test('does not repeat displayed featured events in the upcoming list', () => {

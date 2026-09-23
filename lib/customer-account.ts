@@ -11,6 +11,7 @@ export type CustomerPurchase = {
   id: string;
   reference: string;
   status: string;
+  paymentStatus: string;
   currency: string;
   subtotalKobo: number;
   discountKobo: number;
@@ -79,11 +80,18 @@ type TicketRow = {
   issued_at: string;
 };
 
+type PaymentRow = {
+  order_id: string;
+  status: string;
+  created_at: string;
+};
+
 export function buildCustomerPurchases(
   orders: OrderRow[],
   events: EventRow[],
   items: ItemRow[],
   tickets: TicketRow[],
+  payments: PaymentRow[],
 ): CustomerPurchase[] {
   const eventById = new Map(events.map((event) => [event.id, event]));
   const itemById = new Map(items.map((item) => [item.id, item]));
@@ -95,6 +103,13 @@ export function buildCustomerPurchases(
     ]);
   }
   const ticketsByOrder = new Map<string, CustomerTicket[]>();
+  const latestPaymentByOrder = new Map<string, PaymentRow>();
+  for (const payment of payments) {
+    const current = latestPaymentByOrder.get(payment.order_id);
+    if (!current || payment.created_at > current.created_at) {
+      latestPaymentByOrder.set(payment.order_id, payment);
+    }
+  }
   for (const ticket of tickets) {
     const item = itemById.get(ticket.order_item_id);
     if (!item) continue;
@@ -118,6 +133,9 @@ export function buildCustomerPurchases(
       id: order.id,
       reference: order.reference,
       status: order.status,
+      paymentStatus:
+        latestPaymentByOrder.get(order.id)?.status ||
+        (order.status === 'paid' ? 'verified' : 'not_started'),
       currency: order.currency,
       subtotalKobo: Number(order.subtotal_kobo),
       discountKobo: Number(order.discount_kobo || 0),

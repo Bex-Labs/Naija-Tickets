@@ -45,7 +45,7 @@ export async function GET(request: Request) {
       listEvents(user.id),
       client
         .from('organisers')
-        .select('name,description')
+        .select('name,description,verified_at')
         .eq('id', organiserId)
         .single(),
     ]);
@@ -55,6 +55,7 @@ export async function GET(request: Request) {
       organiser: {
         name: organiserResult.data.name,
         description: organiserResult.data.description || '',
+        verified: Boolean(organiserResult.data.verified_at),
       },
     });
   } catch (error) {
@@ -185,6 +186,8 @@ export async function POST(request: Request) {
       'sales end',
       'event end',
       'Event not found',
+      'Unverified organiser',
+      'Unverified organisers',
     ].some((term) => message.toLowerCase().includes(term.toLowerCase()))
       ? message
       : 'We could not save this event. Please try again.';

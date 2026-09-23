@@ -14,6 +14,7 @@ export function selectFeaturedEvents(events: Event[], limit = 3) {
     .filter((event) => {
       if (
         !event.featured ||
+        event.organiserVerified !== true ||
         (event.id ? seenIds.has(event.id) : false) ||
         seenSlugs.has(event.slug)
       ) {

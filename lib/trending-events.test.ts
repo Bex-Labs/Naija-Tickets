@@ -14,6 +14,7 @@ function event(
     slug,
     title: slug,
     organiser: 'Organiser',
+    organiserVerified: true,
     city: 'Lagos',
     state: 'Lagos',
     venue: 'Venue',
@@ -78,4 +79,12 @@ void test('deduplicates events and respects the display limit', () => {
     ).map((item) => item.slug),
     ['first'],
   );
+});
+
+void test('excludes unverified organiser events from trending placement', () => {
+  const unverified = {
+    ...event('unverified', '2026-09-20', 500),
+    organiserVerified: false,
+  };
+  assert.deepEqual(selectTrendingEvents([unverified], 4, '2026-09-17'), []);
 });

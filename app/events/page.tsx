@@ -102,12 +102,15 @@ export default function EventsPage() {
           const matchesDate =
             (!filters.dateFrom || event.date >= filters.dateFrom) &&
             (!filters.dateTo || event.date <= filters.dateTo);
+          const matchesTrendingEligibility =
+            filters.sort !== 'trending' || event.organiserVerified === true;
           return (
             matchesSearch &&
             (!filters.city || event.city === filters.city) &&
             (!filters.category || event.category === filters.category) &&
             matchesPrice &&
-            matchesDate
+            matchesDate &&
+            matchesTrendingEligibility
           );
         })
         .sort((a, b) => {

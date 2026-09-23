@@ -34,7 +34,11 @@ type View =
   | 'attendees'
   | 'promos'
   | 'payouts';
-type OrganiserProfile = { name: string; description: string };
+type OrganiserProfile = {
+  name: string;
+  description: string;
+  verified: boolean;
+};
 
 function blankEvent(profile?: OrganiserProfile): EventEditorValue {
   return {
@@ -198,28 +202,41 @@ export function OrganiserWorkspace() {
             className="grid grid-cols-2 gap-2 md:grid-cols-1"
             aria-label="Organiser navigation"
           >
-            {nav.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => {
-                  setView(id);
-                  if (id === 'editor') {
-                    setEditingId(null);
-                    setEventForm(blankEvent(organiserProfile));
-                  }
-                }}
-                className={`flex items-center gap-3 px-3 py-3 text-left text-sm font-bold transition ${view === id ? 'bg-emerald-500 text-emerald-950' : 'text-slate-600 hover:bg-emerald-50 hover:text-[#241b3f]'}`}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </button>
-            ))}
+            {nav
+              .filter(({ id }) => id !== 'promos' || organiserProfile?.verified)
+              .map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  onClick={() => {
+                    setView(id);
+                    if (id === 'editor') {
+                      setEditingId(null);
+                      setEventForm(blankEvent(organiserProfile));
+                    }
+                  }}
+                  className={`flex items-center gap-3 px-3 py-3 text-left text-sm font-bold transition ${view === id ? 'bg-emerald-500 text-emerald-950' : 'text-slate-600 hover:bg-emerald-50 hover:text-[#241b3f]'}`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              ))}
           </nav>
         </aside>
         <section className="min-w-0 p-5 sm:p-8 lg:p-10">
           <OrganiserVerificationAlert
             onOpenSettings={() => setView('settings')}
           />
+          {organiserProfile?.verified === false && (
+            <aside className="mb-6 border border-amber-400/40 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+              <p className="font-black">Unverified organiser limits</p>
+              <p className="mt-1">
+                You can create up to 2 active events with free tickets only,
+                with a maximum of 100 tickets per event and 1 administrator.
+                Promo codes, featured placement and trending placement become
+                available after verification.
+              </p>
+            </aside>
+          )}
           {view === 'overview' && (
             <div className="animate-rise">
               <p className="eyebrow">Good morning</p>
@@ -355,7 +372,9 @@ export function OrganiserWorkspace() {
               initialEventId={attendeeEventId}
             />
           )}
-          {view === 'promos' && <OrganiserPromoCodes events={events} />}
+          {view === 'promos' && organiserProfile?.verified && (
+            <OrganiserPromoCodes events={events} />
+          )}
           {view === 'payouts' && <OrganiserPayouts />}
           {view === 'settings' && <OrganiserSettings />}
         </section>

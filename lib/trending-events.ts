@@ -18,7 +18,7 @@ export function selectTrendingEvents(
   const seenSlugs = new Set<string>();
 
   return [...events]
-    .filter((event) => event.date >= today)
+    .filter((event) => event.date >= today && event.organiserVerified === true)
     .sort(compareTrendingEvents)
     .filter((event) => {
       if (

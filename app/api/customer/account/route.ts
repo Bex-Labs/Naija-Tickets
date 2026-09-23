@@ -55,6 +55,7 @@ export async function GET(request: Request) {
     const [
       { data: events, error: eventsError },
       { data: rawItems, error: itemsError },
+      { data: payments, error: paymentsError },
     ] = await Promise.all([
       eventIds.length
         ? admin
@@ -70,9 +71,17 @@ export async function GET(request: Request) {
             .select('id,order_id,quantity,ticket_types(name)')
             .in('order_id', orderIds)
         : Promise.resolve({ data: [], error: null }),
+      orderIds.length
+        ? admin
+            .from('payments')
+            .select('order_id,status,created_at')
+            .in('order_id', orderIds)
+            .order('created_at', { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
     ]);
     if (eventsError) throw eventsError;
     if (itemsError) throw itemsError;
+    if (paymentsError) throw paymentsError;
     const items = (
       (rawItems || []) as unknown as Array<{
         id: string;
@@ -109,6 +118,7 @@ export async function GET(request: Request) {
         events || [],
         items,
         tickets || [],
+        payments || [],
       ),
     };
     return respond(account);

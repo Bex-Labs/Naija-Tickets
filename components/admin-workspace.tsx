@@ -296,10 +296,7 @@ export function AdminWorkspace() {
                           </button>
                           <button
                             type="button"
-                            disabled={
-                              reviewingId === event.id ||
-                              !event.organiserVerified
-                            }
+                            disabled={reviewingId === event.id}
                             onClick={() => void decideEvent(event.id, true)}
                             className="inline-flex min-h-11 items-center gap-2 bg-emerald-500 px-4 text-sm font-bold text-emerald-950"
                           >
@@ -307,7 +304,8 @@ export function AdminWorkspace() {
                           </button>
                           {!event.organiserVerified && (
                             <span className="self-center text-xs text-amber-800">
-                              Verify organiser first
+                              Unverified: only free events with up to 100
+                              tickets can be published
                             </span>
                           )}
                         </div>
@@ -317,7 +315,10 @@ export function AdminWorkspace() {
                           <button
                             type="button"
                             aria-pressed={event.featured}
-                            disabled={reviewingId === event.id}
+                            disabled={
+                              reviewingId === event.id ||
+                              !event.organiserVerified
+                            }
                             onClick={() =>
                               void setFeatured(event.id, !event.featured)
                             }

@@ -12,12 +12,28 @@ const respond = (body: unknown, status = 200) =>
     headers: { 'Cache-Control': 'private, no-store', Vary: 'Authorization' },
   });
 
+async function verifiedOrganiserIds(userId: string) {
+  const ids = await organiserIdsForUser(userId);
+  if (!ids.length) return [];
+  const { data, error } = await getSupabaseAdminClient()
+    .from('organisers')
+    .select('id')
+    .in('id', ids)
+    .not('verified_at', 'is', null);
+  if (error) throw error;
+  return (data || []).map((organiser) => organiser.id as string);
+}
+
 export async function GET(request: Request) {
   try {
     const user = await getAuthenticatedUser(request);
     if (!user) return respond({ error: 'Authentication required.' }, 401);
-    const ids = await organiserIdsForUser(user.id);
-    if (!ids.length) return respond({ promoCodes: [] });
+    const ids = await verifiedOrganiserIds(user.id);
+    if (!ids.length)
+      return respond(
+        { error: 'Verify your organiser account to use promo codes.' },
+        403,
+      );
     const { data, error } = await getSupabaseAdminClient()
       .from('promo_codes')
       .select(
@@ -40,6 +56,11 @@ export async function POST(request: Request) {
   try {
     const user = await getAuthenticatedUser(request);
     if (!user) return respond({ error: 'Authentication required.' }, 401);
+    if (!(await verifiedOrganiserIds(user.id)).length)
+      return respond(
+        { error: 'Verify your organiser account to create promo codes.' },
+        403,
+      );
     const input = parsePromoCodeInput(await request.json().catch(() => null));
     if (!input)
       return respond(
@@ -73,6 +94,8 @@ export async function POST(request: Request) {
         return respond({ error: error.message }, 404);
       if (error.message === 'Choose ticket types belonging to this event.')
         return respond({ error: error.message }, 400);
+      if (error.message.includes('Verify your organiser account'))
+        return respond({ error: error.message }, 403);
       throw error;
     }
     return respond({ id: data }, 201);
