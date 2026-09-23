@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { accountHomeFromMetadata } from '@/lib/auth-destination';
 import {
+  buildCustomerSavedEvents,
   buildCustomerPurchases,
   type CustomerAccount,
 } from '@/lib/customer-account';
@@ -31,6 +32,7 @@ export async function GET(request: Request) {
     const [
       { data: profile, error: profileError },
       { data: orders, error: ordersError },
+      { data: savedEvents, error: savedEventsError },
     ] = await Promise.all([
       admin
         .from('profiles')
@@ -45,13 +47,25 @@ export async function GET(request: Request) {
         .eq('customer_id', user.id)
         .order('created_at', { ascending: false })
         .limit(100),
+      admin
+        .from('saved_events')
+        .select('event_id,created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1000),
     ]);
     if (profileError) throw profileError;
     if (ordersError) throw ordersError;
+    if (savedEventsError) throw savedEventsError;
 
     const orderRows = orders || [];
     const orderIds = orderRows.map((order) => order.id);
-    const eventIds = [...new Set(orderRows.map((order) => order.event_id))];
+    const eventIds = [
+      ...new Set([
+        ...orderRows.map((order) => order.event_id),
+        ...(savedEvents || []).map((saved) => saved.event_id),
+      ]),
+    ];
     const [
       { data: events, error: eventsError },
       { data: rawItems, error: itemsError },
@@ -61,7 +75,7 @@ export async function GET(request: Request) {
         ? admin
             .from('events')
             .select(
-              'id,title,slug,starts_at,timezone,timezone_label,venue_name,city,image_path',
+              'id,title,slug,starts_at,timezone,timezone_label,venue_name,city,image_path,status',
             )
             .in('id', eventIds)
         : Promise.resolve({ data: [], error: null }),
@@ -120,6 +134,7 @@ export async function GET(request: Request) {
         tickets || [],
         payments || [],
       ),
+      savedEvents: buildCustomerSavedEvents(savedEvents || [], events || []),
     };
     return respond(account);
   } catch (error) {

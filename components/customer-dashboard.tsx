@@ -3,6 +3,7 @@
 import {
   CalendarDays,
   CircleUserRound,
+  Heart,
   LockKeyhole,
   MapPin,
   RefreshCw,
@@ -10,8 +11,13 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AccountSignOut } from '@/components/account-sign-out';
+import { EventSaveButton } from '@/components/event-save-button';
 import { accountHomeFromMetadata } from '@/lib/auth-destination';
-import type { CustomerAccount, CustomerPurchase } from '@/lib/customer-account';
+import type {
+  CustomerAccount,
+  CustomerPurchase,
+  CustomerSavedEvent,
+} from '@/lib/customer-account';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 const formatAmount = (kobo: number, currency = 'NGN') =>
@@ -124,6 +130,76 @@ function PurchaseCard({ purchase }: { purchase: CustomerPurchase }) {
           )}
         </div>
       </div>
+    </article>
+  );
+}
+
+function SavedEventCard({
+  event,
+  onRemove,
+}: {
+  event: CustomerSavedEvent;
+  onRemove: () => void;
+}) {
+  const content = (
+    <>
+      {event.image ? (
+        <img
+          src={event.image}
+          alt=""
+          className="h-40 w-full object-cover sm:h-full"
+        />
+      ) : (
+        <div className="grid h-32 place-items-center bg-[#fff3d8] text-emerald-700 sm:h-full">
+          <Heart className="h-8 w-8" />
+        </div>
+      )}
+      <div className="p-5">
+        <p className="text-xs font-bold uppercase tracking-[.12em] text-emerald-700">
+          {event.available ? 'Saved event' : 'Currently unavailable'}
+        </p>
+        <h3 className="mt-2 text-xl font-black">{event.title}</h3>
+        {event.startsAt && (
+          <p className="mt-3 flex items-center gap-2 text-xs text-slate-600">
+            <CalendarDays className="h-3.5 w-3.5" />
+            {formatDate(event.startsAt, event.timezone)} {event.timezoneLabel}
+          </p>
+        )}
+        {event.venue && (
+          <p className="mt-2 flex items-center gap-2 text-xs text-slate-600">
+            <MapPin className="h-3.5 w-3.5" />
+            {event.venue}, {event.city}
+          </p>
+        )}
+        {!event.available && (
+          <p className="mt-3 text-sm leading-6 text-slate-500">
+            This event has been removed from sale or is awaiting publication.
+          </p>
+        )}
+      </div>
+    </>
+  );
+
+  return (
+    <article className="relative overflow-hidden border border-[#241b3f]/10 bg-white shadow-sm">
+      <div className="grid sm:grid-cols-[9rem_1fr]">
+        {event.available && event.slug ? (
+          <a href={`/events/${event.slug}`} className="contents">
+            {content}
+          </a>
+        ) : (
+          content
+        )}
+      </div>
+      <EventSaveButton
+        eventId={event.eventId}
+        eventSlug={event.slug}
+        initialSaved
+        className="absolute right-3 top-3"
+        onChange={(saved) => {
+          if (!saved) onRemove();
+        }}
+      />
     </article>
   );
 }
@@ -256,6 +332,46 @@ export function CustomerDashboard() {
       </section>
       <section className="mx-auto max-w-7xl px-5 py-12 md:px-10 md:py-16">
         <div className="mb-7">
+          <p className="eyebrow">Considering</p>
+          <h2 className="mt-2 text-3xl font-black tracking-[-.03em]">
+            Saved events
+          </h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Keep events here while you decide which tickets to buy.
+          </p>
+        </div>
+        {account.savedEvents.length ? (
+          <div className="grid gap-5 lg:grid-cols-2">
+            {account.savedEvents.map((event) => (
+              <SavedEventCard
+                key={event.eventId}
+                event={event}
+                onRemove={() =>
+                  setAccount((current) =>
+                    current
+                      ? {
+                          ...current,
+                          savedEvents: current.savedEvents.filter(
+                            (saved) => saved.eventId !== event.eventId,
+                          ),
+                        }
+                      : current,
+                  )
+                }
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="border border-dashed border-[#241b3f]/15 bg-white p-8 text-center">
+            <Heart className="mx-auto h-8 w-8 text-emerald-600" />
+            <h3 className="mt-4 text-xl font-black">No saved events yet</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              Use the heart button on an event to save it here.
+            </p>
+          </div>
+        )}
+
+        <div className="mb-7 mt-14 border-t border-[#241b3f]/10 pt-12">
           <p className="eyebrow">Orders</p>
           <h2 className="mt-2 text-3xl font-black tracking-[-.03em]">
             Purchase history

@@ -36,6 +36,21 @@ export type CustomerPurchase = {
 export type CustomerAccount = {
   profile: { name: string; email: string; phone: string };
   purchases: CustomerPurchase[];
+  savedEvents: CustomerSavedEvent[];
+};
+
+export type CustomerSavedEvent = {
+  eventId: string;
+  savedAt: string;
+  available: boolean;
+  title: string;
+  slug: string | null;
+  startsAt: string | null;
+  timezone: string;
+  timezoneLabel: string;
+  venue: string;
+  city: string;
+  image: string;
 };
 
 type OrderRow = {
@@ -62,6 +77,12 @@ type EventRow = {
   venue_name: string;
   city: string;
   image_path: string | null;
+  status?: string;
+};
+
+type SavedEventRow = {
+  event_id: string;
+  created_at: string;
 };
 
 type ItemRow = {
@@ -157,6 +178,30 @@ export function buildCustomerPurchases(
         : null,
       quantity: orderItems.reduce((total, item) => total + item.quantity, 0),
       tickets: ticketsByOrder.get(order.id) || [],
+    };
+  });
+}
+
+export function buildCustomerSavedEvents(
+  savedEvents: SavedEventRow[],
+  events: EventRow[],
+): CustomerSavedEvent[] {
+  const eventById = new Map(events.map((event) => [event.id, event]));
+  return savedEvents.map((saved) => {
+    const event = eventById.get(saved.event_id);
+    const available = event?.status === 'published';
+    return {
+      eventId: saved.event_id,
+      savedAt: saved.created_at,
+      available,
+      title: event?.title || 'Event unavailable',
+      slug: available && event ? event.slug : null,
+      startsAt: event?.starts_at || null,
+      timezone: event?.timezone || 'Africa/Lagos',
+      timezoneLabel: event?.timezone_label || 'WAT',
+      venue: event?.venue_name || '',
+      city: event?.city || '',
+      image: event?.image_path || '',
     };
   });
 }

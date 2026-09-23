@@ -7,6 +7,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { EventShareButton } from '@/components/event-share-button';
+import { EventSaveButton } from '@/components/event-save-button';
 import { VerifiedOrganiserBadge } from '@/components/verified-organiser-badge';
 import { SiteFooter, SiteHeader } from '@/components/site-header';
 import { TicketSelector } from '@/components/ticket-selector';
@@ -105,7 +106,16 @@ export default async function EventDetails({ params }: Props) {
                 {event.title}
               </h1>
             </div>
-            <EventShareButton title={event.title} />
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              {event.id && (
+                <EventSaveButton
+                  eventId={event.id}
+                  eventSlug={event.slug}
+                  showLabel
+                />
+              )}
+              <EventShareButton title={event.title} />
+            </div>
           </div>
           <div className="mt-7 grid gap-4 border border-[#241b3f]/10 bg-white p-5 sm:grid-cols-2">
             <div className="flex gap-3">
