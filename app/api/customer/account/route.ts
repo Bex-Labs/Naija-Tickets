@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { accountHomeFromMetadata } from '@/lib/auth-destination';
+import { parseCustomerProfileInput } from '@/lib/customer-profile';
 import {
   buildCustomerSavedEvents,
   buildCustomerPurchases,
@@ -16,18 +17,29 @@ function first<T>(relation: Relation<T>) {
   return Array.isArray(relation) ? relation[0] : relation;
 }
 
+const respond = (body: unknown, status = 200) =>
+  NextResponse.json(body, {
+    status,
+    headers: { 'Cache-Control': 'private, no-store', Vary: 'Authorization' },
+  });
+
+async function customer(request: Request) {
+  const user = await getAuthenticatedUser(request);
+  if (!user)
+    return { response: respond({ error: 'Authentication required.' }, 401) };
+  if (accountHomeFromMetadata(user.user_metadata) !== '/account') {
+    return {
+      response: respond({ error: 'A customer account is required.' }, 403),
+    };
+  }
+  return { user };
+}
+
 export async function GET(request: Request) {
-  const respond = (body: unknown, status = 200) =>
-    NextResponse.json(body, {
-      status,
-      headers: { 'Cache-Control': 'private, no-store', Vary: 'Authorization' },
-    });
   try {
-    const user = await getAuthenticatedUser(request);
-    if (!user) return respond({ error: 'Authentication required.' }, 401);
-    if (accountHomeFromMetadata(user.user_metadata) !== '/account') {
-      return respond({ error: 'A customer account is required.' }, 403);
-    }
+    const auth = await customer(request);
+    if ('response' in auth) return auth.response;
+    const { user } = auth;
     const admin = getSupabaseAdminClient();
     const [
       { data: profile, error: profileError },
@@ -143,5 +155,42 @@ export async function GET(request: Request) {
       { error: 'We could not load your tickets. Please try again.' },
       500,
     );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const auth = await customer(request);
+    if ('response' in auth) return auth.response;
+    const parsed = parseCustomerProfileInput(
+      await request.json().catch(() => null),
+    );
+    if (!parsed.value) return respond({ error: parsed.error }, 400);
+    const { fullName, phone } = parsed.value;
+    const client = getSupabaseAdminClient();
+    const updatedAt = new Date().toISOString();
+    const [profileResult, authResult] = await Promise.all([
+      client
+        .from('profiles')
+        .update({ full_name: fullName, phone, updated_at: updatedAt })
+        .eq('id', auth.user.id)
+        .select('id')
+        .single(),
+      client.auth.admin.updateUserById(auth.user.id, {
+        user_metadata: {
+          ...auth.user.user_metadata,
+          full_name: fullName,
+          phone,
+        },
+      }),
+    ]);
+    if (profileResult.error) throw profileResult.error;
+    if (authResult.error) throw authResult.error;
+    return respond({
+      profile: { name: fullName, email: auth.user.email || '', phone },
+    });
+  } catch (error) {
+    console.error('Unable to update customer profile', error);
+    return respond({ error: 'We could not save your profile.' }, 500);
   }
 }

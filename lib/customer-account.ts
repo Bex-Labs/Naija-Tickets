@@ -33,8 +33,10 @@ export type CustomerPurchase = {
   tickets: CustomerTicket[];
 };
 
+export type CustomerProfile = { name: string; email: string; phone: string };
+
 export type CustomerAccount = {
-  profile: { name: string; email: string; phone: string };
+  profile: CustomerProfile;
   purchases: CustomerPurchase[];
   savedEvents: CustomerSavedEvent[];
 };

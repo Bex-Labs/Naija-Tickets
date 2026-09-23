@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AccountSignOut } from '@/components/account-sign-out';
+import { CustomerProfileForm } from '@/components/customer-profile-form';
 import { EventSaveButton } from '@/components/event-save-button';
 import { accountHomeFromMetadata } from '@/lib/auth-destination';
 import type {
@@ -331,7 +332,16 @@ export function CustomerDashboard() {
         </div>
       </section>
       <section className="mx-auto max-w-7xl px-5 py-12 md:px-10 md:py-16">
-        <div className="mb-7">
+        <CustomerProfileForm
+          profile={account.profile}
+          onSaved={(profile) =>
+            setAccount((current) =>
+              current ? { ...current, profile } : current,
+            )
+          }
+        />
+
+        <div className="mb-7 mt-14 border-t border-[#241b3f]/10 pt-12">
           <p className="eyebrow">Considering</p>
           <h2 className="mt-2 text-3xl font-black tracking-[-.03em]">
             Saved events
