@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Bell,
   CalendarDays,
   CircleUserRound,
   Heart,
@@ -16,6 +17,7 @@ import { EventSaveButton } from '@/components/event-save-button';
 import { accountHomeFromMetadata } from '@/lib/auth-destination';
 import type {
   CustomerAccount,
+  CustomerNotification,
   CustomerPurchase,
   CustomerSavedEvent,
 } from '@/lib/customer-account';
@@ -205,6 +207,46 @@ function SavedEventCard({
   );
 }
 
+function NotificationCard({
+  notification,
+}: {
+  notification: CustomerNotification;
+}) {
+  const content = (
+    <>
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-800">
+        <Bell className="h-4 w-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-black">{notification.title}</span>
+        <span className="mt-1 block text-sm leading-6 text-slate-600">
+          {notification.message}
+        </span>
+        <span className="mt-2 block text-xs text-slate-400">
+          {formatDate(notification.createdAt)}
+        </span>
+      </span>
+      {notification.link && (
+        <span className="shrink-0 text-sm font-black text-emerald-700">
+          Open →
+        </span>
+      )}
+    </>
+  );
+  const className =
+    'flex items-start gap-4 border border-[#241b3f]/10 bg-white p-5 shadow-sm transition';
+  return notification.link ? (
+    <a
+      href={notification.link}
+      className={`${className} hover:border-emerald-400`}
+    >
+      {content}
+    </a>
+  ) : (
+    <article className={className}>{content}</article>
+  );
+}
+
 export function CustomerDashboard() {
   const [account, setAccount] = useState<CustomerAccount | null>(null);
   const [state, setState] = useState<
@@ -340,6 +382,35 @@ export function CustomerDashboard() {
             )
           }
         />
+
+        <div className="mb-7 mt-14 border-t border-[#241b3f]/10 pt-12">
+          <p className="eyebrow">Updates</p>
+          <h2 className="mt-2 text-3xl font-black tracking-[-.03em]">
+            Notifications
+          </h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Purchase confirmations and important changes to your events appear
+            here.
+          </p>
+        </div>
+        {account.notifications.length ? (
+          <div className="grid gap-3">
+            {account.notifications.map((notification) => (
+              <NotificationCard
+                key={notification.id}
+                notification={notification}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="border border-dashed border-[#241b3f]/15 bg-white p-8 text-center">
+            <Bell className="mx-auto h-8 w-8 text-emerald-600" />
+            <h3 className="mt-4 text-xl font-black">No notifications yet</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              Ticket confirmations and relevant event updates will appear here.
+            </p>
+          </div>
+        )}
 
         <div className="mb-7 mt-14 border-t border-[#241b3f]/10 pt-12">
           <p className="eyebrow">Considering</p>

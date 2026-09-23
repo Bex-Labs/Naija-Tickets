@@ -45,6 +45,7 @@ export async function GET(request: Request) {
       { data: profile, error: profileError },
       { data: orders, error: ordersError },
       { data: savedEvents, error: savedEventsError },
+      { data: notifications, error: notificationsError },
     ] = await Promise.all([
       admin
         .from('profiles')
@@ -65,10 +66,17 @@ export async function GET(request: Request) {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1000),
+      admin
+        .from('customer_notifications')
+        .select('id,notification_type,title,message,link_path,created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50),
     ]);
     if (profileError) throw profileError;
     if (ordersError) throw ordersError;
     if (savedEventsError) throw savedEventsError;
+    if (notificationsError) throw notificationsError;
 
     const orderRows = orders || [];
     const orderIds = orderRows.map((order) => order.id);
@@ -139,6 +147,18 @@ export async function GET(request: Request) {
         email: user.email || '',
         phone: profile.phone || '',
       },
+      notifications: (notifications || []).map((notification) => ({
+        id: notification.id,
+        type: notification.notification_type,
+        title: notification.title,
+        message: notification.message,
+        link:
+          typeof notification.link_path === 'string' &&
+          notification.link_path.startsWith('/')
+            ? notification.link_path
+            : null,
+        createdAt: notification.created_at,
+      })),
       purchases: buildCustomerPurchases(
         orderRows,
         events || [],

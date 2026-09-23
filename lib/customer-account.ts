@@ -37,8 +37,22 @@ export type CustomerProfile = { name: string; email: string; phone: string };
 
 export type CustomerAccount = {
   profile: CustomerProfile;
+  notifications: CustomerNotification[];
   purchases: CustomerPurchase[];
   savedEvents: CustomerSavedEvent[];
+};
+
+export type CustomerNotification = {
+  id: string;
+  type:
+    | 'purchase_confirmed'
+    | 'event_available'
+    | 'event_unavailable'
+    | 'event_updated';
+  title: string;
+  message: string;
+  link: string | null;
+  createdAt: string;
 };
 
 export type CustomerSavedEvent = {

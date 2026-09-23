@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, Menu, Search, Ticket, X } from 'lucide-react';
+import { CircleUserRound, LogOut, Menu, Search, Ticket, X } from 'lucide-react';
 import type { SyntheticEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { accountHomeFromMetadata } from '@/lib/auth-destination';
@@ -151,10 +151,12 @@ export function SiteHeader() {
               {accountHome === '/account' ? (
                 <a
                   href="/account"
+                  aria-label="Open my profile"
+                  title="My profile"
                   aria-current={isActive('/account') ? 'page' : undefined}
-                  className={`inline-flex min-h-11 items-center border-b-2 px-1 text-sm font-bold transition ${isActive('/account') ? 'border-emerald-500 text-emerald-800' : 'border-transparent hover:text-emerald-600'}`}
+                  className={`inline-flex h-11 w-11 items-center justify-center border-b-2 transition ${isActive('/account') ? 'border-emerald-500 text-emerald-800' : 'border-transparent hover:text-emerald-600'}`}
                 >
-                  My tickets
+                  <CircleUserRound className="h-6 w-6" />
                 </a>
               ) : (
                 <a
@@ -250,13 +252,20 @@ export function SiteHeader() {
           {signedIn ? (
             <div className="mt-2 grid gap-2">
               <a
-                className="bg-emerald-100 px-3 py-3 text-center font-bold text-emerald-900"
+                className="flex min-h-12 items-center justify-center bg-emerald-100 px-3 py-3 text-center font-bold text-emerald-900"
                 href={accountHome}
+                aria-label={
+                  accountHome === '/account'
+                    ? 'Open my profile'
+                    : 'Open organiser workspace'
+                }
                 aria-current={isActive(accountHome) ? 'page' : undefined}
               >
-                {accountHome === '/account'
-                  ? 'My tickets'
-                  : 'Organiser workspace'}
+                {accountHome === '/account' ? (
+                  <CircleUserRound className="h-6 w-6" />
+                ) : (
+                  'Organiser workspace'
+                )}
               </a>
               <button
                 type="button"
