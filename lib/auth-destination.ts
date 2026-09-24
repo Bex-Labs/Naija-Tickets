@@ -7,7 +7,11 @@ export function authenticatedDestination(
   accountHome = '/account',
 ) {
   if (!requestedPath) return accountHome;
-  if (requestedPath === '/account' || requestedPath === '/organiser') {
+  if (
+    requestedPath === '/account' ||
+    requestedPath === '/organiser' ||
+    requestedPath === '/entry'
+  ) {
     return requestedPath;
   }
   if (requestedPath.startsWith('/checkout/')) return requestedPath;

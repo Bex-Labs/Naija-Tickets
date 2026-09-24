@@ -16,6 +16,7 @@ void test('login preserves supported checkout and organiser destinations', () =>
     '/checkout/live-show?selection=0%3A2',
   );
   assert.equal(authenticatedDestination('/organiser'), '/organiser');
+  assert.equal(authenticatedDestination('/entry'), '/entry');
   assert.equal(authenticatedDestination('https://example.com'), '/account');
   assert.equal(authenticatedDestination('//example.com'), '/account');
 });

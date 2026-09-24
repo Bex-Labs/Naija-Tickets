@@ -189,6 +189,12 @@ export function OrganiserWorkspace() {
             </span>
           </a>
           <div className="flex items-center gap-3">
+            <a
+              href="/entry"
+              className="min-h-11 py-3 text-sm font-bold text-emerald-700"
+            >
+              Event entry
+            </a>
             <span className="hidden text-xs font-bold uppercase tracking-wider text-emerald-400 sm:block">
               Organiser workspace
             </span>

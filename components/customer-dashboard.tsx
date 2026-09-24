@@ -364,6 +364,12 @@ export function CustomerDashboard() {
           </div>
           <div className="flex items-center gap-4">
             <a
+              href="/entry"
+              className="min-h-11 py-3 text-sm font-bold text-emerald-700"
+            >
+              Event entry
+            </a>
+            <a
               href="/events"
               className="min-h-11 py-3 text-sm font-bold text-emerald-700"
             >
