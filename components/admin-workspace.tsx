@@ -4,6 +4,7 @@ import {
   Building2,
   CalendarCheck2,
   Check,
+  CreditCard,
   LayoutDashboard,
   Settings,
   Shield,
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AdminSalesOverview } from '@/components/admin-sales-analytics';
+import { AdminTransactions } from '@/components/admin-transactions';
 import { AdminAccounts } from '@/components/admin-accounts';
 import { AdminGuestOrders } from '@/components/admin-guest-orders';
 import { AdminSettings } from '@/components/admin-settings';
@@ -29,6 +31,7 @@ type Tab =
   | 'overview'
   | 'customers'
   | 'guests'
+  | 'transactions'
   | 'organisers'
   | 'admins'
   | 'events'
@@ -123,6 +126,7 @@ export function AdminWorkspace() {
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'customers', label: 'Customers', icon: UserRound },
     { id: 'guests', label: 'Guest buyers', icon: ShoppingBag },
+    { id: 'transactions', label: 'Transactions', icon: CreditCard },
     { id: 'organisers', label: 'Organisers', icon: Building2 },
     { id: 'admins', label: 'Admins', icon: ShieldCheck },
     { id: 'events', label: 'Event approvals', icon: CalendarCheck2 },
@@ -186,10 +190,15 @@ export function AdminWorkspace() {
               <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">
                 Admin overview
               </h1>
-              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {[
                   ['Customers', 'customers', 'Manage customer accounts'],
                   ['Guest buyers', 'guests', 'Review account-free purchases'],
+                  [
+                    'Transactions',
+                    'transactions',
+                    'Monitor payments and issues',
+                  ],
                   ['Organisers', 'organisers', 'Manage organiser access'],
                   ['Admins', 'admins', 'Manage administrator accounts'],
                   [
@@ -227,6 +236,7 @@ export function AdminWorkspace() {
 
           {tab === 'customers' && <AdminUserDirectory accountKind="customer" />}
           {tab === 'guests' && <AdminGuestOrders />}
+          {tab === 'transactions' && <AdminTransactions />}
           {tab === 'organisers' && (
             <>
               <AdminUserDirectory accountKind="organiser" />
