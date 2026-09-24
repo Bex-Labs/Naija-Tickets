@@ -27,6 +27,7 @@ export function AdminSettings() {
   );
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [feeType, setFeeType] = useState<'percentage' | 'fixed'>('percentage');
   const [percentage, setPercentage] = useState('5');
   const [fixedNairaPerTicket, setFixedNairaPerTicket] = useState('500');
@@ -40,7 +41,14 @@ export function AdminSettings() {
   useEffect(() => {
     const load = async () => {
       try {
-        const response = await fetch('/api/admin/settings');
+        const response = await fetch('/api/admin/settings', {
+          credentials: 'same-origin',
+          cache: 'no-store',
+        });
+        if (response.status === 401) {
+          setSessionExpired(true);
+          return;
+        }
         const result = (await response.json()) as {
           username?: string;
           error?: string;
@@ -67,7 +75,14 @@ export function AdminSettings() {
   useEffect(() => {
     const loadFee = async () => {
       try {
-        const response = await fetch('/api/admin/platform-fee');
+        const response = await fetch('/api/admin/platform-fee', {
+          credentials: 'same-origin',
+          cache: 'no-store',
+        });
+        if (response.status === 401) {
+          setSessionExpired(true);
+          return;
+        }
         const result = (await response.json()) as {
           feeRule?: PlatformFeeRule;
           error?: string;
@@ -105,6 +120,7 @@ export function AdminSettings() {
     try {
       const response = await fetch('/api/admin/settings', {
         method: 'PATCH',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username,
@@ -113,6 +129,10 @@ export function AdminSettings() {
           confirmPassword,
         }),
       });
+      if (response.status === 401) {
+        setSessionExpired(true);
+        return;
+      }
       const result = (await response.json()) as {
         username?: string;
         error?: string;
@@ -147,6 +167,7 @@ export function AdminSettings() {
     try {
       const response = await fetch('/api/admin/platform-fee', {
         method: 'PATCH',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: feeType,
@@ -155,6 +176,10 @@ export function AdminSettings() {
           currentPassword: feePassword,
         }),
       });
+      if (response.status === 401) {
+        setSessionExpired(true);
+        return;
+      }
       const result = (await response.json()) as {
         feeRule?: PlatformFeeRule;
         error?: string;
@@ -182,6 +207,33 @@ export function AdminSettings() {
     feeType === 'percentage'
       ? Math.max(0, Math.round(2_500_000 * (Number(percentage) || 0) * 0.01))
       : Math.max(0, Math.round((Number(fixedNairaPerTicket) || 0) * 100 * 2));
+
+  if (sessionExpired) {
+    return (
+      <div className="animate-rise max-w-3xl border border-amber-300 bg-amber-50 p-6 sm:p-8">
+        <h1 className="text-2xl font-black">Admin session ended</h1>
+        <p className="mt-2 text-sm leading-6 text-slate-700">
+          Sign in again to view or change admin settings.
+        </p>
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await fetch('/api/admin/logout', {
+                method: 'POST',
+                credentials: 'same-origin',
+              });
+            } finally {
+              window.location.replace('/admin');
+            }
+          }}
+          className="mt-5 inline-flex min-h-11 items-center bg-[#241b3f] px-5 text-sm font-bold text-white"
+        >
+          Sign in again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-rise max-w-3xl">
