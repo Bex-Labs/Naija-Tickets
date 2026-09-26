@@ -10,7 +10,7 @@ export type GuestOrderRow = {
   created_at: string;
   personal_data_erased_at?: string | null;
   events: { title: string } | { title: string }[] | null;
-  order_items: { quantity: number }[] | null;
+  order_items: { quantity: number; admissions_per_ticket?: number }[] | null;
 };
 
 export type GuestOrder = {
@@ -45,7 +45,8 @@ export function mapGuestOrder(row: GuestOrderRow): GuestOrder {
     purchaserPhone: erasedAt ? '' : row.purchaser_phone,
     eventTitle: relatedEvent(row)?.title || 'Event unavailable',
     ticketCount: (row.order_items || []).reduce(
-      (total, item) => total + Number(item.quantity || 0),
+      (total, item) =>
+        total + Number(item.quantity || 0) * (item.admissions_per_ticket || 1),
       0,
     ),
     createdAt: row.created_at,

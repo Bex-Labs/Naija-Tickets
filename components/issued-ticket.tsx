@@ -11,6 +11,8 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import type { PaidTicketOrderView } from '@/lib/order-ticket-access';
 import { formatNaira } from '@/lib/events';
+import { GroupBookingCard } from '@/components/group-booking-card';
+import { TicketShareButton } from '@/components/ticket-share-button';
 
 function eventTiming(order: PaidTicketOrderView) {
   const startsAt = new Date(order.event.startsAt);
@@ -40,7 +42,13 @@ export function PrintTicketsButton() {
   );
 }
 
-export function IssuedTicketList({ order }: { order: PaidTicketOrderView }) {
+export function IssuedTicketList({
+  order,
+  hideOrderReference = false,
+}: {
+  order: PaidTicketOrderView;
+  hideOrderReference?: boolean;
+}) {
   const timing = eventTiming(order);
 
   return (
@@ -49,6 +57,9 @@ export function IssuedTicketList({ order }: { order: PaidTicketOrderView }) {
       aria-live="polite"
       data-ticket-count={order.tickets.length}
     >
+      {order.groups?.map((booking) => (
+        <GroupBookingCard key={booking.id} booking={booking} />
+      ))}
       {order.tickets.map((ticket, index) => (
         <article
           key={ticket.id}
@@ -130,7 +141,11 @@ export function IssuedTicketList({ order }: { order: PaidTicketOrderView }) {
                 </strong>
               </div>
               <div>
-                <span>Unit price</span>
+                <span>
+                  {(ticket.admissionsPerTicket || 1) > 1
+                    ? 'Group package price'
+                    : 'Unit price'}
+                </span>
                 <strong>{formatNaira(ticket.unitPriceKobo)}</strong>
               </div>
             </div>
@@ -153,6 +168,7 @@ export function IssuedTicketList({ order }: { order: PaidTicketOrderView }) {
             </div>
             <div className="issued-ticket__qr">
               <QRCodeSVG
+                id={`issued-qr-${ticket.id}`}
                 value={ticket.displayCode}
                 title={`Entry QR code for ${ticket.attendeeName}`}
                 size={148}
@@ -164,12 +180,25 @@ export function IssuedTicketList({ order }: { order: PaidTicketOrderView }) {
                 {ticket.displayCode}
               </p>
             </div>
-            <div className="mt-5 text-[10px] font-bold uppercase tracking-[.13em] text-emerald-50">
-              <span className="block">Order reference</span>
-              <span className="mt-1 block break-all font-mono normal-case tracking-normal">
-                {order.reference}
-              </span>
-            </div>
+            {ticket.status === 'valid' && (
+              <TicketShareButton
+                qrId={`issued-qr-${ticket.id}`}
+                eventTitle={order.event.title}
+                eventDate={`${timing.date}, ${timing.time} ${order.event.timezoneLabel}`}
+                venue={`${order.event.venue}, ${order.event.city}`}
+                attendeeName={ticket.attendeeName}
+                ticketType={ticket.ticketType}
+                displayCode={ticket.displayCode}
+              />
+            )}
+            {!hideOrderReference && (
+              <div className="mt-5 text-[10px] font-bold uppercase tracking-[.13em] text-emerald-50">
+                <span className="block">Order reference</span>
+                <span className="mt-1 block break-all font-mono normal-case tracking-normal">
+                  {order.reference}
+                </span>
+              </div>
+            )}
           </aside>
         </article>
       ))}

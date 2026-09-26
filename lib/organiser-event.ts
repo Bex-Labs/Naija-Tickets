@@ -242,6 +242,14 @@ export function parseOrganiserEventInput(
       : null;
     const earlyBirdEndAt = optionalLocalIso(earlyBirdEnd);
     const quantityTotal = Number(ticket.quantityTotal);
+    const admissionsPerTicket = Number(ticket.admissionsPerTicket ?? 1);
+    if (
+      !Number.isSafeInteger(admissionsPerTicket) ||
+      admissionsPerTicket < 1 ||
+      admissionsPerTicket > 100
+    ) {
+      return { error: 'A ticket must admit between 1 and 100 people.' };
+    }
     const quantitySold = Number(ticket.quantitySold || 0);
     const quantityReserved = Number(ticket.quantityReserved || 0);
     const minPerOrder = Number(ticket.minPerOrder);
@@ -300,10 +308,10 @@ export function parseOrganiserEventInput(
     if (
       !Number.isSafeInteger(quantityTotal) ||
       quantityTotal < 0 ||
-      quantityTotal > 1000000 ||
+      quantityTotal * admissionsPerTicket > 1000000 ||
       !Number.isSafeInteger(quantitySold) ||
       !Number.isSafeInteger(quantityReserved) ||
-      quantityTotal < quantitySold + quantityReserved
+      quantityTotal * admissionsPerTicket < quantitySold + quantityReserved
     ) {
       return {
         error: 'Ticket capacity cannot be below sold and reserved inventory.',
@@ -346,6 +354,7 @@ export function parseOrganiserEventInput(
       earlyBirdEnd,
       earlyBirdEndAt,
       quantityTotal,
+      admissionsPerTicket,
       quantitySold,
       quantityReserved,
       minPerOrder,

@@ -152,7 +152,9 @@ export async function POST(request: Request) {
           price_kobo: ticket.priceKobo,
           early_bird_price_kobo: ticket.earlyBirdPriceKobo,
           early_bird_ends_at: ticket.earlyBirdEndAt,
-          quantity_total: ticket.quantityTotal,
+          quantity_total:
+            ticket.quantityTotal * (ticket.admissionsPerTicket || 1),
+          admissions_per_ticket: ticket.admissionsPerTicket || 1,
           min_per_order: ticket.minPerOrder,
           max_per_order: ticket.maxPerOrder,
           sales_start_at: values.salesStartAt,
@@ -176,9 +178,17 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('Unable to save organiser event', error);
-    const message = error instanceof Error ? error.message : '';
+    const message =
+      error &&
+      typeof error === 'object' &&
+      'message' in error &&
+      typeof error.message === 'string'
+        ? error.message
+        : '';
     const safeMessage = [
       'capacity',
+      'group ticket',
+      'number admitted',
       'inventory',
       'ticket tier',
       'early bird',

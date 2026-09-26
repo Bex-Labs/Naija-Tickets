@@ -1,3 +1,4 @@
+import type { GroupBooking } from './group-bookings.ts';
 export const ORDER_REFERENCE_PATTERN = /^[a-f0-9]{36}$/i;
 
 export type StoredTicketOrder = {
@@ -22,6 +23,7 @@ export type StoredTicketEvent = {
 };
 
 export type StoredTicketOrderItem = {
+  admissionsPerTicket?: number;
   id: string;
   ticketType: string;
   unitPriceKobo: number;
@@ -37,6 +39,7 @@ export type StoredIssuedTicket = {
 };
 
 export type IssuedTicketView = StoredIssuedTicket & {
+  admissionsPerTicket?: number;
   ticketType: string;
   unitPriceKobo: number;
 };
@@ -46,6 +49,7 @@ export type PaidTicketOrderView = {
   currency: string;
   event: StoredTicketEvent;
   tickets: IssuedTicketView[];
+  groups?: GroupBooking[];
 };
 
 export type TicketOrderLookup =
@@ -55,6 +59,7 @@ export type TicketOrderLookup =
   | { state: 'success'; order: PaidTicketOrderView };
 
 export type TicketOrderSource = {
+  findGroupBookings?(orderId: string): Promise<GroupBooking[]>;
   findOrder(reference: string): Promise<StoredTicketOrder | null>;
   findEvent(eventId: string): Promise<StoredTicketEvent | null>;
   findOrderItems(orderId: string): Promise<StoredTicketOrderItem[]>;
@@ -114,11 +119,15 @@ export async function retrieveTicketOrder(
             ...ticket,
             ticketType: item.ticketType,
             unitPriceKobo: item.unitPriceKobo,
+            admissionsPerTicket: item.admissionsPerTicket || 1,
           },
         ]
       : [];
   });
-  if (tickets.length === 0) {
+  const groups = source.findGroupBookings
+    ? await source.findGroupBookings(order.id)
+    : [];
+  if (tickets.length === 0 && groups.length === 0) {
     return { state: 'paid_without_tickets', reference: order.reference };
   }
 
@@ -129,6 +138,7 @@ export async function retrieveTicketOrder(
       currency: order.currency,
       event,
       tickets,
+      groups,
     },
   };
 }

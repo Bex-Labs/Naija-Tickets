@@ -48,6 +48,7 @@ export type OrganiserPolicy = {
 };
 
 export type OrganiserTicketType = {
+  admissionsPerTicket?: number;
   id?: string;
   clientKey?: string;
   name: string;

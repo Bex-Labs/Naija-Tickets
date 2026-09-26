@@ -4,6 +4,7 @@ import { Minus, Plus, ShieldCheck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { TicketType } from '@/lib/events';
 import { formatNaira, isEarlyBirdTicket, ticketPrice } from '@/lib/events';
+import { MAX_CHECKOUT_ADMISSIONS } from '@/lib/checkout-reservation-validation';
 
 export function TicketSelector({
   eventSlug,
@@ -48,11 +49,30 @@ export function TicketSelector({
     (sum, value) => sum + value,
     0,
   );
+  const admissionCount = tickets.reduce(
+    (sum, ticket) =>
+      sum + (quantities[ticket.name] || 0) * (ticket.admissionsPerTicket || 1),
+    0,
+  );
   const change = (ticket: TicketType, amount: number) =>
     setQuantities((current) => {
       const quantity = current[ticket.name] || 0;
       const minimum = ticket.minPerOrder || 1;
-      const maximum = Math.min(ticket.maxPerOrder || 6, ticket.remaining);
+      const otherAdmissions = tickets.reduce(
+        (sum, type) =>
+          type.name === ticket.name
+            ? sum
+            : sum + (current[type.name] || 0) * (type.admissionsPerTicket || 1),
+        0,
+      );
+      const maximum = Math.min(
+        ticket.maxPerOrder || 6,
+        ticket.remaining,
+        Math.floor(
+          (MAX_CHECKOUT_ADMISSIONS - otherAdmissions) /
+            (ticket.admissionsPerTicket || 1),
+        ),
+      );
       const next =
         amount > 0 && quantity === 0
           ? Math.min(minimum, maximum)
@@ -101,6 +121,11 @@ export function TicketSelector({
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="font-black">{ticket.name}</h3>
+                  {(ticket.admissionsPerTicket || 1) > 1 && (
+                    <p className="mt-1 text-xs font-bold text-emerald-700">
+                      Group ticket · Admits {ticket.admissionsPerTicket} people
+                    </p>
+                  )}
                   <div className="mt-1 flex flex-wrap items-center gap-2">
                     <p className="text-sm font-bold text-emerald-600">
                       {formatNaira(currentPrice)}
@@ -154,7 +179,13 @@ export function TicketSelector({
                       ticket.status === 'not-on-sale' ||
                       ticket.status === 'sold-out' ||
                       (quantities[ticket.name] || 0) >=
-                        Math.min(ticket.maxPerOrder || 6, ticket.remaining)
+                        Math.min(ticket.maxPerOrder || 6, ticket.remaining) ||
+                      admissionCount +
+                        (ticket.admissionsPerTicket || 1) *
+                          (quantities[ticket.name] || 0
+                            ? 1
+                            : ticket.minPerOrder || 1) >
+                        MAX_CHECKOUT_ADMISSIONS
                     }
                     onClick={() => change(ticket, 1)}
                     className="grid h-11 w-11 place-items-center bg-emerald-500 text-emerald-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
@@ -181,6 +212,11 @@ export function TicketSelector({
             ? `Continue with ${count} ${count === 1 ? 'ticket' : 'tickets'}`
             : 'Select a ticket'}
         </button>
+        {admissionCount > count && (
+          <p className="mt-3 text-center text-xs text-slate-600">
+            {admissionCount} people · Each gets their own QR ticket
+          </p>
+        )}
         <p className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-500">
           <ShieldCheck className="h-4 w-4" /> Secure checkout powered by
           Paystack

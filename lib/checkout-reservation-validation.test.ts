@@ -39,3 +39,13 @@ void test('checkout still requires details for every selected ticket', () => {
     false,
   );
 });
+
+void test('group checkout requires no attendee details and uses the stored group size', () => {
+  const group = { ...item(2), attendees: [] };
+  assert.equal(validReservationItem(group, 5), true);
+  assert.equal(validReservationItem(group), false);
+  assert.equal(validReservationItem(item(2), 5), false);
+  assert.equal(validReservationItem(group, 0), false);
+  assert.equal(validReservationItem(group, 2.5), false);
+  assert.equal(validReservationItem({ ...group, quantity: 5 }, 100), false);
+});

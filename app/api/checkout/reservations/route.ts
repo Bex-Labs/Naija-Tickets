@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   MAX_CHECKOUT_TICKET_TYPES,
+  MAX_CHECKOUT_ADMISSIONS,
   UUID_PATTERN,
   validReservationItem,
 } from '@/lib/checkout-reservation-validation';
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
   }
   if (!validPurchaser(values.purchaser)) {
     return NextResponse.json(
-      { error: 'Check the first attendee’s name, email and phone number.' },
+      { error: 'Check the buyer’s name, email and phone number.' },
       { status: 400 },
     );
   }
@@ -92,8 +93,14 @@ export async function POST(request: Request) {
     );
   }
   const items = values.items as ReservationItem[];
-  const valid = items.every(validReservationItem);
-  if (!valid) {
+  if (
+    items.some(
+      (item) =>
+        !item ||
+        typeof item.ticketTypeId !== 'string' ||
+        !UUID_PATTERN.test(item.ticketTypeId),
+    )
+  ) {
     return NextResponse.json(
       { error: 'Check the ticket quantities and attendee details.' },
       { status: 400 },
@@ -101,27 +108,61 @@ export async function POST(request: Request) {
   }
 
   try {
+    const client = getSupabaseAdminClient();
+    const { data: types, error: typesError } = await client
+      .from('ticket_types')
+      .select('id,admissions_per_ticket')
+      .eq('event_id', values.eventId)
+      .in(
+        'id',
+        items.map((item) => item.ticketTypeId as string),
+      );
+    if (typesError) throw typesError;
+    const sizeById = new Map(
+      (types || []).map((type) => [
+        type.id,
+        type.admissions_per_ticket as number,
+      ]),
+    );
+    if (
+      items.some(
+        (item) =>
+          !sizeById.has(item.ticketTypeId) ||
+          !validReservationItem(item, sizeById.get(item.ticketTypeId)),
+      ) ||
+      items.reduce(
+        (total, item) =>
+          total +
+          Number(item.quantity) * (sizeById.get(item.ticketTypeId) || 1),
+        0,
+      ) > MAX_CHECKOUT_ADMISSIONS
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Check the ticket quantities and individual attendee details (maximum 400 admissions per checkout).',
+        },
+        { status: 400 },
+      );
+    }
     const checkoutToken = createCheckoutToken();
     const checkoutTokenHash = await sha256Hex(checkoutToken);
-    const { data, error } = await getSupabaseAdminClient().rpc(
-      'create_checkout_reservation_v3',
-      {
-        p_promo_code: promoCode || null,
-        p_customer_id: user?.id || null,
-        p_event_id: values.eventId,
-        p_items: items.map((item) => ({
-          ticket_type_id: item.ticketTypeId,
-          quantity: item.quantity,
-          attendees: item.attendees,
-        })),
-        p_purchaser: {
-          name: values.purchaser.name.trim(),
-          email: values.purchaser.email.trim().toLowerCase(),
-          phone: values.purchaser.phone.trim(),
-        },
-        p_checkout_token_hash: checkoutTokenHash,
+    const { data, error } = await client.rpc('create_checkout_reservation_v3', {
+      p_promo_code: promoCode || null,
+      p_customer_id: user?.id || null,
+      p_event_id: values.eventId,
+      p_items: items.map((item) => ({
+        ticket_type_id: item.ticketTypeId,
+        quantity: item.quantity,
+        attendees: item.attendees,
+      })),
+      p_purchaser: {
+        name: values.purchaser.name.trim(),
+        email: values.purchaser.email.trim().toLowerCase(),
+        phone: values.purchaser.phone.trim(),
       },
-    );
+      p_checkout_token_hash: checkoutTokenHash,
+    });
     if (error) throw error;
     const row = Array.isArray(data) ? data[0] : data;
     if (!row) throw new Error('Reservation was not created.');

@@ -1,5 +1,6 @@
 export const MAX_CHECKOUT_TICKETS_PER_TYPE = 20;
 export const MAX_CHECKOUT_TICKET_TYPES = 20;
+export const MAX_CHECKOUT_ADMISSIONS = 400;
 
 export const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -23,15 +24,21 @@ function validAttendees(value: unknown, quantity: number) {
   });
 }
 
-export function validReservationItem(value: unknown) {
+export function validReservationItem(value: unknown, admissionsPerTicket = 1) {
   if (!value || typeof value !== 'object') return false;
   const item = value as Record<string, unknown>;
   return (
+    Number.isSafeInteger(admissionsPerTicket) &&
+    admissionsPerTicket >= 1 &&
+    admissionsPerTicket <= 100 &&
     typeof item.ticketTypeId === 'string' &&
     UUID_PATTERN.test(item.ticketTypeId) &&
     Number.isSafeInteger(item.quantity) &&
     Number(item.quantity) > 0 &&
     Number(item.quantity) <= MAX_CHECKOUT_TICKETS_PER_TYPE &&
-    validAttendees(item.attendees, Number(item.quantity))
+    Number(item.quantity) * admissionsPerTicket <= MAX_CHECKOUT_ADMISSIONS &&
+    (admissionsPerTicket > 1
+      ? Array.isArray(item.attendees) && item.attendees.length === 0
+      : validAttendees(item.attendees, Number(item.quantity)))
   );
 }

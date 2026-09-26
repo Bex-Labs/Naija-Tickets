@@ -192,3 +192,51 @@ void test('partial refunds retain verified ticket access; full refunds do not ex
   );
   assert.equal(unverified.state, 'failed');
 });
+
+void test('paid group bookings are available before any attendee has claimed a QR', async () => {
+  let groupReads = 0;
+  const order = {
+    id: 'order-1',
+    reference,
+    status: 'paid',
+    paymentStatus: 'verified',
+    currency: 'NGN',
+    event_id: 'event-1',
+  };
+  const source = {
+    ...sourceFor(order),
+    async findIssuedTickets() {
+      return [];
+    },
+    async findGroupBookings() {
+      groupReads += 1;
+      return [
+        {
+          id: 'group-1',
+          orderItemId: 'item-1',
+          ticketName: 'Squad Pass',
+          buyerName: 'Buyer',
+          admissions: 5,
+          registered: 0,
+          remaining: 5,
+          checkedIn: 0,
+          invitePath: '/groups/' + 'a'.repeat(64),
+          members: [],
+        },
+      ];
+    },
+  };
+  const result = await retrieveTicketOrder(reference, source);
+  assert.equal(result.state, 'success');
+  if (result.state === 'success') {
+    assert.equal(result.order.tickets.length, 0);
+    assert.equal(result.order.groups?.[0].remaining, 5);
+  }
+  source.findOrder = async () => ({ ...order, paymentStatus: 'pending' });
+  await retrieveTicketOrder(reference, source);
+  assert.equal(
+    groupReads,
+    1,
+    'unverified payments must not reveal a group invite',
+  );
+});

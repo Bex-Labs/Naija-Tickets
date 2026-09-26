@@ -70,3 +70,21 @@ void test('uses one stable idempotency key and rejects insecure public links', (
     /HTTPS/,
   );
 });
+
+void test('unclaimed group slots show reserved admissions without generating ticket codes', () => {
+  const email = buildTicketEmail(
+    {
+      ...details,
+      tickets: Array.from({ length: 5 }, () => ({
+        attendee_name: null,
+        attendee_email: null,
+        display_code: null,
+        ticket_type: 'Squad Pass',
+      })),
+    },
+    'https://tickets.example.com',
+  );
+  assert.match(email.text, /5 group admissions are reserved/);
+  assert.match(email.html, /group registration link/);
+  assert.doesNotMatch(email.html, /Entry code|>null</);
+});

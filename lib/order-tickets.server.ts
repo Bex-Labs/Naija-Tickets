@@ -1,3 +1,4 @@
+import { getOrderGroupBookings } from '@/lib/group-bookings.server';
 import {
   retrieveTicketOrder,
   type StoredIssuedTicket,
@@ -15,6 +16,7 @@ function first<T>(relation: Relation<T>) {
 }
 
 const supabaseTicketOrderSource: TicketOrderSource = {
+  findGroupBookings: (orderId) => getOrderGroupBookings([orderId]),
   async findOrder(reference): Promise<StoredTicketOrder | null> {
     const admin = getSupabaseAdminClient();
     const { data, error } = await admin
@@ -78,19 +80,21 @@ const supabaseTicketOrderSource: TicketOrderSource = {
   async findOrderItems(orderId): Promise<StoredTicketOrderItem[]> {
     const { data, error } = await getSupabaseAdminClient()
       .from('order_items')
-      .select('id,unit_price_kobo,ticket_types(name)')
+      .select('id,unit_price_kobo,admissions_per_ticket,ticket_types(name)')
       .eq('order_id', orderId);
     if (error) throw error;
     return (
       (data || []) as unknown as Array<{
         id: string;
         unit_price_kobo: string | number;
+        admissions_per_ticket: number;
         ticket_types: Relation<{ name: string }>;
       }>
     ).map((item) => ({
       id: item.id,
       ticketType: first(item.ticket_types)?.name || 'Admission',
       unitPriceKobo: Number(item.unit_price_kobo),
+      admissionsPerTicket: item.admissions_per_ticket,
     }));
   },
 
@@ -102,6 +106,7 @@ const supabaseTicketOrderSource: TicketOrderSource = {
         'id,order_item_id,attendee_name,display_code,status,issued_at,attendee_index',
       )
       .in('order_item_id', orderItemIds)
+      .neq('claim_state', 'UNCLAIMED')
       .order('issued_at', { ascending: true })
       .order('attendee_index', { ascending: true });
     if (error) throw error;

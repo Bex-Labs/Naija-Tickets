@@ -1,3 +1,4 @@
+import { getOrderGroupBookings } from '@/lib/group-bookings.server';
 import { NextResponse } from 'next/server';
 import { accountHomeFromMetadata } from '@/lib/auth-destination';
 import { parseCustomerProfileInput } from '@/lib/customer-profile';
@@ -102,7 +103,9 @@ export async function GET(request: Request) {
       orderIds.length
         ? admin
             .from('order_items')
-            .select('id,order_id,quantity,ticket_types(name)')
+            .select(
+              'id,order_id,quantity,admissions_per_ticket,ticket_types(name)',
+            )
             .in('order_id', orderIds)
         : Promise.resolve({ data: [], error: null }),
       orderIds.length
@@ -121,12 +124,14 @@ export async function GET(request: Request) {
         id: string;
         order_id: string;
         quantity: number;
+        admissions_per_ticket: number;
         ticket_types: Relation<{ name: string }>;
       }>
     ).map((item) => ({
       id: item.id,
       order_id: item.order_id,
       quantity: item.quantity,
+      admissionsPerTicket: item.admissions_per_ticket,
       ticketType: first(item.ticket_types)?.name || 'Admission',
     }));
     const itemIds = items.map((item) => item.id);
@@ -137,10 +142,12 @@ export async function GET(request: Request) {
             'id,order_item_id,attendee_name,display_code,status,issued_at',
           )
           .in('order_item_id', itemIds)
+          .neq('claim_state', 'UNCLAIMED')
           .order('issued_at', { ascending: true })
       : { data: [], error: null };
     if (ticketsError) throw ticketsError;
 
+    const groups = await getOrderGroupBookings(orderIds);
     const account: CustomerAccount = {
       profile: {
         name: profile.full_name,
@@ -165,7 +172,15 @@ export async function GET(request: Request) {
         items,
         tickets || [],
         payments || [],
-      ),
+      ).map((purchase) => ({
+        ...purchase,
+        groups: groups.filter((booking) =>
+          items.some(
+            (item) =>
+              item.id === booking.orderItemId && item.order_id === purchase.id,
+          ),
+        ),
+      })),
       savedEvents: buildCustomerSavedEvents(savedEvents || [], events || []),
     };
     return respond(account);

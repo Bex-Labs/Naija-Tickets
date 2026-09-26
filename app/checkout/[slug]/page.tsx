@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 function selectedLines(ticketTypes: TicketType[], selection = '') {
+  let availableAdmissions = 400;
   const quantities = new Map<number, number>();
   for (const pair of selection.split(',')) {
     const [rawIndex, rawQuantity] = pair.split(':');
@@ -44,16 +45,26 @@ function selectedLines(ticketTypes: TicketType[], selection = '') {
     .filter(
       ([index, quantity]) => quantity >= (ticketTypes[index].minPerOrder || 1),
     )
-    .map(([index, quantity]): CheckoutLine => {
+    .flatMap(([index, requestedQuantity]): CheckoutLine[] => {
       const ticket = ticketTypes[index];
+      const size = ticket.admissionsPerTicket || 1;
+      const quantity = Math.min(
+        requestedQuantity,
+        Math.floor(availableAdmissions / size),
+      );
+      if (quantity < (ticket.minPerOrder || 1)) return [];
+      availableAdmissions -= quantity * size;
       const unitPriceKobo = ticketPrice(ticket);
-      return {
-        ticketTypeId: ticket.id,
-        name: ticket.name,
-        quantity,
-        unitPriceKobo,
-        lineTotalKobo: unitPriceKobo * quantity,
-      };
+      return [
+        {
+          ticketTypeId: ticket.id,
+          name: ticket.name,
+          quantity,
+          admissionsPerTicket: ticket.admissionsPerTicket || 1,
+          unitPriceKobo,
+          lineTotalKobo: unitPriceKobo * quantity,
+        },
+      ];
     });
 }
 

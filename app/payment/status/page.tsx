@@ -107,11 +107,14 @@ export default async function PaymentStatusPage({ searchParams }: Props) {
               </span>
               <p className="eyebrow mt-6">Payment confirmed</p>
               <h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">
-                Your tickets are ready.
+                {lookup.order.groups?.length
+                  ? 'Your group booking is confirmed.'
+                  : 'Your tickets are ready.'}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                Show each QR code at the entrance. Keep this private link and
-                every ticket code secure.
+                {lookup.order.groups?.length
+                  ? 'Share your group registration link below. Each member claims their own admission and receives a unique QR code. Your admissions are already reserved.'
+                  : 'Show each QR code at the entrance. Keep this private link and every ticket code secure.'}
               </p>
               <p className="mt-2 text-sm font-semibold text-emerald-700">
                 {['sent', 'already_sent'].includes(delivery)

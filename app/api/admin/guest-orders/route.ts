@@ -11,7 +11,7 @@ async function listGuestOrders() {
   const { data, error } = await getSupabaseAdminClient()
     .from('orders')
     .select(
-      'id,reference,status,currency,total_kobo,purchaser_name,purchaser_email,purchaser_phone,created_at,personal_data_erased_at,events(title),order_items(quantity)',
+      'id,reference,status,currency,total_kobo,purchaser_name,purchaser_email,purchaser_phone,created_at,personal_data_erased_at,events(title),order_items(quantity,admissions_per_ticket)',
     )
     .is('customer_id', null)
     .order('created_at', { ascending: false })

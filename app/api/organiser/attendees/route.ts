@@ -1,3 +1,4 @@
+import { getOrderGroupBookings } from '@/lib/group-bookings.server';
 import { NextResponse } from 'next/server';
 import {
   getAuthenticatedUser,
@@ -43,7 +44,8 @@ export async function GET(request: Request) {
             'id,attendee_name,attendee_email,display_code,status,issued_at,order_items(ticket_types(name))',
             { count: 'exact' },
           )
-          .eq('event_id', params.eventId);
+          .eq('event_id', params.eventId)
+          .neq('claim_state', 'UNCLAIMED');
         if (params.status) query = query.eq('status', params.status);
         if (params.search)
           query = query.ilike(
@@ -58,7 +60,40 @@ export async function GET(request: Request) {
         if (error) throw error;
         const first = <T>(value: T | T[] | null): T | null =>
           Array.isArray(value) ? value[0] : value;
+        const orderIds: string[] = [];
+        for (let offset = 0; ; offset += 1000) {
+          const { data: orders, error: ordersError } = await client
+            .from('orders')
+            .select('id')
+            .eq('event_id', params.eventId)
+            .in('status', ['paid', 'partially_refunded', 'refunded'])
+            .order('id')
+            .range(offset, offset + 999);
+          if (ordersError) throw ordersError;
+          orderIds.push(...(orders || []).map((order) => order.id));
+          if ((orders?.length || 0) < 1000) break;
+        }
+        const groups = await getOrderGroupBookings(orderIds);
         return {
+          groups: groups.map(
+            ({
+              id,
+              ticketName,
+              buyerName,
+              admissions,
+              registered,
+              remaining,
+              checkedIn,
+            }) => ({
+              id,
+              ticketName,
+              buyerName,
+              admissions,
+              registered,
+              remaining,
+              checkedIn,
+            }),
+          ),
           attendees: (data || []).map(({ order_items, ...ticket }) => ({
             ...ticket,
             ticketType:

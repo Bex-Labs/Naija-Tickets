@@ -21,6 +21,7 @@ export type CheckoutLine = {
   ticketTypeId?: string;
   name: string;
   quantity: number;
+  admissionsPerTicket?: number;
   unitPriceKobo: number;
   lineTotalKobo: number;
 };
@@ -46,17 +47,36 @@ export function CheckoutFlow({
   subtotalKobo: number;
   feeKobo: number;
 }) {
+  const hasGroupTickets = lines.some(
+    (line) => (line.admissionsPerTicket || 1) > 1,
+  );
   const admissions = useMemo(
-    () =>
-      lines.flatMap((line) =>
-        Array.from({ length: line.quantity }, (_, index) => ({
-          key: `${line.ticketTypeId || line.name}-${index}`,
-          ticketTypeId: line.ticketTypeId,
-          ticketName: line.name,
-          number: index + 1,
-        })),
+    () => [
+      ...(hasGroupTickets
+        ? [
+            {
+              key: 'buyer',
+              ticketTypeId: undefined,
+              ticketName: 'Buyer',
+              number: 1,
+            },
+          ]
+        : []),
+      ...lines.flatMap((line) =>
+        (line.admissionsPerTicket || 1) > 1
+          ? []
+          : Array.from(
+              { length: line.quantity * (line.admissionsPerTicket || 1) },
+              (_, index) => ({
+                key: `${line.ticketTypeId || line.name}-${index}`,
+                ticketTypeId: line.ticketTypeId,
+                ticketName: line.name,
+                number: index + 1,
+              }),
+            ),
       ),
-    [lines],
+    ],
+    [lines, hasGroupTickets],
   );
   const [attendees, setAttendees] = useState<Record<string, Attendee>>({});
   const [status, setStatus] = useState<'idle' | 'saving' | 'reserved'>('idle');
@@ -367,7 +387,11 @@ export function CheckoutFlow({
     >
       <section>
         <ol className="grid grid-cols-3 border border-[#241b3f]/10 bg-white p-4 text-center text-xs font-bold sm:p-5">
-          {['Tickets', 'Attendee details', 'Payment'].map((label, index) => (
+          {[
+            'Tickets',
+            hasGroupTickets ? 'Buyer details' : 'Attendee details',
+            'Payment',
+          ].map((label, index) => (
             <li
               key={label}
               className={`flex items-center justify-center gap-2 ${index === 1 ? 'text-[#ff6b4a]' : index === 2 ? 'text-slate-400' : 'text-emerald-700'}`}
@@ -384,16 +408,19 @@ export function CheckoutFlow({
         <div className="mt-7">
           <p className="eyebrow">Checkout</p>
           <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">
-            Who are the tickets for?
+            {hasGroupTickets
+              ? 'Your booking details'
+              : 'Who are the tickets for?'}
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Add every attendee on this page. These details will be used on the
-            tickets after payment is verified.
+            {hasGroupTickets
+              ? 'Enter your own details for the group booking. After payment, share the group link so each member can claim their ticket. Any individual tickets are registered below.'
+              : 'Add every attendee on this page. These details will be used on the tickets after payment is verified.'}
           </p>
           {accountPrefill && (
             <p className="mt-3 border border-emerald-500/20 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-900">
               Signed in as {accountPrefill}. Your details were added to the
-              first ticket
+              booking
               {signedInCustomer
                 ? ', and this purchase will be saved to My tickets.'
                 : '.'}
@@ -416,7 +443,9 @@ export function CheckoutFlow({
               className="grid gap-5 border border-[#241b3f]/10 bg-white p-5 sm:grid-cols-2 sm:p-6"
             >
               <legend className="px-2 text-sm font-black">
-                Attendee {index + 1} · {admission.ticketName}
+                {admission.key === 'buyer'
+                  ? 'Buyer details'
+                  : `Attendee ${index + 1} · ${admission.ticketName}`}
               </legend>
               <div className="sm:col-span-2">
                 <label className="auth-label" htmlFor={`${admission.key}-name`}>
@@ -497,6 +526,12 @@ export function CheckoutFlow({
               >
                 <span>
                   {line.quantity} × {line.name}
+                  {(line.admissionsPerTicket || 1) > 1 && (
+                    <span className="block text-xs font-normal text-slate-500">
+                      {line.quantity * (line.admissionsPerTicket || 1)}{' '}
+                      individual admissions
+                    </span>
+                  )}
                 </span>
                 <strong>{formatNaira(line.lineTotalKobo)}</strong>
               </div>

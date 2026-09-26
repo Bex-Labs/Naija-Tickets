@@ -11,6 +11,9 @@ import {
   TicketCheck,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import { GroupBookingCard } from '@/components/group-booking-card';
+import { TicketShareButton } from '@/components/ticket-share-button';
 import { AccountSignOut } from '@/components/account-sign-out';
 import { CustomerProfileForm } from '@/components/customer-profile-form';
 import { EventSaveButton } from '@/components/event-save-button';
@@ -107,6 +110,13 @@ function PurchaseCard({ purchase }: { purchase: CustomerPurchase }) {
             <span>Order reference: {purchase.reference}</span>
             <span>Order date: {formatDate(purchase.createdAt)}</span>
           </div>
+          {purchase.groups?.map((booking) => (
+            <GroupBookingCard
+              key={booking.id}
+              booking={booking}
+              active={successful}
+            />
+          ))}
           {purchase.tickets.length > 0 && (
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {purchase.tickets.map((ticket) => (
@@ -118,21 +128,47 @@ function PurchaseCard({ purchase }: { purchase: CustomerPurchase }) {
                     {ticket.ticketType} · {statusLabel(ticket.status)}
                   </p>
                   <p className="mt-2 font-black">{ticket.attendeeName}</p>
+                  {successful && (
+                    <QRCodeSVG
+                      id={`account-qr-${ticket.id}`}
+                      value={ticket.displayCode}
+                      size={112}
+                      level="M"
+                      marginSize={2}
+                      title={`Entry code for ${ticket.attendeeName}`}
+                      className="mt-3"
+                    />
+                  )}
                   <p className="mt-2 font-mono text-xs font-bold tracking-wider text-slate-600">
                     {ticket.displayCode}
                   </p>
+                  {successful &&
+                    ticket.status === 'valid' &&
+                    purchase.event && (
+                      <TicketShareButton
+                        qrId={`account-qr-${ticket.id}`}
+                        eventTitle={purchase.event.title}
+                        eventDate={`${formatDate(purchase.event.startsAt, purchase.event.timezone)} ${purchase.event.timezoneLabel}`}
+                        venue={`${purchase.event.venue}, ${purchase.event.city}`}
+                        attendeeName={ticket.attendeeName}
+                        ticketType={ticket.ticketType}
+                        displayCode={ticket.displayCode}
+                      />
+                    )}
                 </div>
               ))}
             </div>
           )}
-          {successful && purchase.tickets.length > 0 && (
-            <a
-              href={`/payment/status?reference=${encodeURIComponent(purchase.reference)}`}
-              className="mt-5 inline-flex min-h-11 items-center bg-emerald-500 px-4 text-sm font-black text-emerald-950"
-            >
-              Open tickets
-            </a>
-          )}
+          {successful &&
+            (purchase.tickets.length > 0 ||
+              Boolean(purchase.groups?.length)) && (
+              <a
+                href={`/payment/status?reference=${encodeURIComponent(purchase.reference)}`}
+                className="mt-5 inline-flex min-h-11 items-center bg-emerald-500 px-4 text-sm font-black text-emerald-950"
+              >
+                Open booking
+              </a>
+            )}
         </div>
       </div>
     </article>
@@ -364,7 +400,18 @@ export function CustomerDashboard() {
               {account.profile.email}
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <button
+              type="button"
+              onClick={() => {
+                setState('loading');
+                setReload((value) => value + 1);
+              }}
+              className="inline-flex min-h-11 items-center gap-2 py-3 text-sm font-bold text-emerald-700"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh bookings
+            </button>
             <a
               href="/entry"
               className="min-h-11 py-3 text-sm font-bold text-emerald-700"

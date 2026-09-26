@@ -38,6 +38,7 @@ function validEvent() {
         earlyBirdPriceNaira: null as number | null,
         earlyBirdEnd: '',
         quantityTotal: 100,
+        admissionsPerTicket: 1,
         quantitySold: 0,
         quantityReserved: 0,
         minPerOrder: 1,
@@ -52,6 +53,7 @@ function validEvent() {
         earlyBirdPriceNaira: null as number | null,
         earlyBirdEnd: '',
         quantityTotal: 20,
+        admissionsPerTicket: 1,
         quantitySold: 2,
         quantityReserved: 1,
         minPerOrder: 1,
@@ -160,4 +162,25 @@ void test('rejects invalid URLs and event end times', () => {
     parseOrganiserEventInput(timeInput).error || '',
     /valid start and end dates and times/,
   );
+});
+
+void test('group packages use a package price and admission-based capacity validation', () => {
+  const input = validEvent();
+  input.ticketTypes[1].name = 'Squad Pass';
+  input.ticketTypes[1].priceNaira = 45000;
+  input.ticketTypes[1].admissionsPerTicket = 5;
+  input.ticketTypes[1].quantityTotal = 2;
+  input.ticketTypes[1].quantitySold = 5;
+  input.ticketTypes[1].quantityReserved = 5;
+  const result = parseOrganiserEventInput(input);
+  assert.ok(result.value);
+  assert.equal(result.value.ticketTypes[1].priceKobo, 4500000);
+  assert.equal(result.value.ticketTypes[1].admissionsPerTicket, 5);
+  assert.equal(result.value.ticketTypes[1].quantityTotal, 2);
+  input.ticketTypes[1].quantityTotal = 1;
+  assert.match(parseOrganiserEventInput(input).error || '', /capacity/);
+  for (const size of [0, -1, 1.5, 101]) {
+    input.ticketTypes[1].admissionsPerTicket = size;
+    assert.match(parseOrganiserEventInput(input).error || '', /admit/);
+  }
 });

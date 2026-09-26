@@ -1,4 +1,5 @@
 export type TicketType = {
+  admissionsPerTicket?: number;
   id?: string;
   name: string;
   description?: string;

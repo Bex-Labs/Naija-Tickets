@@ -7,6 +7,7 @@ import {
   attendeeStatuses,
   type Attendee,
 } from '@/lib/organiser-attendees';
+import type { GroupBooking } from '@/lib/group-bookings';
 import type { OrganiserEvent } from '@/lib/organiser-types';
 
 export function OrganiserAttendees({
@@ -25,6 +26,16 @@ export function OrganiserAttendees({
   const [result, setResult] = useState<{
     attendees: Attendee[];
     total: number;
+    groups?: Pick<
+      GroupBooking,
+      | 'id'
+      | 'ticketName'
+      | 'buyerName'
+      | 'admissions'
+      | 'registered'
+      | 'remaining'
+      | 'checkedIn'
+    >[];
   } | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -56,6 +67,16 @@ export function OrganiserAttendees({
         const body = (await response.json()) as {
           attendees: Attendee[];
           total: number;
+          groups?: Pick<
+            GroupBooking,
+            | 'id'
+            | 'ticketName'
+            | 'buyerName'
+            | 'admissions'
+            | 'registered'
+            | 'remaining'
+            | 'checkedIn'
+          >[];
           error?: string;
         };
         if (!response.ok)
@@ -181,6 +202,53 @@ export function OrganiserAttendees({
               `${result.total} matching ticket${result.total === 1 ? '' : 's'}`
             ) : null}
           </div>
+          {!loading && result?.groups?.length ? (
+            <section className="mt-6">
+              <h2 className="text-xl font-black">Group bookings</h2>
+              <div className="mt-3 overflow-x-auto border border-[#241b3f]/10 bg-white">
+                <table className="w-full text-left text-sm">
+                  <caption className="sr-only">
+                    Group registration and entry totals
+                  </caption>
+                  <thead className="bg-[#fff3d8]">
+                    <tr>
+                      {[
+                        'Group ticket',
+                        'Buyer',
+                        'Admissions',
+                        'Registered',
+                        'Awaiting registration',
+                        'Checked in',
+                      ].map((label) => (
+                        <th
+                          key={label}
+                          scope="col"
+                          className="whitespace-nowrap p-4"
+                        >
+                          {label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.groups.map((group) => (
+                      <tr
+                        key={group.id}
+                        className="border-t border-[#241b3f]/10"
+                      >
+                        <td className="p-4 font-bold">{group.ticketName}</td>
+                        <td className="p-4">{group.buyerName}</td>
+                        <td className="p-4">{group.admissions}</td>
+                        <td className="p-4">{group.registered}</td>
+                        <td className="p-4">{group.remaining}</td>
+                        <td className="p-4">{group.checkedIn}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ) : null}
           {!loading && result && (
             <>
               {!result.attendees.length ? (

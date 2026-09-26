@@ -71,6 +71,7 @@ export type DatabaseEventRow = {
     early_bird_price_kobo?: number | string | null;
     early_bird_ends_at?: string | null;
     quantity_total: number;
+    admissions_per_ticket?: number;
     quantity_sold: number;
     quantity_reserved: number;
     min_per_order: number;
@@ -84,7 +85,7 @@ export type DatabaseEventRow = {
 };
 
 export const publicEventSelect =
-  'id,title,slug,presenter_line,description,venue_name,address,directions_url,city,state,timezone,timezone_label,starts_at,ends_at,sales_start_at,sales_end_at,status,featured,image_path,rejection_reason,organisers(name,verified_at,description,slug,contact_email,logo_path,website_url,instagram_url,x_url,facebook_url,tiktok_url),categories(name),event_schedule_items(id,start_time,item_label,sort_order),event_policies(id,policy_text,sort_order),ticket_types(id,name,description,price_kobo,standard_price_kobo,early_bird_price_kobo,early_bird_ends_at,quantity_total,quantity_sold,quantity_reserved,min_per_order,max_per_order,sales_start_at,sales_end_at,inclusions,active,sort_order)';
+  'id,title,slug,presenter_line,description,venue_name,address,directions_url,city,state,timezone,timezone_label,starts_at,ends_at,sales_start_at,sales_end_at,status,featured,image_path,rejection_reason,organisers(name,verified_at,description,slug,contact_email,logo_path,website_url,instagram_url,x_url,facebook_url,tiktok_url),categories(name),event_schedule_items(id,start_time,item_label,sort_order),event_policies(id,policy_text,sort_order),ticket_types(id,name,description,price_kobo,standard_price_kobo,early_bird_price_kobo,early_bird_ends_at,admissions_per_ticket,quantity_total,quantity_sold,quantity_reserved,min_per_order,max_per_order,sales_start_at,sales_end_at,inclusions,active,sort_order)';
 
 export function isRetiredSeedEvent(row: DatabaseEventRow) {
   const organiser = Array.isArray(row.organisers)
@@ -225,7 +226,9 @@ export function databaseRowToOrganiserEvent(
             ? null
             : Number(ticket.early_bird_price_kobo) / 100,
         earlyBirdEnd: formDateTime(ticket.early_bird_ends_at, timeZone),
-        quantityTotal: ticket.quantity_total,
+        admissionsPerTicket: ticket.admissions_per_ticket || 1,
+        quantityTotal:
+          ticket.quantity_total / (ticket.admissions_per_ticket || 1),
         quantitySold: ticket.quantity_sold,
         quantityReserved: ticket.quantity_reserved,
         minPerOrder: ticket.min_per_order,
@@ -273,7 +276,8 @@ export function databaseRowToPublicEvent(row: DatabaseEventRow): Event {
             ? undefined
             : Number(ticket.early_bird_price_kobo),
         earlyBirdEndsAt: ticket.early_bird_ends_at || undefined,
-        remaining,
+        admissionsPerTicket: ticket.admissions_per_ticket || 1,
+        remaining: Math.floor(remaining / (ticket.admissions_per_ticket || 1)),
         minPerOrder: ticket.min_per_order,
         maxPerOrder: ticket.max_per_order,
         salesStartAt: ticket.sales_start_at || undefined,
@@ -281,7 +285,8 @@ export function databaseRowToPublicEvent(row: DatabaseEventRow): Event {
         saleState,
         status: !salesOpen
           ? 'not-on-sale'
-          : remaining < ticket.min_per_order
+          : remaining <
+              ticket.min_per_order * (ticket.admissions_per_ticket || 1)
             ? 'sold-out'
             : 'available',
         inclusions: ticket.inclusions || [],

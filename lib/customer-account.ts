@@ -1,3 +1,4 @@
+import type { GroupBooking } from './group-bookings.ts';
 import { eventHasEnded } from './event-availability.ts';
 
 export type CustomerTicket = {
@@ -33,6 +34,7 @@ export type CustomerPurchase = {
   } | null;
   quantity: number;
   tickets: CustomerTicket[];
+  groups?: GroupBooking[];
 };
 
 export type CustomerProfile = { name: string; email: string; phone: string };
@@ -108,6 +110,7 @@ type ItemRow = {
   id: string;
   order_id: string;
   quantity: number;
+  admissionsPerTicket?: number;
   ticketType: string;
 };
 
@@ -195,7 +198,11 @@ export function buildCustomerPurchases(
             image: event.image_path || '',
           }
         : null,
-      quantity: orderItems.reduce((total, item) => total + item.quantity, 0),
+      quantity: orderItems.reduce(
+        (total, item) =>
+          total + item.quantity * (item.admissionsPerTicket || 1),
+        0,
+      ),
       tickets: ticketsByOrder.get(order.id) || [],
     };
   });
