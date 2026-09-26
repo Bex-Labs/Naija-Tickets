@@ -128,6 +128,7 @@ void test('returns verified event and ticket data only for a paid order', async 
         id: 'order-1',
         reference,
         status: 'paid',
+        paymentStatus: 'verified',
         currency: 'NGN',
         event_id: 'event-1',
       },
@@ -141,4 +142,53 @@ void test('returns verified event and ticket data only for a paid order', async 
   assert.equal(result.order.tickets[0].displayCode, 'NT-260919-08427');
   assert.equal(result.order.tickets[0].unitPriceKobo, 850000);
   assert.deepEqual(counters, { order: 1, event: 1, items: 1, tickets: 1 });
+});
+
+void test('partial refunds retain verified ticket access; full refunds do not expose codes', async () => {
+  const partial = await retrieveTicketOrder(
+    reference,
+    sourceFor({
+      id: 'order-1',
+      reference,
+      status: 'partially_refunded',
+      paymentStatus: 'verified',
+      currency: 'NGN',
+      event_id: 'event-1',
+    }),
+  );
+  assert.equal(partial.state, 'success');
+
+  const counters = { order: 0, event: 0, items: 0, tickets: 0 };
+  const full = await retrieveTicketOrder(
+    reference,
+    sourceFor(
+      {
+        id: 'order-1',
+        reference,
+        status: 'refunded',
+        paymentStatus: 'refunded',
+        currency: 'NGN',
+        event_id: 'event-1',
+      },
+      counters,
+    ),
+  );
+  assert.deepEqual(full, { state: 'refunded' });
+  assert.deepEqual(counters, { order: 1, event: 0, items: 0, tickets: 0 });
+
+  const unverified = await retrieveTicketOrder(
+    reference,
+    sourceFor(
+      {
+        id: 'order-1',
+        reference,
+        status: 'paid',
+        paymentStatus: 'pending',
+        currency: 'NGN',
+        event_id: 'event-1',
+      },
+      counters,
+    ),
+  );
+  assert.equal(unverified.state, 'failed');
 });

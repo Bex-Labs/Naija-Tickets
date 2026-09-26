@@ -195,6 +195,13 @@ export async function verifyPaystackTransaction(reference: string) {
   );
 }
 
+export async function getPaystackRefund(refundId: string) {
+  if (!/^[0-9]{1,20}$/.test(refundId)) {
+    throw new Error('The Paystack refund ID is invalid.');
+  }
+  return paystackRequest<unknown>(`/refund/${refundId}`);
+}
+
 export function isValidPaystackReference(value: string) {
   return REFERENCE_PATTERN.test(value);
 }

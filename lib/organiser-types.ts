@@ -11,6 +11,7 @@ export type OrganiserEvent = {
   time: string;
   endDate: string;
   endTime: string;
+  endsAt?: string;
   timezoneLabel: string;
   salesStart: string;
   salesEnd: string;

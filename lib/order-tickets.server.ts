@@ -28,6 +28,7 @@ const supabaseTicketOrderSource: TicketOrderSource = {
       .from('payments')
       .select('status')
       .eq('order_id', data.id)
+      .eq('status', 'verified')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();

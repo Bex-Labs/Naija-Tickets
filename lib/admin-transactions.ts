@@ -13,7 +13,33 @@ export const transactionStatuses = [
 export type TransactionStatusFilter = (typeof transactionStatuses)[number];
 export type TransactionMethodFilter = 'all' | 'paystack' | 'demo_free';
 
-export type AdminTransaction = {
+export type AdminRefund = {
+  id: string;
+  amountKobo: number;
+  status:
+    | 'requested'
+    | 'approved'
+    | 'rejected'
+    | 'processing'
+    | 'completed'
+    | 'failed';
+  providerRefundId: string | null;
+  providerStatus: string | null;
+  reason: string;
+  createdAt: string;
+  confirmedAt: string | null;
+};
+
+export type AdminRefundSummary = {
+  orderId: string;
+  refundedKobo: number;
+  processingKobo: number;
+  remainingKobo: number;
+  canRecordRefund: boolean;
+  refunds: AdminRefund[];
+};
+
+export type AdminTransaction = AdminRefundSummary & {
   id: string;
   reference: string;
   createdAt: string;

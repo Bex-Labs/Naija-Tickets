@@ -1,3 +1,5 @@
+import { eventHasEnded } from './event-availability.ts';
+
 export type CustomerTicket = {
   id: string;
   attendeeName: string;
@@ -88,6 +90,7 @@ type EventRow = {
   title: string;
   slug: string;
   starts_at: string;
+  ends_at?: string;
   timezone: string;
   timezone_label: string | null;
   venue_name: string;
@@ -201,11 +204,14 @@ export function buildCustomerPurchases(
 export function buildCustomerSavedEvents(
   savedEvents: SavedEventRow[],
   events: EventRow[],
+  now = Date.now(),
 ): CustomerSavedEvent[] {
   const eventById = new Map(events.map((event) => [event.id, event]));
   return savedEvents.map((saved) => {
     const event = eventById.get(saved.event_id);
-    const available = event?.status === 'published';
+    const available =
+      event?.status === 'published' &&
+      Boolean(event.ends_at && !eventHasEnded(event.ends_at, now));
     return {
       eventId: saved.event_id,
       savedAt: saved.created_at,

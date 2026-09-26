@@ -15,7 +15,6 @@ async function listEvents() {
   const { data, error } = await getSupabaseAdminClient()
     .from('events')
     .select(publicEventSelect)
-    .in('status', ['submitted', 'published', 'rejected'])
     .order('created_at', { ascending: false });
   if (error) throw error;
   return ((data || []) as unknown as DatabaseEventRow[])
@@ -96,12 +95,15 @@ export async function PATCH(request: Request) {
         })
         .eq('id', id)
         .eq('status', 'published')
+        .gt('ends_at', new Date().toISOString())
         .select('id')
         .maybeSingle();
       if (error) throw error;
       if (!data) {
         return NextResponse.json(
-          { error: 'Only published events can be featured.' },
+          {
+            error: 'Only published events that have not ended can be featured.',
+          },
           { status: 409 },
         );
       }

@@ -78,6 +78,7 @@ void test('saved events preserve unavailable records without linking to them', (
         title: 'Lagos Live',
         slug: 'lagos-live',
         starts_at: '2026-10-01T18:00:00Z',
+        ends_at: '2026-10-01T23:00:00Z',
         timezone: 'Africa/Lagos',
         timezone_label: 'WAT',
         venue_name: 'Arena',
@@ -98,6 +99,7 @@ void test('saved events preserve unavailable records without linking to them', (
         status: 'submitted',
       },
     ],
+    Date.parse('2026-09-26T00:00:00Z'),
   );
   assert.equal(saved[0].available, true);
   assert.equal(saved[0].slug, 'lagos-live');

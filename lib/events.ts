@@ -32,6 +32,7 @@ export type Event = {
   directionsUrl?: string;
   category: string;
   date: string;
+  endsAt?: string;
   displayDate: string;
   time: string;
   timezoneLabel?: string;

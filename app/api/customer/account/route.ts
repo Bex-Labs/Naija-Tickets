@@ -95,7 +95,7 @@ export async function GET(request: Request) {
         ? admin
             .from('events')
             .select(
-              'id,title,slug,starts_at,timezone,timezone_label,venue_name,city,image_path,status',
+              'id,title,slug,starts_at,ends_at,timezone,timezone_label,venue_name,city,image_path,status',
             )
             .in('id', eventIds)
         : Promise.resolve({ data: [], error: null }),

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAuthenticatedAdmin } from '@/lib/admin-request';
 import {
   transactionStatuses,
+  type AdminRefundSummary,
   type AdminTransactionsPage,
   type TransactionMethodFilter,
 } from '@/lib/admin-transactions';
@@ -50,7 +51,30 @@ export async function GET(request: Request) {
       },
     );
     if (error) throw error;
-    return respond(data as AdminTransactionsPage);
+    const transactionPage = data as AdminTransactionsPage;
+    const orderIds = transactionPage.transactions.map(
+      (transaction) => transaction.id,
+    );
+    if (!orderIds.length) return respond(transactionPage);
+    const { data: refundData, error: refundError } =
+      await getSupabaseAdminClient().rpc('admin_refund_summaries', {
+        p_order_ids: orderIds,
+      });
+    if (refundError) throw refundError;
+    const summaries = new Map(
+      (refundData as AdminRefundSummary[]).map((summary) => [
+        summary.orderId,
+        summary,
+      ]),
+    );
+    return respond({
+      ...transactionPage,
+      transactions: transactionPage.transactions.map((transaction) => {
+        const summary = summaries.get(transaction.id);
+        if (!summary) throw new Error('Refund summary is unavailable.');
+        return { ...transaction, ...summary };
+      }),
+    });
   } catch (error) {
     console.error('Unable to load admin transactions', error);
     return respond(

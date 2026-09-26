@@ -45,6 +45,13 @@ const states = {
     icon: AlertTriangle,
     iconClass: 'bg-amber-300 text-amber-950',
   },
+  refunded: {
+    eyebrow: 'Refund confirmed',
+    title: 'These tickets were refunded.',
+    body: 'This order has been fully refunded, so its ticket codes are no longer valid for entry.',
+    icon: RotateCcw,
+    iconClass: 'bg-violet-200 text-violet-950',
+  },
   pending: {
     eyebrow: 'Verification in progress',
     title: 'We are checking your payment.',

@@ -48,7 +48,9 @@ function statusLabel(status: string) {
 }
 
 function PurchaseCard({ purchase }: { purchase: CustomerPurchase }) {
-  const successful = ['verified', 'refunded'].includes(purchase.paymentStatus);
+  const successful =
+    purchase.paymentStatus === 'verified' &&
+    ['paid', 'partially_refunded'].includes(purchase.status);
   return (
     <article className="overflow-hidden border border-[#241b3f]/10 bg-white shadow-sm">
       <div className="grid md:grid-cols-[11rem_1fr]">

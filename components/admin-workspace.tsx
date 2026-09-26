@@ -26,6 +26,7 @@ import { AdminUserDirectory } from '@/components/admin-user-directory';
 import { AdminOrganiserVerification } from '@/components/admin-organiser-verification';
 import { VerifiedOrganiserBadge } from '@/components/verified-organiser-badge';
 import type { OrganiserEvent } from '@/lib/organiser-types';
+import { eventHasEnded } from '@/lib/event-availability';
 
 type Tab =
   | 'overview'
@@ -42,6 +43,9 @@ export function AdminWorkspace() {
   const [tab, setTab] = useState<Tab>('overview');
   const [notice, setNotice] = useState('');
   const [reviewingId, setReviewingId] = useState('');
+  const [eventPeriod, setEventPeriod] = useState<'all' | 'current' | 'past'>(
+    'all',
+  );
 
   useEffect(() => {
     const loadEvents = async () => {
@@ -122,6 +126,15 @@ export function AdminWorkspace() {
   };
 
   const pendingEvents = events.filter((event) => event.status === 'submitted');
+  const isPast = (event: OrganiserEvent) =>
+    event.status === 'completed' || eventHasEnded(event.endsAt || '');
+  const visibleEvents = events.filter((event) =>
+    eventPeriod === 'all'
+      ? true
+      : eventPeriod === 'past'
+        ? isPast(event)
+        : !isPast(event),
+  );
   const nav = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'customers', label: 'Customers', icon: UserRound },
@@ -129,7 +142,7 @@ export function AdminWorkspace() {
     { id: 'transactions', label: 'Transactions', icon: CreditCard },
     { id: 'organisers', label: 'Organisers', icon: Building2 },
     { id: 'admins', label: 'Admins', icon: ShieldCheck },
-    { id: 'events', label: 'Event approvals', icon: CalendarCheck2 },
+    { id: 'events', label: 'Events & history', icon: CalendarCheck2 },
     { id: 'settings', label: 'Settings', icon: Settings },
   ] as const;
 
@@ -249,11 +262,31 @@ export function AdminWorkspace() {
             <div className="animate-rise">
               <p className="eyebrow">Content quality</p>
               <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">
-                Event approvals
+                Events & history
               </h1>
-              {events.length ? (
+              <p className="mt-3 text-sm text-slate-600">
+                Review submissions and view past event records. Past events are
+                hidden from public browsing.
+              </p>
+              <label className="mt-5 flex items-center gap-3 text-sm font-bold">
+                Show
+                <select
+                  value={eventPeriod}
+                  onChange={(event) =>
+                    setEventPeriod(
+                      event.target.value as 'all' | 'current' | 'past',
+                    )
+                  }
+                  className="min-h-11 border border-[#241b3f]/20 bg-white px-3"
+                >
+                  <option value="all">All events</option>
+                  <option value="current">Current & upcoming</option>
+                  <option value="past">Past events</option>
+                </select>
+              </label>
+              {visibleEvents.length ? (
                 <div className="mt-8 space-y-4">
-                  {events.map((event) => (
+                  {visibleEvents.map((event) => (
                     <article
                       key={event.id}
                       className="border border-[#241b3f]/10 bg-white p-6"
@@ -270,7 +303,11 @@ export function AdminWorkspace() {
                         <div>
                           <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
                             {event.status}
-                            {event.featured ? ' · Featured' : ''}
+                            {isPast(event)
+                              ? ' · Past event'
+                              : event.featured
+                                ? ' · Featured'
+                                : ''}
                           </p>
                           <h2 className="mt-2 text-xl font-black">
                             {event.title}
@@ -320,7 +357,7 @@ export function AdminWorkspace() {
                           )}
                         </div>
                       )}
-                      {event.status === 'published' && (
+                      {event.status === 'published' && !isPast(event) && (
                         <div className="mt-6">
                           <button
                             type="button"
@@ -350,10 +387,10 @@ export function AdminWorkspace() {
                 <div className="mt-8 border border-dashed border-[#241b3f]/15 p-10 text-center">
                   <CalendarCheck2 className="mx-auto h-7 w-7 text-emerald-600" />
                   <h2 className="mt-4 text-xl font-black">
-                    No event submissions
+                    No matching events
                   </h2>
                   <p className="mt-2 text-sm text-slate-600">
-                    New organiser submissions will appear here.
+                    Events matching this filter will appear here.
                   </p>
                 </div>
               )}

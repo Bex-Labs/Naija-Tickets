@@ -50,7 +50,7 @@ export type PaidTicketOrderView = {
 
 export type TicketOrderLookup =
   | { state: 'invalid' | 'not_found' }
-  | { state: 'pending' | 'failed' | 'expired' }
+  | { state: 'pending' | 'failed' | 'expired' | 'refunded' }
   | { state: 'paid_without_tickets'; reference: string }
   | { state: 'success'; order: PaidTicketOrderView };
 
@@ -65,9 +65,12 @@ export function isValidOrderReference(value: string) {
   return ORDER_REFERENCE_PATTERN.test(value);
 }
 
-function unavailableState(status: string): 'pending' | 'failed' | 'expired' {
+function unavailableState(
+  status: string,
+): 'pending' | 'failed' | 'expired' | 'refunded' {
   if (status === 'pending') return 'pending';
   if (status === 'expired') return 'expired';
+  if (status === 'refunded') return 'refunded';
   return 'failed';
 }
 
@@ -83,7 +86,10 @@ export async function retrieveTicketOrder(
   if (order.reference.toLowerCase() !== normalizedReference) {
     return { state: 'not_found' };
   }
-  if (order.status !== 'paid') {
+  if (
+    !['paid', 'partially_refunded'].includes(order.status) ||
+    order.paymentStatus !== 'verified'
+  ) {
     if (['failed', 'abandoned'].includes(order.paymentStatus || '')) {
       return { state: 'failed' };
     }

@@ -1,17 +1,83 @@
 import { NextResponse } from 'next/server';
 import { waitUntil } from 'cloudflare:workers';
+import { parsePaystackRefund } from '@/lib/admin-refunds';
 import { finalizePaystackPayment } from '@/lib/payments';
 import {
+  getPaystackRefund,
   isValidPaystackReference,
   sha256Hex,
   verifyPaystackWebhookSignature,
 } from '@/lib/paystack';
+import { getSupabaseAdminClient } from '@/lib/supabase/server';
 import { deliverOrderTickets } from '@/lib/ticket-delivery';
 
 type PaystackWebhook = {
   event?: unknown;
   data?: unknown;
 };
+
+const refundEvents = new Set([
+  'refund.pending',
+  'refund.processing',
+  'refund.needs-attention',
+  'refund.failed',
+  'refund.processed',
+]);
+
+async function reconcileRecordedRefund(data: unknown) {
+  if (!data || typeof data !== 'object') return 'invalid';
+  const values = data as Record<string, unknown>;
+  const transactionReference = values.transaction_reference;
+  const amount = Number(values.amount);
+  if (
+    typeof transactionReference !== 'string' ||
+    !isValidPaystackReference(transactionReference) ||
+    !Number.isSafeInteger(amount) ||
+    amount <= 0 ||
+    values.currency !== 'NGN'
+  ) {
+    return 'invalid';
+  }
+
+  const client = getSupabaseAdminClient();
+  const { data: payment, error: paymentError } = await client
+    .from('payments')
+    .select('order_id,provider_transaction_id')
+    .eq('provider', 'paystack')
+    .eq('provider_reference', transactionReference)
+    .maybeSingle();
+  if (paymentError) throw paymentError;
+  if (!payment) return 'unmatched';
+
+  const { data: refunds, error: refundError } = await client
+    .from('refunds')
+    .select('provider_refund_id,admin_actor_id')
+    .eq('order_id', payment.order_id)
+    .eq('amount_kobo', amount)
+    .eq('status', 'processing');
+  if (refundError) throw refundError;
+  if (!refunds || refunds.length !== 1 || !refunds[0].provider_refund_id) {
+    return 'unmatched';
+  }
+
+  const refundId = refunds[0].provider_refund_id as string;
+  const provider = parsePaystackRefund(
+    (await getPaystackRefund(refundId)).data,
+    refundId,
+  );
+  const { error: updateError } = await client.rpc('record_admin_refund', {
+    p_order_id: payment.order_id,
+    p_provider_refund_id: provider.id,
+    p_provider_transaction_id: provider.transactionId,
+    p_amount_kobo: provider.amountKobo,
+    p_currency: provider.currency,
+    p_provider_status: provider.providerStatus,
+    p_reason: '',
+    p_admin_actor_id: refunds[0].admin_actor_id || 'paystack-webhook',
+  });
+  if (updateError) throw updateError;
+  return 'updated';
+}
 
 export async function POST(request: Request) {
   const rawBytes = await request.arrayBuffer();
@@ -38,6 +104,20 @@ export async function POST(request: Request) {
     event = JSON.parse(rawPayload) as PaystackWebhook;
   } catch {
     return NextResponse.json({ error: 'Invalid payload.' }, { status: 400 });
+  }
+  if (typeof event.event === 'string' && refundEvents.has(event.event)) {
+    try {
+      return NextResponse.json({
+        received: true,
+        outcome: await reconcileRecordedRefund(event.data),
+      });
+    } catch (error) {
+      console.error('Paystack refund reconciliation failed', error);
+      return NextResponse.json(
+        { error: 'Refund reconciliation failed.' },
+        { status: 500 },
+      );
+    }
   }
   if (event.event !== 'charge.success') {
     return NextResponse.json({ received: true, ignored: true });

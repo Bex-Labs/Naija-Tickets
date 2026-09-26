@@ -65,6 +65,7 @@ export async function POST(request: Request) {
       .select('id')
       .eq('id', eventId)
       .eq('status', 'published')
+      .gt('ends_at', new Date().toISOString())
       .maybeSingle();
     if (eventError) throw eventError;
     if (!event)

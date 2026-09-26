@@ -22,6 +22,7 @@ export async function getPublishedEvents() {
     .from('events')
     .select(publicEventSelect)
     .eq('status', 'published')
+    .gt('ends_at', new Date().toISOString())
     .order('published_at', { ascending: false });
   if (error) return [];
   return ((data || []) as unknown as DatabaseEventRow[])
@@ -37,6 +38,7 @@ export async function getPublishedEventBySlug(slug: string) {
     .select(publicEventSelect)
     .eq('slug', slug)
     .eq('status', 'published')
+    .gt('ends_at', new Date().toISOString())
     .maybeSingle();
 
   if (error || !data) return null;

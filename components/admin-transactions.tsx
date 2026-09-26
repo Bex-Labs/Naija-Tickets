@@ -2,6 +2,7 @@
 
 import { RefreshCw, Search } from 'lucide-react';
 import { useEffect, useState, type SyntheticEvent } from 'react';
+import { AdminRefundActions } from '@/components/admin-refund-actions';
 import { formatNaira } from '@/lib/events';
 import type {
   AdminTransactionsPage,
@@ -104,7 +105,7 @@ export function AdminTransactions() {
       <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
         Monitor purchases and payment attempts across the platform. Verified
         means the order and its payment verification agree; mismatches are
-        flagged for review.
+        flagged for review. Refunds recorded here are verified against Paystack.
       </p>
 
       <div className="mt-7 grid gap-3 lg:grid-cols-[minmax(0,1fr)_11rem_11rem_auto]">
@@ -196,7 +197,7 @@ export function AdminTransactions() {
       </div>
 
       <div className="mt-3 overflow-x-auto border border-[#241b3f]/10 bg-white">
-        <table className="w-full min-w-[880px] text-left text-sm">
+        <table className="w-full min-w-[1100px] text-left text-sm">
           <thead className="bg-[#fff3d8] text-xs uppercase tracking-wider text-slate-600">
             <tr>
               <th scope="col" className="px-4 py-4">
@@ -216,6 +217,9 @@ export function AdminTransactions() {
               </th>
               <th scope="col" className="px-4 py-4">
                 Status
+              </th>
+              <th scope="col" className="px-4 py-4">
+                Refunds
               </th>
             </tr>
           </thead>
@@ -278,12 +282,18 @@ export function AdminTransactions() {
                       </span>
                     )}
                   </td>
+                  <td className="px-4 py-4 align-top">
+                    <AdminRefundActions
+                      transaction={transaction}
+                      onUpdated={() => setRefresh((value) => value + 1)}
+                    />
+                  </td>
                 </tr>
               ))}
             {!loading && !error && data?.transactions.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-12 text-center text-slate-500"
                 >
                   No transactions match these filters.
@@ -293,7 +303,7 @@ export function AdminTransactions() {
             {loading && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-12 text-center text-slate-500"
                 >
                   Loading transactions…
