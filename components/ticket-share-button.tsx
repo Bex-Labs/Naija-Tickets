@@ -31,51 +31,54 @@ async function ticketImage(qrId: string, details: TicketDetails) {
       image.src = qrUrl;
     });
     const canvas = document.createElement('canvas');
-    canvas.width = 800;
+    canvas.width = 1000;
     canvas.height = 2000;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Your browser cannot export this ticket.');
     ctx.fillStyle = '#fffaf0';
-    ctx.fillRect(0, 0, 800, 2000);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#079669';
-    ctx.fillRect(0, 0, 800, 115);
+    ctx.fillRect(0, 0, 1000, 72);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 38px sans-serif';
-    ctx.fillText('Naija Tickets', 48, 73);
+    ctx.font = 'bold 30px sans-serif';
+    ctx.fillText('Naija Tickets', 32, 47);
     ctx.fillStyle = '#241b3f';
-    let y = 175;
+    let y = 120;
     for (const [value, font] of [
-      [details.eventTitle, 'bold 32px sans-serif'],
-      [details.eventDate, '22px sans-serif'],
-      [details.venue, '22px sans-serif'],
-      [`${details.ticketType} · Admit one`, 'bold 24px sans-serif'],
-      [details.attendeeName, 'bold 26px sans-serif'],
+      [details.eventTitle, 'bold 30px sans-serif'],
+      [details.eventDate, '21px sans-serif'],
+      [details.venue, '21px sans-serif'],
+      [`${details.ticketType} · Admit one`, 'bold 23px sans-serif'],
+      [details.attendeeName, 'bold 25px sans-serif'],
     ]) {
       ctx.font = font;
       let line = '';
       for (const word of value.split(/\s+/)) {
         const next = line ? `${line} ${word}` : word;
-        if (ctx.measureText(next).width > 704 && line) {
-          ctx.fillText(line, 48, y, 704);
-          y += 39;
+        if (ctx.measureText(next).width > 560 && line) {
+          ctx.fillText(line, 32, y, 560);
+          y += 32;
           line = word;
         } else line = next;
       }
-      ctx.fillText(line, 48, y, 704);
-      y += 57;
+      ctx.fillText(line, 32, y, 560);
+      y += 48;
     }
+    const height = Math.max(500, y + 32);
+    ctx.fillStyle = '#079669';
+    ctx.fillRect(624, 72, 376, height - 72);
+    ctx.fillStyle = '#fffaf0';
+    ctx.fillRect(668, 108, 288, 288);
+    ctx.drawImage(image, 684, 124, 256, 256);
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(230, y + 10, 340, 340);
-    ctx.drawImage(image, 250, y + 30, 300, 300);
-    ctx.fillStyle = '#241b3f';
-    ctx.font = 'bold 25px monospace';
+    ctx.font = 'bold 23px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText(details.displayCode, 400, y + 395);
-    ctx.font = '20px sans-serif';
-    ctx.fillText('Show this QR code at the entrance.', 400, y + 440);
+    ctx.fillText(details.displayCode, 812, 430, 344);
+    ctx.font = '17px sans-serif';
+    ctx.fillText('Show this QR code at the entrance.', 812, 462, 344);
     const cropped = document.createElement('canvas');
-    cropped.width = 800;
-    cropped.height = y + 485;
+    cropped.width = 1000;
+    cropped.height = height;
     const croppedContext = cropped.getContext('2d');
     if (!croppedContext)
       throw new Error('Your browser cannot export this ticket.');
@@ -139,12 +142,12 @@ export function TicketShareButton({
     }
   };
   return (
-    <div className="no-print mt-3">
+    <div className="no-print flex flex-wrap justify-center gap-2">
       <button
         type="button"
         disabled={busy}
         onClick={() => void share()}
-        className="inline-flex min-h-11 items-center gap-2 border border-emerald-600/30 bg-white px-3 text-xs font-bold text-emerald-800 disabled:opacity-50"
+        className="inline-flex min-h-9 items-center gap-2 border border-emerald-600/30 bg-white px-2 text-[11px] font-bold text-emerald-800 disabled:opacity-50"
       >
         <Share2 className="h-4 w-4" />
         {busy ? 'Preparing…' : 'Share ticket'}
@@ -153,13 +156,15 @@ export function TicketShareButton({
         type="button"
         disabled={busy}
         onClick={() => void share(true)}
-        className="ml-2 inline-flex min-h-11 items-center gap-2 border border-emerald-600/30 bg-white px-3 text-xs font-bold text-emerald-800 disabled:opacity-50"
+        className="inline-flex min-h-9 items-center gap-2 border border-emerald-600/30 bg-white px-2 text-[11px] font-bold text-emerald-800 disabled:opacity-50"
       >
         <Download className="h-4 w-4" />
         Save ticket
       </button>
       {notice && (
-        <output className="mt-2 block text-xs text-slate-600">{notice}</output>
+        <output className="mt-2 block w-full text-xs text-emerald-50">
+          {notice}
+        </output>
       )}
     </div>
   );

@@ -56,15 +56,18 @@ export function mapGuestOrder(row: GuestOrderRow): GuestOrder {
 
 export function filterGuestOrders(orders: GuestOrder[], query: string) {
   const normalized = query.trim().toLowerCase();
-  if (!normalized) return orders;
-  return orders.filter((order) =>
-    [
-      order.purchaserName,
-      order.purchaserEmail,
-      order.purchaserPhone,
-      order.eventTitle,
-      order.reference,
-      order.status,
-    ].some((value) => value.toLowerCase().includes(normalized)),
-  );
+  return orders
+    .filter((order) => !order.personalDataErasedAt)
+    .filter(
+      (order) =>
+        !normalized ||
+        [
+          order.purchaserName,
+          order.purchaserEmail,
+          order.purchaserPhone,
+          order.eventTitle,
+          order.reference,
+          order.status,
+        ].some((value) => value.toLowerCase().includes(normalized)),
+    );
 }

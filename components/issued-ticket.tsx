@@ -152,20 +152,9 @@ export function IssuedTicketList({
           </div>
 
           <aside className="issued-ticket__stub" aria-label="Entry code">
-            <div className="flex items-center gap-2 text-white">
-              <span className="grid h-8 w-8 place-items-center bg-[#fffaf0] text-[#241b3f]">
-                <Ticket className="h-4 w-4" aria-hidden="true" />
-              </span>
-              <span className="brand-wordmark text-lg">Naija Tickets</span>
-            </div>
-            <div>
-              <p className="mt-8 text-2xl font-black uppercase tracking-[.08em] text-white">
-                Admit one
-              </p>
-              <p className="mt-3 border-y border-white/55 py-3 text-xs font-black uppercase tracking-[.24em] text-emerald-50">
-                {ticket.ticketType}
-              </p>
-            </div>
+            <p className="issued-ticket__entry-label text-sm font-black uppercase tracking-[.12em] text-white">
+              Admit one
+            </p>
             <div className="issued-ticket__qr">
               <QRCodeSVG
                 id={`issued-qr-${ticket.id}`}
@@ -176,7 +165,7 @@ export function IssuedTicketList({
                 bgColor="#fffaf0"
                 fgColor="#17112f"
               />
-              <p className="mt-3 break-all font-mono text-sm font-black tracking-[.08em] text-[#241b3f]">
+              <p className="mt-2 break-all font-mono text-xs font-black text-[#241b3f]">
                 {ticket.displayCode}
               </p>
             </div>
@@ -192,7 +181,7 @@ export function IssuedTicketList({
               />
             )}
             {!hideOrderReference && (
-              <div className="mt-5 text-[10px] font-bold uppercase tracking-[.13em] text-emerald-50">
+              <div className="issued-ticket__reference mt-2 text-[9px] font-bold uppercase tracking-[.1em] text-emerald-50">
                 <span className="block">Order reference</span>
                 <span className="mt-1 block break-all font-mono normal-case tracking-normal">
                   {order.reference}

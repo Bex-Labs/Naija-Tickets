@@ -95,6 +95,11 @@ export function AdminOrganiserVerification() {
         <p className="mt-5 text-sm">Loading requests…</p>
       ) : (
         <div className="mt-5 space-y-4">
+          {organisers.length === 0 && (
+            <p className="text-sm text-slate-500">
+              No verification requests submitted yet.
+            </p>
+          )}
           {organisers.map((organiser) => (
             <article
               key={organiser.organiserId}

@@ -65,3 +65,13 @@ void test('searches guest purchases across contact, event, reference and status'
   assert.deepEqual(filterGuestOrders([first, second], 'ada@example'), [first]);
   assert.deepEqual(filterGuestOrders([first, second], 'pending'), [second]);
 });
+
+void test('erased guests never appear in the buyer list, including search results', () => {
+  const active = mapGuestOrder(row());
+  const erased = mapGuestOrder(
+    row({ id: 'erased', personal_data_erased_at: '2026-09-28T00:00:00Z' }),
+  );
+  assert.deepEqual(filterGuestOrders([active, erased], ''), [active]);
+  assert.deepEqual(filterGuestOrders([active, erased], 'Lagos'), [active]);
+  assert.deepEqual(filterGuestOrders([erased], erased.reference), []);
+});

@@ -57,7 +57,7 @@ export function AdminUserDirectory({
   useEffect(() => {
     const load = async () => {
       try {
-        const response = await fetch('/api/admin/users');
+        const response = await fetch('/api/admin/users', { cache: 'no-store' });
         const result = (await response.json()) as DirectoryResponse;
         if (!response.ok)
           throw new Error(result.error || 'Accounts could not be loaded.');
@@ -162,7 +162,7 @@ export function AdminUserDirectory({
           <p className="mt-3 text-sm leading-6 text-slate-600">
             {isOrganiser
               ? 'View, add, or remove organiser access from one place.'
-              : 'View, add, or remove customer accounts from one place.'}
+              : 'Customers who have signed up appear here, even before their first purchase.'}
           </p>
         </div>
         <Button

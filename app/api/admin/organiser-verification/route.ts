@@ -10,7 +10,7 @@ async function listVerifications(): Promise<VerificationRequest[]> {
   const { data, error } = await getSupabaseAdminClient()
     .from('organisers')
     .select(
-      'id,name,account_type,contact_email,phone,verified_at,organiser_verification_requests(legal_name,registration_reference,status,submitted_at,reviewed_at,review_note)',
+      'id,name,account_type,contact_email,phone,verified_at,organiser_verification_requests!inner(legal_name,registration_reference,status,submitted_at,reviewed_at,review_note)',
     )
     .order('created_at', { ascending: false });
   if (error) throw error;

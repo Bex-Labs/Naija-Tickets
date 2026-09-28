@@ -201,7 +201,12 @@ export function TicketSelector({
       <div className="border-t border-[#241b3f]/10 pt-5">
         <div className="mb-4 flex items-center justify-between">
           <span className="text-sm text-slate-600">Total before fees</span>
-          <strong className="text-xl">{formatNaira(total)}</strong>
+          <strong
+            className={count ? 'text-xl' : 'text-sm text-slate-500'}
+            aria-live="polite"
+          >
+            {count ? formatNaira(total) : 'Select a ticket'}
+          </strong>
         </div>
         <button
           disabled={!count}

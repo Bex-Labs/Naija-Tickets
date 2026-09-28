@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isCustomerAccount } from '@/lib/admin-customer-accounts';
 import { verifyAdminCredentials } from '@/lib/admin-auth';
 import { getAuthenticatedAdmin } from '@/lib/admin-request';
 import { getSupabaseAdminClient } from '@/lib/supabase/server';
@@ -67,13 +68,20 @@ async function listAccounts() {
     ),
   );
   const activeUsers = authData.users.filter(
-    (user) => !(user as unknown as { deleted_at?: string }).deleted_at,
+    (user) =>
+      !user.is_anonymous &&
+      !(user as unknown as { deleted_at?: string }).deleted_at,
   );
 
   const organisers = activeUsers.flatMap((user) => {
     const membership = membershipByUser.get(user.id);
     const organisation = membership ? organiserRelation(membership) : null;
-    if (!membership || !organisation) return [];
+    if (
+      !membership ||
+      !organisation ||
+      user.user_metadata?.account_purpose === 'customer'
+    )
+      return [];
     const profile = profileById.get(user.id);
     return [
       {
@@ -90,14 +98,14 @@ async function listAccounts() {
   });
   const organiserUserIds = new Set(organisers.map((item) => item.id));
   const customers = activeUsers
-    .filter((user) => !organiserUserIds.has(user.id))
+    .filter((user) => isCustomerAccount(user, organiserUserIds.has(user.id)))
     .map((user) => {
       const profile = profileById.get(user.id);
       return {
         id: user.id,
-        name: profile?.full_name || 'Customer',
+        name: profile?.full_name || user.user_metadata?.full_name || 'Customer',
         email: user.email || '',
-        phone: profile?.phone || '',
+        phone: profile?.phone || user.user_metadata?.phone || '',
         createdAt: user.created_at,
         confirmed: Boolean(user.email_confirmed_at),
       };
@@ -137,7 +145,9 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorised.' }, { status: 401 });
   }
   try {
-    return NextResponse.json(await listAccounts());
+    return NextResponse.json(await listAccounts(), {
+      headers: { 'Cache-Control': 'private, no-store' },
+    });
   } catch (error) {
     console.error('Admin user list failed', error);
     return NextResponse.json(
@@ -191,6 +201,7 @@ export async function POST(request: Request) {
       user_metadata: {
         full_name: name,
         phone,
+        account_purpose: accountKind,
         account_type:
           accountKind === 'organiser' ? 'organisation' : 'individual',
         organisation_name: accountKind === 'organiser' ? organisation : null,
@@ -231,7 +242,9 @@ export async function POST(request: Request) {
     }
 
     await audit('admin.user_created', current.id, createdUserId, accountKind);
-    return NextResponse.json(await listAccounts());
+    return NextResponse.json(await listAccounts(), {
+      headers: { 'Cache-Control': 'private, no-store' },
+    });
   } catch (error) {
     if (createdUserId) await client.auth.admin.deleteUser(createdUserId);
     if (createdOrganiserId) {
@@ -321,7 +334,9 @@ export async function DELETE(request: Request) {
     if (deleteError) throw deleteError;
 
     await audit('admin.user_deleted', current.id, userId, accountKind);
-    return NextResponse.json(await listAccounts());
+    return NextResponse.json(await listAccounts(), {
+      headers: { 'Cache-Control': 'private, no-store' },
+    });
   } catch (error) {
     console.error('Admin user deletion failed', error);
     return NextResponse.json(

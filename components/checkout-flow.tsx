@@ -317,11 +317,11 @@ export function CheckoutFlow({
             <div className="flex items-start justify-between gap-5">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
-                  Paystack secure checkout
+                  Secure checkout
                 </p>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Card and bank details are entered on Paystack. Naija Tickets
-                  never receives your payment credentials.
+                  Card and bank details are entered on the secure payment page.
+                  Naija Tickets never receives your payment credentials.
                 </p>
               </div>
               <CreditCard className="h-6 w-6 shrink-0 text-emerald-700" />
@@ -355,10 +355,10 @@ export function CheckoutFlow({
               className="mt-5 h-12 w-full bg-[#ff6b4a] font-black text-white hover:bg-[#ee5535]"
             >
               {paymentStatus === 'starting'
-                ? 'Opening Paystack...'
+                ? 'Continuing...'
                 : reservation.totalKobo === 0
                   ? 'Complete free booking'
-                  : 'Pay with Paystack'}
+                  : 'Continue to payment'}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
