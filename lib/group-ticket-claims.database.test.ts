@@ -185,11 +185,11 @@ void test('group claims reuse verified payments and admission inventory', async 
           'select id,claim_state,display_code,qr_token_hash,claim_access_token from public.tickets order by attendee_index',
         )
       ).rows;
-    const scan = async (code: string | null) =>
+    const scan = async (code: string | null, admit = true) =>
       (
         await db.query<{ result: { outcome: string } }>(
-          'select public.verify_event_entry($1,$2,$3,true) as result',
-          [owner, event, code],
+          'select public.verify_event_entry($1,$2,$3,$4) as result',
+          [owner, event, code, admit],
         )
       ).rows[0].result;
     await scenario(
@@ -247,6 +247,21 @@ void test('group claims reuse verified payments and admission inventory', async 
         tickets = await slots();
         assert.notEqual(tickets[0].display_code, tickets[1].display_code);
         assert.notEqual(tickets[0].qr_token_hash, tickets[1].qr_token_hash);
+        // Scanning to preview validity must not consume the attendee's admission.
+        assert.equal(
+          (await scan(tickets[0].display_code, false)).outcome,
+          'valid',
+        );
+        assert.equal(
+          (await scan(tickets[0].display_code, false)).outcome,
+          'valid',
+        );
+        assert.equal((await slots())[0].claim_state, 'CLAIMED');
+        assert.equal(
+          (await scan(groupBooking.invite_token)).outcome,
+          'invalid',
+        );
+        assert.equal((await scan(receipt)).outcome, 'invalid');
         assert.equal((await scan(tickets[0].display_code)).outcome, 'admitted');
         assert.equal(
           (await scan(tickets[0].display_code)).outcome,

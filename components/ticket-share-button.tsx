@@ -1,90 +1,36 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Share2 } from 'lucide-react';
+import { Download, Printer, Share2 } from 'lucide-react';
 
-type TicketDetails = {
-  eventTitle: string;
-  eventDate: string;
-  venue: string;
-  attendeeName: string;
-  ticketType: string;
-  displayCode: string;
-};
-
-// Export only this admission. Sharing the order URL would expose every ticket
-// in the purchase to a group member.
-async function ticketImage(qrId: string, details: TicketDetails) {
-  const qr = document.getElementById(qrId);
-  if (!qr) throw new Error('The ticket QR code is not available.');
-  const qrUrl = URL.createObjectURL(
-    new Blob([new XMLSerializer().serializeToString(qr)], {
-      type: 'image/svg+xml',
-    }),
+// Export the displayed artwork itself, never redraw it or share an order URL.
+// That keeps the design identical and shares only this attendee's admission.
+export async function ticketImage(artworkId: string, displayCode: string) {
+  const artwork = document.getElementById(artworkId);
+  if (!(artwork instanceof SVGSVGElement))
+    throw new Error('The ticket is not ready. Please try again.');
+  const width = artwork.viewBox.baseVal.width;
+  const height = artwork.viewBox.baseVal.height;
+  const source = new XMLSerializer().serializeToString(artwork);
+  const url = URL.createObjectURL(
+    new Blob([source], { type: 'image/svg+xml;charset=utf-8' }),
   );
   try {
     const image = new Image();
     await new Promise<void>((resolve, reject) => {
       image.onload = () => resolve();
       image.onerror = () =>
-        reject(new Error('The QR image could not be prepared.'));
-      image.src = qrUrl;
+        reject(new Error('The ticket image could not be prepared.'));
+      image.src = url;
     });
     const canvas = document.createElement('canvas');
-    canvas.width = 1000;
-    canvas.height = 2000;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Your browser cannot export this ticket.');
-    ctx.fillStyle = '#fffaf0';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#079669';
-    ctx.fillRect(0, 0, 1000, 72);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 30px sans-serif';
-    ctx.fillText('Naija Tickets', 32, 47);
-    ctx.fillStyle = '#241b3f';
-    let y = 120;
-    for (const [value, font] of [
-      [details.eventTitle, 'bold 30px sans-serif'],
-      [details.eventDate, '21px sans-serif'],
-      [details.venue, '21px sans-serif'],
-      [`${details.ticketType} · Admit one`, 'bold 23px sans-serif'],
-      [details.attendeeName, 'bold 25px sans-serif'],
-    ]) {
-      ctx.font = font;
-      let line = '';
-      for (const word of value.split(/\s+/)) {
-        const next = line ? `${line} ${word}` : word;
-        if (ctx.measureText(next).width > 560 && line) {
-          ctx.fillText(line, 32, y, 560);
-          y += 32;
-          line = word;
-        } else line = next;
-      }
-      ctx.fillText(line, 32, y, 560);
-      y += 48;
-    }
-    const height = Math.max(500, y + 32);
-    ctx.fillStyle = '#079669';
-    ctx.fillRect(624, 72, 376, height - 72);
-    ctx.fillStyle = '#fffaf0';
-    ctx.fillRect(668, 108, 288, 288);
-    ctx.drawImage(image, 684, 124, 256, 256);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 23px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(details.displayCode, 812, 430, 344);
-    ctx.font = '17px sans-serif';
-    ctx.fillText('Show this QR code at the entrance.', 812, 462, 344);
-    const cropped = document.createElement('canvas');
-    cropped.width = 1000;
-    cropped.height = height;
-    const croppedContext = cropped.getContext('2d');
-    if (!croppedContext)
-      throw new Error('Your browser cannot export this ticket.');
-    croppedContext.drawImage(canvas, 0, 0);
+    canvas.width = width * 3;
+    canvas.height = height * 3;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Your browser cannot export this ticket.');
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise<Blob>((resolve, reject) =>
-      cropped.toBlob(
+      canvas.toBlob(
         (value) =>
           value
             ? resolve(value)
@@ -92,34 +38,40 @@ async function ticketImage(qrId: string, details: TicketDetails) {
         'image/png',
       ),
     );
-    return new File([blob], `${details.displayCode}.png`, {
-      type: 'image/png',
-    });
+    return new File([blob], `${displayCode}.png`, { type: 'image/png' });
   } finally {
-    URL.revokeObjectURL(qrUrl);
+    URL.revokeObjectURL(url);
   }
 }
 
 export function TicketShareButton({
-  qrId,
-  ...details
-}: TicketDetails & { qrId: string }) {
+  artworkId,
+  eventTitle,
+  attendeeName,
+  displayCode,
+  canShare = true,
+}: {
+  artworkId: string;
+  eventTitle: string;
+  attendeeName: string;
+  displayCode: string;
+  canShare?: boolean;
+}) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const share = async (downloadOnly = false) => {
     setBusy(true);
     setNotice('');
     try {
-      const file = await ticketImage(qrId, details);
+      const file = await ticketImage(artworkId, displayCode);
       if (
         !downloadOnly &&
         navigator.share &&
         navigator.canShare?.({ files: [file] })
       ) {
-        setNotice('Choose where to share this individual ticket.');
         await navigator.share({
           files: [file],
-          title: `${details.eventTitle} — ${details.attendeeName}`,
+          title: `${eventTitle} — ${attendeeName}`,
         });
       } else {
         const url = URL.createObjectURL(file);
@@ -128,7 +80,11 @@ export function TicketShareButton({
         link.download = file.name;
         link.click();
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-        setNotice('Ticket image saved. Send this image to your guest.');
+        setNotice(
+          downloadOnly
+            ? 'Ticket saved.'
+            : 'Ticket saved. You can send this image to your guest.',
+        );
       }
     } catch (error) {
       if (!(error instanceof Error && error.name === 'AbortError'))
@@ -141,31 +97,68 @@ export function TicketShareButton({
       setBusy(false);
     }
   };
+  const print = () => {
+    document
+      .querySelectorAll('.issued-ticket-record[data-print-selected]')
+      .forEach((record) => record.removeAttribute('data-print-selected'));
+    document.body.dataset.printTicket = artworkId;
+    const record = document
+      .getElementById(artworkId)
+      ?.closest('.issued-ticket-record');
+    record?.setAttribute('data-print-selected', 'true');
+    const clear = () => {
+      delete document.body.dataset.printTicket;
+      record?.removeAttribute('data-print-selected');
+      window.removeEventListener('afterprint', clear);
+    };
+    window.addEventListener('afterprint', clear);
+    try {
+      window.print();
+    } catch {
+      clear();
+      setNotice('Printing is unavailable. Save your ticket instead.');
+    }
+  };
+  const buttonClass =
+    'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 text-sm font-semibold shadow-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:opacity-50';
   return (
-    <div className="no-print flex flex-wrap justify-center gap-2">
+    <fieldset className="no-print mt-4 flex min-w-0 flex-wrap items-center justify-end gap-3">
+      <legend className="sr-only">Actions for {attendeeName}’s ticket</legend>
       <button
         type="button"
-        disabled={busy}
-        onClick={() => void share()}
-        className="inline-flex min-h-9 items-center gap-2 border border-emerald-600/30 bg-white px-2 text-[11px] font-bold text-emerald-800 disabled:opacity-50"
+        onClick={print}
+        className={`${buttonClass} border-emerald-700/20 bg-white text-emerald-800 hover:bg-emerald-50`}
       >
-        <Share2 className="h-4 w-4" />
-        {busy ? 'Preparing…' : 'Share ticket'}
+        <Printer className="h-4 w-4" />
+        Print ticket
       </button>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => void share(true)}
-        className="inline-flex min-h-9 items-center gap-2 border border-emerald-600/30 bg-white px-2 text-[11px] font-bold text-emerald-800 disabled:opacity-50"
-      >
-        <Download className="h-4 w-4" />
-        Save ticket
-      </button>
+      {canShare && (
+        <>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void share()}
+            className={`${buttonClass} border-emerald-700/20 bg-white text-emerald-800 hover:bg-emerald-50`}
+          >
+            <Share2 className="h-4 w-4" />
+            {busy ? 'Preparing…' : 'Share ticket'}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void share(true)}
+            className={`${buttonClass} border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800`}
+          >
+            <Download className="h-4 w-4" />
+            Save ticket
+          </button>
+        </>
+      )}
       {notice && (
-        <output className="mt-2 block w-full text-xs text-emerald-50">
+        <output className="w-full text-right text-sm text-slate-600">
           {notice}
         </output>
       )}
-    </div>
+    </fieldset>
   );
 }

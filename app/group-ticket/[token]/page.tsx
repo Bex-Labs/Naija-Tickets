@@ -106,8 +106,8 @@ export default async function ClaimedTicketPage({
     <main className="payment-status-page min-h-screen bg-[#fffaf0] text-[#241b3f]">
       <SiteHeader />
       <section className="mx-auto max-w-6xl px-5 py-12 md:px-10">
-        <p className="eyebrow">Group admission</p>
-        <h1 className="mt-3 text-3xl font-black">
+        <p className="eyebrow no-print">Group admission</p>
+        <h1 className="no-print mt-3 text-3xl font-black">
           {order
             ? order.tickets[0].status === 'used'
               ? 'Your ticket has been checked in.'
@@ -116,7 +116,7 @@ export default async function ClaimedTicketPage({
         </h1>
         {order ? (
           <>
-            <p className="mt-4 text-sm text-slate-600">
+            <p className="no-print mt-4 text-sm text-slate-600">
               Save your ticket and keep this private link. Your QR code admits
               one person, once.
             </p>

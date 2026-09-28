@@ -173,270 +173,16 @@ a {
 }
 
 .issued-ticket {
-  position: relative;
-  isolation: isolate;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 16rem;
   overflow: hidden;
   border: 1px solid rgba(36, 27, 63, 0.15);
   background: #fffaf0;
-  box-shadow: 0 22px 55px rgba(36, 27, 63, 0.14);
+  box-shadow: 0 12px 35px rgba(36, 27, 63, 0.1);
 }
 
-.issued-ticket__main {
-  position: relative;
-  min-width: 0;
-  overflow: hidden;
-  padding: clamp(1rem, 2.5vw, 1.5rem);
-}
-
-.issued-ticket__main::before,
-.issued-ticket__main::after {
-  position: absolute;
-  z-index: -1;
-  border: 2px solid rgba(7, 150, 105, 0.42);
-  border-radius: 999px;
-  content: '';
-}
-
-.issued-ticket__main::before {
-  bottom: -8rem;
-  left: -8rem;
-  width: 18rem;
-  height: 18rem;
-  box-shadow:
-    0 0 0 13px #fffaf0,
-    0 0 0 15px rgba(7, 150, 105, 0.3),
-    0 0 0 28px #fffaf0,
-    0 0 0 30px rgba(7, 150, 105, 0.22);
-}
-
-.issued-ticket__main::after {
-  top: -5rem;
-  right: 2rem;
-  width: 12rem;
-  height: 12rem;
-  opacity: 0.28;
-}
-
-.issued-ticket__brand-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.issued-ticket__art {
-  position: absolute;
-  right: 1.25rem;
-  bottom: 7rem;
-  color: rgba(7, 150, 105, 0.08);
-  transform: rotate(-12deg);
-}
-
-.issued-ticket__art svg {
-  width: clamp(7rem, 14vw, 12rem);
-  height: clamp(7rem, 14vw, 12rem);
-  stroke-width: 1;
-}
-
-.issued-ticket__title {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  margin-top: 1.25rem;
-  font-size: clamp(1.75rem, 3.6vw, 3rem);
-  font-weight: 950;
-  line-height: 1;
-  letter-spacing: -0.065em;
-  text-transform: uppercase;
-}
-
-.issued-ticket__details {
-  display: grid;
-  grid-template-columns: 1.15fr 0.8fr 1.15fr;
-  gap: 1rem;
-  margin-top: 1.25rem;
-  padding-block: 0.75rem;
-  border-block: 1px solid rgba(36, 27, 63, 0.22);
-}
-
-.issued-ticket__details > div {
-  display: flex;
-  min-width: 0;
-  align-items: flex-start;
-  gap: 0.65rem;
-}
-
-.issued-ticket__details > div + div {
-  padding-left: 1rem;
-  border-left: 1px solid rgba(36, 27, 63, 0.18);
-}
-
-.issued-ticket__details svg {
-  width: 1.35rem;
-  height: 1.35rem;
-  flex: none;
-  color: #079669;
-}
-
-.issued-ticket__details dt,
-.issued-ticket__admission span {
-  font-size: 0.63rem;
-  font-weight: 800;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  color: #655d78;
-}
-
-.issued-ticket__details dd {
-  margin-top: 0.22rem;
-  font-size: 0.82rem;
-  font-weight: 800;
-  line-height: 1.35;
-}
-
-.issued-ticket__address {
-  margin-top: 0.75rem;
-  font-size: 0.75rem;
-  line-height: 1.5;
-  color: #655d78;
-}
-
-.issued-ticket__admission {
-  display: grid;
-  grid-template-columns: 0.85fr 1.3fr 0.65fr;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.issued-ticket__admission > div {
-  min-width: 0;
-}
-
-.issued-ticket__admission strong {
-  display: flex;
-  margin-top: 0.3rem;
-  font-size: 0.9rem;
-  line-height: 1.35;
-}
-
-.issued-ticket__stub {
-  position: relative;
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.75rem;
-  overflow: hidden;
-  border-left: 2px dashed rgba(255, 250, 240, 0.8);
-  background:
-    radial-gradient(
-      circle at 88% 12%,
-      rgba(255, 255, 255, 0.13),
-      transparent 28%
-    ),
-    #079669;
-  padding: 1rem;
-}
-
-.issued-ticket__stub::before,
-.issued-ticket__stub::after {
-  position: absolute;
-  left: -0.8rem;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 999px;
-  background: #fffaf0;
-  content: '';
-}
-
-.issued-ticket__stub::before {
-  top: -0.75rem;
-}
-
-.issued-ticket__stub::after {
-  bottom: -0.75rem;
-}
-
-.issued-ticket__qr {
-  margin-top: 0;
-  background: #fffaf0;
-  padding: 0.85rem;
-  text-align: center;
-}
-
-.issued-ticket__qr svg {
-  width: min(100%, 9.25rem);
+.ticket-artwork {
+  display: block;
+  width: 100%;
   height: auto;
-}
-
-@media (max-width: 47.999rem) {
-  .issued-ticket {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .issued-ticket__brand-row {
-    flex-direction: column;
-  }
-
-  .issued-ticket__title {
-    margin-top: 1rem;
-    font-size: clamp(1.75rem, 8vw, 2.5rem);
-  }
-
-  .issued-ticket__details,
-  .issued-ticket__admission {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
-  }
-
-  .issued-ticket__details > div:last-child {
-    grid-column: 1 / -1;
-  }
-
-  .issued-ticket__details > div + div {
-    padding-top: 0;
-    padding-left: 0;
-    border-top: 0;
-    border-left: 0;
-  }
-
-  .issued-ticket__stub {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 10rem;
-    align-items: center;
-    border-top: 2px dashed rgba(255, 250, 240, 0.8);
-    border-left: 0;
-  }
-
-  .issued-ticket__qr {
-    grid-column: 2;
-    grid-row: 1 / span 3;
-  }
-
-  .issued-ticket__stub .no-print {
-    grid-column: 1;
-  }
-
-  .issued-ticket__reference {
-    grid-column: 1;
-    grid-row: 3;
-  }
-
-  .issued-ticket__stub::before,
-  .issued-ticket__stub::after {
-    top: -0.8rem;
-    left: auto;
-  }
-
-  .issued-ticket__stub::before {
-    right: -0.75rem;
-  }
-
-  .issued-ticket__stub::after {
-    bottom: auto;
-    left: -0.75rem;
-  }
 }
 
 @media print {
@@ -444,171 +190,62 @@ a {
     size: A4 portrait;
     margin: 8mm;
   }
-
   html,
   body {
     width: 100% !important;
     min-width: 0 !important;
     background: white !important;
   }
-
   body,
   body * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-
   .no-print,
   .payment-status-page > header,
   .payment-status-page > footer {
     display: none !important;
   }
-
   .payment-status-page,
   .ticket-print-sheet {
     background: white !important;
   }
-
   .payment-status-page > section {
     width: 100% !important;
     max-width: none !important;
     margin: 0 !important;
     padding: 0 !important;
   }
-
   .ticket-print-sheet {
     display: block !important;
     width: 100% !important;
     margin: 0 !important;
   }
-
-  .ticket-print-sheet > .issued-ticket {
-    margin-block: 0 5mm !important;
-  }
-
-  .issued-ticket {
-    grid-template-columns: minmax(0, 1fr) 48mm !important;
-    width: 100% !important;
-    min-height: 96mm !important;
-    height: auto !important;
-    margin-inline: auto !important;
-    overflow: hidden !important;
-    border: 0.35mm solid rgba(36, 27, 63, 0.22) !important;
-    background: #fffaf0 !important;
-    break-before: auto;
+  .issued-ticket-record {
+    margin: 0 0 5mm !important;
     break-inside: avoid;
     page-break-inside: avoid;
+  }
+  .issued-ticket {
+    border: 0 !important;
     box-shadow: none !important;
   }
-
-  .issued-ticket:nth-of-type(2n):not(:last-child) {
+  /* Scale the same SVG proportionally. No print-only typography or layout. */
+  .ticket-artwork {
+    width: 100%;
+    height: auto;
+    max-height: 130mm;
+  }
+  .issued-ticket-record:nth-of-type(2n):not(:last-child) {
     break-after: page;
     page-break-after: always;
   }
-
-  .issued-ticket:last-child {
-    break-after: avoid;
-    page-break-after: avoid;
+  body[data-print-ticket] .issued-ticket-record:not([data-print-selected]) {
+    display: none !important;
   }
-
-  .issued-ticket__main {
-    padding: 5mm !important;
-  }
-
-  .issued-ticket__brand-row {
-    flex-direction: row !important;
-    gap: 3mm !important;
-  }
-
-  .issued-ticket__title {
-    max-width: 100% !important;
-    margin-top: 4mm !important;
-    overflow-wrap: anywhere !important;
-    font-size: 8mm !important;
-    line-height: 0.95 !important;
-  }
-
-  .issued-ticket__art {
-    right: 6mm !important;
-    bottom: 32mm !important;
-  }
-
-  .issued-ticket__art svg {
-    width: 30mm !important;
-    height: 30mm !important;
-  }
-
-  .issued-ticket__details {
-    grid-template-columns: 1.15fr 0.8fr 1.15fr !important;
-    gap: 4mm !important;
-    margin-top: 4mm !important;
-    padding-block: 2mm !important;
-  }
-
-  .issued-ticket__details > div {
-    grid-column: auto !important;
-  }
-
-  .issued-ticket__details > div + div {
-    padding-top: 0 !important;
-    padding-left: 4mm !important;
-    border-top: 0 !important;
-    border-left: 0.25mm solid rgba(36, 27, 63, 0.18) !important;
-  }
-
-  .issued-ticket__address {
-    margin-top: 3mm !important;
-  }
-
-  .issued-ticket__admission {
-    grid-template-columns: 0.85fr 1.3fr 0.65fr !important;
-    gap: 4mm !important;
-    margin-top: 3mm !important;
-  }
-
-  .issued-ticket__stub {
-    display: flex !important;
-    gap: 3mm !important;
-    padding: 4mm !important;
-    border-top: 0 !important;
-    border-left: 0.6mm dashed rgba(255, 250, 240, 0.85) !important;
-    background:
-      radial-gradient(
-        circle at 88% 12%,
-        rgba(255, 255, 255, 0.13),
-        transparent 28%
-      ),
-      #079669 !important;
-  }
-
-  .issued-ticket__stub::before,
-  .issued-ticket__stub::after {
-    top: auto !important;
-    right: auto !important;
-    left: -3mm !important;
-    width: 6mm !important;
-    height: 6mm !important;
-    background: white !important;
-  }
-
-  .issued-ticket__stub::before {
-    top: -3mm !important;
-  }
-
-  .issued-ticket__stub::after {
-    bottom: -3mm !important;
-  }
-
-  .issued-ticket__qr {
-    margin-top: 3mm !important;
-    padding: 2mm !important;
-    background: #fffaf0 !important;
-  }
-
-  .issued-ticket__qr svg {
-    width: 32mm !important;
-    max-width: 100% !important;
-    height: 32mm !important;
+  body[data-print-ticket] .issued-ticket-record[data-print-selected] {
+    break-after: auto;
+    page-break-after: auto;
   }
 }
 

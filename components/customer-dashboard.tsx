@@ -13,7 +13,6 @@ import {
 import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { GroupBookingCard } from '@/components/group-booking-card';
-import { TicketShareButton } from '@/components/ticket-share-button';
 import { AccountSignOut } from '@/components/account-sign-out';
 import { CustomerProfileForm } from '@/components/customer-profile-form';
 import { EventSaveButton } from '@/components/event-save-button';
@@ -145,15 +144,12 @@ function PurchaseCard({ purchase }: { purchase: CustomerPurchase }) {
                   {successful &&
                     ticket.status === 'valid' &&
                     purchase.event && (
-                      <TicketShareButton
-                        qrId={`account-qr-${ticket.id}`}
-                        eventTitle={purchase.event.title}
-                        eventDate={`${formatDate(purchase.event.startsAt, purchase.event.timezone)} ${purchase.event.timezoneLabel}`}
-                        venue={`${purchase.event.venue}, ${purchase.event.city}`}
-                        attendeeName={ticket.attendeeName}
-                        ticketType={ticket.ticketType}
-                        displayCode={ticket.displayCode}
-                      />
+                      <a
+                        href={`/payment/status?reference=${encodeURIComponent(purchase.reference)}#issued-artwork-${ticket.id}`}
+                        className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-emerald-700/20 px-3 text-xs font-semibold text-emerald-800 hover:bg-emerald-50"
+                      >
+                        View, print or share ticket
+                      </a>
                     )}
                 </div>
               ))}
