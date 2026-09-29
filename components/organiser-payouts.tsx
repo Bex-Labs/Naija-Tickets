@@ -1,356 +1,263 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Landmark, RefreshCw } from 'lucide-react';
 import type {
   OrganiserPayoutTracking,
   PayoutRecord,
 } from '@/lib/organiser-payouts';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
-const formatAmount = (kobo: number) =>
+const amount = (kobo: number) =>
   new Intl.NumberFormat('en-NG', {
     style: 'currency',
     currency: 'NGN',
     minimumFractionDigits: 2,
   }).format(kobo / 100);
-
-function formatDate(value: string | null) {
-  return value
+const date = (value: string | null) =>
+  value
     ? new Intl.DateTimeFormat('en-NG', {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
         timeZone: 'Africa/Lagos',
       }).format(new Date(value))
-    : '—';
-}
-
-function payoutStatus(payout: PayoutRecord) {
+    : 'Not confirmed yet';
+function status(payout: PayoutRecord) {
   switch (payout.status) {
-    case 'pending':
-      return {
-        label: 'Waiting for review',
-        explanation: 'This payment is waiting to be reviewed.',
-      };
-    case 'approved':
-      return payout.scheduledAt
-        ? {
-            label: 'Payment date set',
-            explanation: 'A payment date has been recorded below.',
-          }
-        : {
-            label: 'Approved',
-            explanation:
-              'This payment has been approved. No payment date has been recorded yet.',
-          };
-    case 'processing':
-      return {
-        label: 'Being sent',
-        explanation:
-          'The payment is being processed. It has not been marked as completed yet.',
-      };
     case 'paid':
-      return {
-        label: 'Paid',
-        explanation: 'This payment is recorded as completed.',
-      };
+      return payout.automatic ? 'Sent to your bank' : 'Recorded as paid';
+    case 'processing':
+      return 'On the way';
     case 'failed':
-      return {
-        label: 'Payment failed',
-        explanation:
-          'This payment did not complete. Contact support with its reference for help.',
-      };
+      return 'Payment failed';
+    default:
+      return 'Waiting to be sent';
   }
-}
-
-function AmountRows({
-  rows,
-}: {
-  rows: { label: string; value: number; total?: boolean }[];
-}) {
-  return (
-    <dl className="mt-4 space-y-3 text-sm">
-      {rows.map(({ label, value, total }) => (
-        <div
-          key={label}
-          className={`flex justify-between gap-4 border-b border-[#241b3f]/10 pb-3 ${total ? 'font-black' : ''}`}
-        >
-          <dt>{label}</dt>
-          <dd className="whitespace-nowrap font-bold">{formatAmount(value)}</dd>
-        </div>
-      ))}
-    </dl>
-  );
 }
 
 export function OrganiserPayoutSummary({
   tracking,
+  onOpenSettings,
 }: {
   tracking: OrganiserPayoutTracking;
+  onOpenSettings?: () => void;
 }) {
-  const waiting =
-    tracking.scheduledKobo + tracking.approvedKobo + tracking.pendingKobo;
-  const cards = [
-    {
-      label: 'Your ticket earnings',
-      amount: tracking.eligibleKobo,
-      description:
-        'Ticket sales after discounts, refunds and recorded payout fees.',
-    },
-    {
-      label: 'Paid out',
-      amount: tracking.paidKobo,
-      description: 'Payments recorded as completed.',
-      paid: true,
-    },
-    {
-      label: 'Waiting to be paid',
-      amount: waiting,
-      description: 'Recorded payments still waiting for review or completion.',
-    },
-    {
-      label: 'No payout record yet',
-      amount: tracking.unallocatedKobo,
-      description:
-        tracking.unallocatedKobo < 0
-          ? 'Recorded payouts are higher than the earnings shown. Contact support to check the records.'
-          : 'Earnings that have not yet been added to a payout record.',
-    },
-  ];
+  const bankConnected = tracking.sync?.banks.some((bank) => bank.enabled);
+  const remaining = tracking.eligibleKobo - tracking.paidKobo;
   return (
     <>
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {cards.map((card) => (
-          <div
-            key={card.label}
-            className={`border p-5 ${card.paid ? 'border-emerald-500/25 bg-emerald-50' : 'border-[#241b3f]/10 bg-white'}`}
-          >
-            <h2 className="text-sm font-bold">{card.label}</h2>
-            <p
-              className={`mt-3 break-words text-2xl font-black ${card.paid ? 'text-emerald-800' : ''}`}
-            >
-              {formatAmount(card.amount)}
-            </p>
-            <p className="mt-3 text-xs leading-5 text-slate-600">
-              {card.description}
+      {tracking.sync?.testMode && (
+        <p className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <strong>Test mode.</strong> Test ticket sales do not send money to a
+          bank. Real payout recording starts when live payments are enabled.
+        </p>
+      )}
+      <section className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-[#241b3f]/10 bg-white p-4">
+        <div className="flex items-start gap-3">
+          <Landmark className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+          <div>
+            <h2 className="text-sm font-bold">
+              {bankConnected
+                ? 'Bank account connected'
+                : 'Connect a bank for future ticket payments'}
+            </h2>
+            <p className="mt-1 text-xs leading-5 text-slate-600">
+              {bankConnected
+                ? tracking.sync?.banks
+                    .filter((bank) => bank.enabled)
+                    .map((bank) => `${bank.name} •••• ${bank.last4}`)
+                    .join(' · ')
+                : 'Choose your bank in Settings. Payments collected before it was connected need support to arrange payment.'}
             </p>
           </div>
+        </div>
+        {onOpenSettings && (
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="min-h-10 rounded border border-emerald-700/20 px-3 text-xs font-bold text-emerald-800 hover:bg-emerald-50"
+          >
+            {bankConnected ? 'Bank settings' : 'Connect bank'}
+          </button>
+        )}
+      </section>
+      <div className="mt-5 grid gap-4 md:grid-cols-3">
+        {[
+          {
+            label: 'Ticket earnings',
+            value: tracking.eligibleKobo,
+            description:
+              'Your ticket sales, less discounts, completed refunds and confirmed payout fees.',
+          },
+          {
+            label: 'Paid to your bank',
+            value: tracking.paidKobo,
+            description:
+              'Completed payouts. Automatic records are confirmed by Paystack.',
+          },
+          {
+            label: 'Still to receive',
+            value: Math.max(0, remaining),
+            description:
+              'An estimate until all fees and adjustments are confirmed. This is not a scheduled bank payment.',
+          },
+        ].map((card) => (
+          <section
+            key={card.label}
+            className="rounded-lg border border-[#241b3f]/10 bg-white p-5"
+          >
+            <h2 className="text-sm font-bold">{card.label}</h2>
+            <p className="mt-2 text-2xl font-black text-emerald-800">
+              {amount(card.value)}
+            </p>
+            <p className="mt-2 text-xs leading-5 text-slate-600">
+              {card.description}
+            </p>
+          </section>
         ))}
       </div>
-      <p className="mt-4 max-w-3xl text-xs leading-5 text-slate-600">
-        These amounts come from recorded sales and payments. They do not show
-        your live bank balance. Payments Paystack sends directly to your bank
-        may be recorded separately.
+      <p className="mt-4 text-xs leading-5 text-slate-600">
+        You do not need to enter payouts yourself. We check for bank payouts
+        when you open this page and every minute while it stays open. A ticket
+        sale only counts as paid out after the bank payout is confirmed.
       </p>
-
-      <section className="mt-8 border border-[#241b3f]/10 bg-white p-5 sm:p-6">
-        <h2 className="text-xl font-black">
-          What is happening to the money waiting to be paid?
-        </h2>
-        <div className="mt-5 grid gap-5 md:grid-cols-3">
+      {tracking.sync?.lastSyncedAt && (
+        <p className="mt-1 text-xs text-slate-500">
+          Last successful check:{' '}
+          {new Date(tracking.sync.lastSyncedAt).toLocaleString('en-NG', {
+            timeZone: 'Africa/Lagos',
+          })}{' '}
+          (Lagos time).
+        </p>
+      )}
+      {(tracking.sync?.needsAttention || remaining < 0) && (
+        <p
+          role="alert"
+          className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+        >
+          {remaining < 0
+            ? 'Refunds or adjustments have changed your earnings after a payout. Contact support to reconcile the difference.'
+            : 'Some payouts could not be confirmed yet. We have kept the last confirmed records and will retry automatically. If this continues, contact support.'}
+        </p>
+      )}
+      <details className="mt-5 rounded-lg border border-[#241b3f]/10 bg-white px-4 py-3">
+        <summary className="cursor-pointer text-sm font-bold">
+          How your earnings are calculated
+        </summary>
+        <dl className="mt-3 max-w-xl space-y-2 text-sm">
           {[
-            {
-              label: 'Waiting for review',
-              amount: tracking.pendingKobo,
-              description: 'Payments waiting for approval.',
-            },
-            {
-              label: 'Payment date set',
-              amount: tracking.scheduledKobo,
-              description:
-                'Payments with a planned payment date. See the dates in your payment history.',
-            },
-            {
-              label: 'Approved or being sent',
-              amount: tracking.approvedKobo,
-              description:
-                'Payments approved or being processed, with no payment date recorded yet.',
-            },
-          ].map((item) => (
-            <div key={item.label} className="border-t border-[#241b3f]/10 pt-4">
-              <h3 className="text-sm font-bold">{item.label}</h3>
-              <p className="mt-2 text-xl font-black">
-                {formatAmount(item.amount)}
-              </p>
-              <p className="mt-2 text-xs leading-5 text-slate-600">
-                {item.description}
-              </p>
+            ['Confirmed ticket sales', tracking.grossSalesKobo],
+            ['Discounts', -tracking.discountsKobo],
+            ['Completed refunds', -tracking.refundsKobo],
+            ['Confirmed payout fees', -tracking.payoutFeesKobo],
+            ['Ticket earnings', tracking.eligibleKobo],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="flex justify-between gap-3">
+              <dt>{label}</dt>
+              <dd className="font-semibold">{amount(Number(value))}</dd>
             </div>
           ))}
-        </div>
-      </section>
-
-      <details className="mt-6 border border-[#241b3f]/10 bg-white p-5 sm:p-6">
-        <summary className="cursor-pointer text-base font-black">
-          See how your earnings are calculated
-        </summary>
-        <div className="mt-4 max-w-3xl">
-          <AmountRows
-            rows={[
-              {
-                label: 'Ticket sales from confirmed payments',
-                value: tracking.grossSalesKobo,
-              },
-              {
-                label: 'Minus promo discounts',
-                value: -tracking.discountsKobo,
-              },
-              {
-                label: 'Minus completed refunds',
-                value: -tracking.refundsKobo,
-              },
-              {
-                label: 'Minus recorded payout fees',
-                value: -tracking.payoutFeesKobo,
-              },
-              {
-                label: 'Your ticket earnings',
-                value: tracking.eligibleKobo,
-                total: true,
-              },
-              {
-                label: 'Minus payments already paid out',
-                value: -tracking.paidKobo,
-              },
-              { label: 'Minus payments waiting to be paid', value: -waiting },
-              {
-                label: 'Amount with no payout record yet',
-                value: tracking.unallocatedKobo,
-                total: true,
-              },
-            ]}
-          />
-          <p className="mt-4 text-xs leading-5 text-slate-600">
-            The extra service fee paid by the buyer is not included in your
-            ticket earnings. Failed payouts are not counted as paid or waiting
-            to be paid. An amount with no payout record is not a confirmed
-            amount ready to withdraw.
-          </p>
-        </div>
+        </dl>
+        <p className="mt-3 text-xs text-slate-500">
+          The buyer’s extra service fee is not part of your ticket earnings.
+          Free tickets do not create bank payouts.
+        </p>
       </details>
-
       <section className="mt-8">
-        <h2 className="text-2xl font-black">Your payment history</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          Check the amount, status and date of each payout. If a payment is
-          missing or looks wrong, contact support with its reference.
+        <h2 className="text-xl font-black">Bank payout history</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          One row per bank payout. Several ticket sales may be paid together.
         </p>
         {!tracking.payouts.length ? (
-          <div className="mt-4 border border-dashed border-[#241b3f]/15 p-6 text-sm text-slate-600">
-            <p className="font-bold text-[#241b3f]">
-              No payouts have been recorded yet.
-            </p>
-            <p className="mt-2">
-              Any confirmed ticket sales are still included in your earnings
-              above. Your payments will appear here when a payout is recorded.
+          <div className="mt-4 rounded-lg border border-dashed border-[#241b3f]/20 p-5 text-sm text-slate-600">
+            <p className="font-bold text-[#241b3f]">No bank payouts yet</p>
+            <p className="mt-1">
+              {tracking.sync?.testMode
+                ? 'No real money is paid out in test mode.'
+                : 'Your payout will appear automatically when Paystack creates it. Ticket earnings above do not mean money has already reached your bank.'}
             </p>
           </div>
         ) : (
-          <div className="mt-4 space-y-4">
-            {tracking.payouts.map((payout) => {
-              const status = payoutStatus(payout);
-              return (
-                <article
-                  key={payout.id}
-                  className="border border-[#241b3f]/10 bg-white p-5 sm:p-6"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <p className="text-2xl font-black">
-                        {formatAmount(payout.amountKobo)}
-                      </p>
-                      <p className="mt-2 text-sm font-bold">
-                        {payout.organiserName}
-                      </p>
-                    </div>
-                    <span
-                      className={`inline-block px-3 py-2 text-xs font-bold ${payout.status === 'paid' ? 'bg-emerald-50 text-emerald-800' : payout.status === 'failed' ? 'bg-red-50 text-red-700' : 'bg-[#fff3d8] text-[#241b3f]'}`}
-                    >
-                      {status.label}
-                    </span>
+          <div className="mt-4 space-y-2">
+            {tracking.payouts.map((payout) => (
+              <details
+                key={payout.id}
+                className="rounded-lg border border-[#241b3f]/10 bg-white px-4 py-3"
+              >
+                <summary className="cursor-pointer text-sm">
+                  <span className="font-black">
+                    {amount(payout.amountKobo)}
+                  </span>
+                  <span
+                    className={`ml-3 font-semibold ${payout.status === 'paid' ? 'text-emerald-800' : payout.status === 'failed' ? 'text-red-700' : 'text-slate-600'}`}
+                  >
+                    {status(payout)}
+                  </span>
+                  <span className="ml-3 text-xs text-slate-500">
+                    {date(payout.paidAt || payout.scheduledAt)}
+                  </span>
+                </summary>
+                <dl className="mt-3 grid gap-2 border-t border-[#241b3f]/10 pt-3 text-xs sm:grid-cols-2">
+                  <div>
+                    <dt className="text-slate-500">Reference</dt>
+                    <dd className="break-all font-semibold">
+                      {payout.reference}
+                    </dd>
                   </div>
-                  <p className="mt-3 text-sm leading-6 text-slate-600">
-                    {status.explanation}
-                  </p>
-                  <dl className="mt-4 grid gap-4 border-t border-[#241b3f]/10 pt-4 text-xs sm:grid-cols-2">
-                    <div>
-                      <dt className="text-slate-500">
-                        {payout.status === 'paid'
-                          ? 'Paid on'
-                          : 'Planned payment date'}
-                      </dt>
-                      <dd className="mt-1 font-bold">
-                        {payout.status === 'paid'
-                          ? formatDate(payout.paidAt)
-                          : payout.scheduledAt
-                            ? formatDate(payout.scheduledAt)
-                            : 'No payment date recorded yet'}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-slate-500">Ticket sales covered</dt>
-                      <dd className="mt-1 font-bold">
-                        {formatDate(payout.periodStart)} –{' '}
-                        {formatDate(payout.periodEnd)}
-                      </dd>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <dt className="text-slate-500">Payment reference</dt>
-                      <dd className="mt-1 break-all font-mono font-bold">
-                        {payout.reference}
-                      </dd>
-                    </div>
-                  </dl>
-                  <details className="mt-4 border-t border-[#241b3f]/10 pt-4">
-                    <summary className="cursor-pointer text-sm font-bold">
-                      See how this payment amount was worked out
-                    </summary>
-                    <AmountRows
-                      rows={[
-                        {
-                          label: 'Ticket sales in this payout',
-                          value: payout.grossKobo,
-                        },
-                        { label: 'Minus fees', value: -payout.feesKobo },
-                        { label: 'Minus refunds', value: -payout.refundsKobo },
-                        {
-                          label: 'Payment amount',
-                          value: payout.amountKobo,
-                          total: true,
-                        },
-                      ]}
-                    />
-                    <p className="mt-3 text-xs text-slate-500">
-                      Payout recorded on {formatDate(payout.createdAt)}.
-                    </p>
-                  </details>
-                </article>
-              );
-            })}
-            {tracking.payouts.length === 100 && (
-              <p className="text-xs text-slate-600">
-                Showing your 100 most recent payouts. The totals above include
-                all recorded payouts.
-              </p>
-            )}
+                  <div>
+                    <dt className="text-slate-500">Sales included</dt>
+                    <dd>
+                      {date(payout.periodStart)} – {date(payout.periodEnd)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Ticket amount</dt>
+                    <dd>{amount(payout.grossKobo)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Fees / refunds</dt>
+                    <dd>
+                      {amount(payout.feesKobo)} / {amount(payout.refundsKobo)}
+                    </dd>
+                  </div>
+                </dl>
+                <p className="mt-3 text-xs text-slate-500">
+                  {payout.automatic
+                    ? 'Recorded automatically from Paystack. Your bank may take time to display a completed payment.'
+                    : 'Previously entered record.'}
+                </p>
+              </details>
+            ))}
           </div>
+        )}
+        {tracking.payouts.length === 100 && (
+          <p className="mt-3 text-xs text-slate-500">
+            Showing the latest 100 payouts. Totals include all records.
+          </p>
         )}
       </section>
     </>
   );
 }
 
-export function OrganiserPayouts() {
+export function OrganiserPayouts({
+  onOpenSettings,
+}: {
+  onOpenSettings?: () => void;
+}) {
   const [tracking, setTracking] = useState<OrganiserPayoutTracking | null>(
     null,
   );
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [reload, setReload] = useState(0);
-
   useEffect(() => {
     const controller = new AbortController();
-    void (async () => {
+    let busy = false;
+    const load = async () => {
+      if (busy || controller.signal.aborted) return;
+      busy = true;
       try {
         const { data } = await getSupabaseBrowserClient().auth.getSession();
         if (!data.session)
@@ -365,7 +272,10 @@ export function OrganiserPayouts() {
         };
         if (!response.ok)
           throw new Error(result.error || 'Payouts could not be loaded.');
-        if (!controller.signal.aborted) setTracking(result);
+        if (!controller.signal.aborted) {
+          setTracking(result);
+          setError('');
+        }
       } catch (cause) {
         if (!controller.signal.aborted)
           setError(
@@ -374,23 +284,32 @@ export function OrganiserPayouts() {
               : 'Payouts could not be loaded.',
           );
       } finally {
+        busy = false;
         if (!controller.signal.aborted) setLoading(false);
       }
-    })();
-    return () => controller.abort();
+    };
+    void load();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void load();
+    }, 60_000);
+    const focus = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    document.addEventListener('visibilitychange', focus);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', focus);
+    };
   }, [reload]);
-
   return (
-    <div className="animate-rise">
+    <div>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="eyebrow">Money from your events</p>
-          <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">
-            Payouts
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-            A payout is money paid to you from ticket sales. See what you have
-            earned, what has been paid out, and what is still waiting.
+          <h1 className="mt-2 text-4xl font-black">Payouts</h1>
+          <p className="mt-3 text-sm text-slate-600">
+            See what you earned and what has been sent to your bank.
           </p>
         </div>
         <button
@@ -398,24 +317,31 @@ export function OrganiserPayouts() {
           disabled={loading}
           onClick={() => {
             setLoading(true);
-            setError('');
             setReload((value) => value + 1);
           }}
-          className="min-h-11 px-3 text-sm font-bold text-emerald-800 underline disabled:opacity-50"
+          className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-emerald-800 disabled:opacity-50"
         >
-          Refresh payouts
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          {loading ? 'Checking…' : 'Check for updates'}
         </button>
       </div>
-      {loading ? (
-        <output className="mt-8 block text-sm text-slate-600">
-          Loading payouts…
-        </output>
-      ) : error ? (
-        <p role="alert" className="mt-8 text-sm text-red-700">
+      {error && (
+        <p role="alert" className="mt-5 text-sm text-red-700">
           {error}
+          {tracking ? ' Showing the last loaded figures.' : ''}
         </p>
+      )}
+      {tracking ? (
+        <OrganiserPayoutSummary
+          tracking={tracking}
+          onOpenSettings={onOpenSettings}
+        />
       ) : (
-        tracking && <OrganiserPayoutSummary tracking={tracking} />
+        loading && (
+          <output className="mt-8 block text-sm text-slate-600">
+            Checking your payout records…
+          </output>
+        )
       )}
     </div>
   );

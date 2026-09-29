@@ -381,7 +381,9 @@ export function OrganiserWorkspace() {
           {view === 'promos' && organiserProfile?.verified && (
             <OrganiserPromoCodes events={events} />
           )}
-          {view === 'payouts' && <OrganiserPayouts />}
+          {view === 'payouts' && (
+            <OrganiserPayouts onOpenSettings={() => setView('settings')} />
+          )}
           {view === 'settings' && <OrganiserSettings />}
         </section>
       </div>

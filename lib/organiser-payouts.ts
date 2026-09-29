@@ -12,6 +12,8 @@ export type PayoutRecord = {
   scheduledAt: string | null;
   paidAt: string | null;
   createdAt: string;
+  automatic?: boolean;
+  syncedAt?: string | null;
 };
 
 export type OrganiserPayoutTracking = {
@@ -26,4 +28,10 @@ export type OrganiserPayoutTracking = {
   pendingKobo: number;
   unallocatedKobo: number;
   payouts: PayoutRecord[];
+  sync?: {
+    testMode: boolean;
+    needsAttention: boolean;
+    lastSyncedAt: string | null;
+    banks: { name: string; last4: string; enabled: boolean }[];
+  };
 };

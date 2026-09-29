@@ -5,6 +5,7 @@ type PaystackEnvelope<T> = {
   status: boolean;
   message: string;
   data: T;
+  meta?: { pageCount?: number };
 };
 
 export type PaystackInitialization = {
@@ -270,5 +271,35 @@ export async function sha256Hex(value: string | ArrayBuffer) {
       'SHA-256',
       typeof value === 'string' ? new TextEncoder().encode(value) : value,
     ),
+  );
+}
+
+export async function getPaystackSubaccount(code: string, signal: AbortSignal) {
+  if (!/^ACCT_[A-Za-z0-9]+$/.test(code))
+    throw new Error('Invalid subaccount code.');
+  return paystackRequest<{
+    id: number | string;
+    domain: string;
+    subaccount_code: string;
+  }>(`/subaccount/${encodeURIComponent(code)}`, { signal });
+}
+export async function listPaystackSettlements(
+  subaccountId: string,
+  page: number,
+  signal: AbortSignal,
+) {
+  return paystackRequest<unknown[]>(
+    `/settlement?subaccount=${encodeURIComponent(subaccountId)}&perPage=100&page=${page}`,
+    { signal },
+  );
+}
+export async function listPaystackSettlementTransactions(
+  id: string,
+  page: number,
+  signal: AbortSignal,
+) {
+  return paystackRequest<unknown[]>(
+    `/settlement/${encodeURIComponent(id)}/transactions?perPage=100&page=${page}`,
+    { signal },
   );
 }

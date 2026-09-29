@@ -122,3 +122,11 @@ npm run build
 npm run lint
 npm test
 ```
+
+## Automatic organiser payout records
+
+Apply `supabase/migrations/202609290001_automatic_payout_recording.sql`. The organiser Payouts API now checks Paystack's settlement API automatically on page open; the page checks again every minute while visible. This is an on-demand sync, not a background scheduler. The server rate-limits checks per organiser/subaccount, preserves the last confirmed data on failures, and records the provider's pending, processing, success or failed state. No transfer is initiated by this feature.
+
+Only live NGN settlements whose complete transaction list matches verified payments, recorded split details and organiser earnings can be imported. Provider batches are idempotent, payment allocation is unique, and unknown deductions, missing transactions, conflicting legacy manual records or mismatched amounts are flagged for reconciliation instead of guessed. Fully refunded sales remain in the accounting history. Real-money totals exclude test transactions. Disconnected subaccounts can still be reconciled through the historical split codes on their payments.
+
+The organiser connects a bank under Settings for future split payments. Payments taken without a split account cannot be made into direct settlements retroactively; support must arrange those separately. Test mode displays an explicit notice and never imports simulated payouts. Current production limitations: reconciliation runs when Payouts is open, not while all users are offline, and exceptional deductions require support review. A live bank settlement still needs end-to-end validation when the account is switched from test to live mode.

@@ -2,6 +2,7 @@
 
 import {
   CalendarDays,
+  ChevronDown,
   CircleUserRound,
   Heart,
   LockKeyhole,
@@ -10,8 +11,6 @@ import {
   TicketCheck,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
-import { GroupBookingCard } from '@/components/group-booking-card';
 import { AccountSignOut } from '@/components/account-sign-out';
 import { CustomerNotifications } from '@/components/customer-notifications';
 import { CustomerProfileForm } from '@/components/customer-profile-form';
@@ -48,125 +47,128 @@ function statusLabel(status: string) {
     .replace(/^./, (letter) => letter.toUpperCase());
 }
 
-function PurchaseCard({ purchase }: { purchase: CustomerPurchase }) {
+export function PurchaseCard({ purchase }: { purchase: CustomerPurchase }) {
   const successful =
     purchase.paymentStatus === 'verified' &&
     ['paid', 'partially_refunded'].includes(purchase.status);
   return (
-    <article className="overflow-hidden border border-[#241b3f]/10 bg-white shadow-sm">
-      <div className="grid md:grid-cols-[11rem_1fr]">
-        {purchase.event?.image ? (
-          <img
-            src={purchase.event.image}
-            alt=""
-            className="h-44 w-full object-cover md:h-full"
+    <details className="group overflow-hidden rounded-lg border border-[#241b3f]/10 bg-white">
+      <summary className="grid cursor-pointer list-none grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3 transition hover:bg-emerald-50/40 focus-visible:outline-2 focus-visible:outline-emerald-700 sm:grid-cols-[minmax(0,1fr)_auto_auto] [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-bold">
+            {purchase.event?.title || 'Event purchase'}
+          </span>
+          <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+            <time dateTime={purchase.createdAt}>
+              {new Date(purchase.createdAt).toLocaleDateString('en-NG', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                timeZone: 'Africa/Lagos',
+              })}
+            </time>
+            <span className="break-all">{purchase.reference}</span>
+          </span>
+        </span>
+        <span className="text-right">
+          <span className="block text-sm font-black">
+            {formatAmount(purchase.totalKobo, purchase.currency)}
+          </span>
+          <span
+            className={`mt-1 block text-xs font-semibold ${successful ? 'text-emerald-800' : 'text-slate-600'}`}
+          >
+            Payment {statusLabel(purchase.paymentStatus)}
+          </span>
+        </span>
+        <span className="col-span-2 flex items-center gap-1 text-xs font-semibold text-emerald-800 sm:col-span-1 sm:pl-3">
+          <span className="group-open:hidden">Details</span>
+          <span className="hidden group-open:inline">Close</span>
+          <ChevronDown
+            aria-hidden="true"
+            className="h-4 w-4 transition-transform group-open:rotate-180"
           />
-        ) : (
-          <div className="grid h-32 place-items-center bg-[#fff3d8] text-emerald-700 md:h-full">
-            <TicketCheck className="h-9 w-9" />
+        </span>
+      </summary>
+      <div className="border-t border-[#241b3f]/10 px-4 py-3">
+        <h3 className="mb-2 text-sm font-bold">
+          {purchase.event?.title || 'Event purchase'}
+        </h3>
+        <div className="flex flex-wrap items-start justify-between gap-3 text-xs text-slate-600">
+          <div>
+            <p className="font-bold text-[#241b3f]">
+              {purchase.quantity}{' '}
+              {purchase.quantity === 1 ? 'ticket' : 'tickets'} · Order{' '}
+              {statusLabel(purchase.status)}
+            </p>
+            {purchase.event && (
+              <div className="mt-2 space-y-1">
+                <p className="flex items-center gap-2">
+                  <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                  {formatDate(
+                    purchase.event.startsAt,
+                    purchase.event.timezone,
+                  )}{' '}
+                  {purchase.event.timezoneLabel}
+                </p>
+                <p className="flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  {purchase.event.venue}, {purchase.event.city}
+                </p>
+              </div>
+            )}
           </div>
-        )}
-        <div className="p-5 sm:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[.12em] text-emerald-700">
-                {purchase.quantity}{' '}
-                {purchase.quantity === 1 ? 'ticket' : 'tickets'}
-              </p>
-              <h2 className="mt-2 text-xl font-black">
-                {purchase.event?.title || 'Event purchase'}
-              </h2>
-              {purchase.event && (
-                <div className="mt-3 space-y-1 text-xs leading-5 text-slate-600">
-                  <p className="flex items-center gap-2">
-                    <CalendarDays className="h-3.5 w-3.5" />
-                    {formatDate(
-                      purchase.event.startsAt,
-                      purchase.event.timezone,
-                    )}{' '}
-                    {purchase.event.timezoneLabel}
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <MapPin className="h-3.5 w-3.5" />
-                    {purchase.event.venue}, {purchase.event.city}
-                  </p>
-                </div>
-              )}
-            </div>
-            <div className="text-left sm:text-right">
-              <p className="text-xl font-black">
-                {formatAmount(purchase.totalKobo, purchase.currency)}
-              </p>
-              <span
-                className={`mt-2 inline-block px-2 py-1 text-xs font-bold ${successful ? 'bg-transparent text-emerald-800' : 'bg-[#fff3d8] text-[#241b3f]'}`}
+          <p>Ordered {formatDate(purchase.createdAt)}</p>
+        </div>
+        {purchase.groups?.map((booking) => (
+          <div
+            key={booking.id}
+            className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-[#241b3f]/10 pt-2 text-xs"
+          >
+            <span className="font-semibold">
+              {booking.ticketName} · {booking.admissions} admissions
+            </span>
+            <span className="text-slate-600">
+              {booking.registered} registered · {booking.remaining} unclaimed ·{' '}
+              {booking.checkedIn} checked in
+            </span>
+          </div>
+        ))}
+        {purchase.tickets.length > 0 && (
+          <ul className="mt-2 max-h-48 divide-y divide-[#241b3f]/10 overflow-y-auto border-t border-[#241b3f]/10">
+            {purchase.tickets.map((ticket) => (
+              <li
+                key={ticket.id}
+                className="flex items-center justify-between gap-3 py-2 text-xs"
               >
-                Payment {statusLabel(purchase.paymentStatus)}
-              </span>
-            </div>
-          </div>
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#241b3f]/10 pt-4 text-xs text-slate-500">
-            <span>Order reference: {purchase.reference}</span>
-            <span>Order date: {formatDate(purchase.createdAt)}</span>
-          </div>
-          {purchase.groups?.map((booking) => (
-            <GroupBookingCard
-              key={booking.id}
-              booking={booking}
-              active={successful}
-            />
-          ))}
-          {purchase.tickets.length > 0 && (
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              {purchase.tickets.map((ticket) => (
-                <div
-                  key={ticket.id}
-                  className="border border-emerald-500/20 bg-transparent p-4"
-                >
-                  <p className="text-xs font-bold text-emerald-800">
+                <div className="min-w-0">
+                  <p className="font-semibold">{ticket.attendeeName}</p>
+                  <p className="mt-0.5 text-slate-500">
                     {ticket.ticketType} · {statusLabel(ticket.status)}
                   </p>
-                  <p className="mt-2 font-black">{ticket.attendeeName}</p>
-                  {successful && (
-                    <QRCodeSVG
-                      id={`account-qr-${ticket.id}`}
-                      value={ticket.displayCode}
-                      size={112}
-                      level="M"
-                      marginSize={2}
-                      title={`Entry code for ${ticket.attendeeName}`}
-                      className="mt-3"
-                    />
-                  )}
-                  <p className="mt-2 font-mono text-xs font-bold tracking-wider text-slate-600">
-                    {ticket.displayCode}
-                  </p>
-                  {successful &&
-                    ticket.status === 'valid' &&
-                    purchase.event && (
-                      <a
-                        href={`/payment/status?reference=${encodeURIComponent(purchase.reference)}#issued-artwork-${ticket.id}`}
-                        className="mt-3 inline-flex min-h-11 items-center rounded-lg border border-emerald-700/20 px-3 text-xs font-semibold text-emerald-800 hover:bg-emerald-50"
-                      >
-                        View, print or share ticket
-                      </a>
-                    )}
                 </div>
-              ))}
-            </div>
+                {successful && ticket.status === 'valid' && purchase.event && (
+                  <a
+                    href={`/payment/status?reference=${encodeURIComponent(purchase.reference)}#issued-artwork-${ticket.id}`}
+                    className="shrink-0 py-2 font-semibold text-emerald-800 hover:underline"
+                  >
+                    View ticket
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {successful &&
+          (purchase.tickets.length > 0 || Boolean(purchase.groups?.length)) && (
+            <a
+              href={`/payment/status?reference=${encodeURIComponent(purchase.reference)}`}
+              className="mt-2 inline-flex min-h-9 items-center rounded border border-emerald-700/20 px-3 text-xs font-semibold text-emerald-800 hover:bg-emerald-50"
+            >
+              Open booking
+            </a>
           )}
-          {successful &&
-            (purchase.tickets.length > 0 ||
-              Boolean(purchase.groups?.length)) && (
-              <a
-                href={`/payment/status?reference=${encodeURIComponent(purchase.reference)}`}
-                className="mt-5 inline-flex min-h-11 items-center bg-emerald-500 px-4 text-sm font-black text-emerald-950"
-              >
-                Open booking
-              </a>
-            )}
-        </div>
       </div>
-    </article>
+    </details>
   );
 }
 
@@ -252,8 +254,21 @@ export function CustomerDashboard() {
   useEffect(() => {
     const client = getSupabaseBrowserClient();
     let controller: AbortController | undefined;
+    let activeIdentity = '';
     const { data: listener } = client.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        const identity = session
+          ? `${session.user.id}:${accountHomeFromMetadata(session.user.user_metadata)}`
+          : '';
+        // Supabase emits SIGNED_IN again on tab focus and TOKEN_REFRESHED
+        // during a normal session. Preserve open orders and unsaved form edits.
+        if (
+          identity &&
+          identity === activeIdentity &&
+          (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')
+        )
+          return;
+        activeIdentity = identity;
         controller?.abort();
         controller = new AbortController();
         const signal = controller.signal;
@@ -283,6 +298,7 @@ export function CustomerDashboard() {
             };
             if (signal.aborted) return;
             if (response.status === 401) {
+              activeIdentity = '';
               setState('signed-out');
               return;
             }
@@ -294,6 +310,7 @@ export function CustomerDashboard() {
             setState('ready');
           } catch (cause) {
             if (signal.aborted) return;
+            activeIdentity = '';
             setError(
               cause instanceof Error
                 ? cause.message
@@ -462,7 +479,7 @@ export function CustomerDashboard() {
           </p>
         </div>
         {account.purchases.length ? (
-          <div className="space-y-5">
+          <div className="space-y-2">
             {account.purchases.map((purchase) => (
               <PurchaseCard key={purchase.id} purchase={purchase} />
             ))}
