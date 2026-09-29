@@ -88,3 +88,18 @@ void test('unclaimed group slots show reserved admissions without generating tic
   assert.match(email.html, /group registration link/);
   assert.doesNotMatch(email.html, /Entry code|>null</);
 });
+
+void test('confirmation includes the amount paid and purchase date as proof of purchase', () => {
+  const email = buildTicketEmail(
+    {
+      ...details,
+      totalKobo: 105000,
+      currency: 'NGN',
+      paidAt: '2026-09-19T17:00:00Z',
+    },
+    'https://tickets.example.com',
+  );
+  assert.match(email.text, /1,050\.00/);
+  assert.match(email.html, /Paid on/);
+  assert.match(email.text, /Order a4f67c/);
+});

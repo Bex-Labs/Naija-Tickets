@@ -1,6 +1,6 @@
 'use client';
 
-import { CircleUserRound, LogOut, Menu, Search, Ticket, X } from 'lucide-react';
+import { CircleUserRound, LogOut, Search, Ticket, X } from 'lucide-react';
 import type { SyntheticEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { accountHomeFromMetadata } from '@/lib/auth-destination';
@@ -14,6 +14,19 @@ export function SiteHeader() {
   const [accountHome, setAccountHome] = useState('/account');
   const [pathname, setPathname] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
+  const menuButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        menuButton.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', escape);
+    return () => document.removeEventListener('keydown', escape);
+  }, [open]);
 
   useEffect(() => {
     const pathnameTask = window.setTimeout(
@@ -196,105 +209,125 @@ export function SiteHeader() {
           )}
         </div>
         <button
+          ref={menuButton}
+          type="button"
+          aria-controls="mobile-navigation"
           aria-label={open ? 'Close menu' : 'Open menu'}
           aria-expanded={open}
           onClick={() => setOpen(!open)}
           className="grid h-11 w-11 place-items-center hover:bg-emerald-50 lg:hidden"
         >
-          {open ? <X /> : <Menu />}
+          <span aria-hidden="true" className="relative h-5 w-6">
+            <span
+              className={`absolute left-0 top-0.5 h-0.5 w-6 rounded bg-current transition-transform duration-300 motion-reduce:transition-none ${open ? 'translate-y-2 rotate-45' : ''}`}
+            />
+            <span
+              className={`absolute left-0 top-2.5 h-0.5 w-6 rounded bg-current transition-all duration-200 motion-reduce:transition-none ${open ? 'scale-x-0 opacity-0' : ''}`}
+            />
+            <span
+              className={`absolute left-0 top-[18px] h-0.5 w-6 rounded bg-current transition-transform duration-300 motion-reduce:transition-none ${open ? '-translate-y-2 -rotate-45' : ''}`}
+            />
+          </span>
         </button>
       </div>
-      {open && (
-        <nav
-          className="border-t border-[#241b3f]/10 py-4 lg:hidden"
-          aria-label="Mobile navigation"
-        >
-          <form
-            onSubmit={submitSearch}
-            className="mb-2 flex border border-[#241b3f]/10 bg-white"
+      <div
+        className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none lg:hidden ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+        inert={!open}
+        aria-hidden={!open}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <nav
+            id="mobile-navigation"
+            className={`max-h-[calc(100dvh-4.5rem)] overflow-y-auto border-t border-[#241b3f]/10 py-4 transition-transform duration-300 motion-reduce:transition-none ${open ? 'translate-y-0' : '-translate-y-3'}`}
+            aria-label="Mobile navigation"
           >
-            <Search className="ml-3 h-5 w-5 self-center text-emerald-400" />
-            <label htmlFor="mobile-site-search" className="sr-only">
-              Search the site
-            </label>
-            <input
-              id="mobile-site-search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search events…"
-              className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm outline-none"
-            />
-            <button className="bg-emerald-500 px-4 text-sm font-bold text-emerald-950">
-              Go
-            </button>
-          </form>
-          <a
-            aria-current={isActive('/events') ? 'page' : undefined}
-            className={mobileNavClass('/events')}
-            href="/events"
-          >
-            Find events
-          </a>
-          <a
-            aria-current={isActive('/cities') ? 'page' : undefined}
-            className={mobileNavClass('/cities')}
-            href="/cities"
-          >
-            Browse cities
-          </a>
-          <a
-            aria-current={isActive('/about') ? 'page' : undefined}
-            className={mobileNavClass('/about')}
-            href="/about"
-          >
-            About us
-          </a>
-          {signedIn ? (
-            <div className="mt-2 grid gap-2">
-              <a
-                className="flex min-h-12 items-center justify-center bg-emerald-100 px-3 py-3 text-center font-bold text-emerald-900"
-                href={accountHome}
-                aria-label={
-                  accountHome === '/account'
-                    ? 'Open my profile'
-                    : 'Open organiser workspace'
-                }
-                aria-current={isActive(accountHome) ? 'page' : undefined}
-              >
-                {accountHome === '/account' ? (
-                  <CircleUserRound className="h-6 w-6" />
-                ) : (
-                  'Organiser workspace'
-                )}
-              </a>
-              <button
-                type="button"
-                onClick={signOut}
-                className="bg-[#ff6b4a] px-3 py-3 text-center font-bold text-white"
-              >
-                Log out
+            <form
+              onSubmit={submitSearch}
+              className="mb-2 flex border border-[#241b3f]/10 bg-white"
+            >
+              <Search className="ml-3 h-5 w-5 self-center text-emerald-400" />
+              <label htmlFor="mobile-site-search" className="sr-only">
+                Search the site
+              </label>
+              <input
+                id="mobile-site-search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search events…"
+                className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm outline-none"
+              />
+              <button className="bg-emerald-500 px-4 text-sm font-bold text-emerald-950">
+                Go
               </button>
-            </div>
-          ) : (
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <a
-                className={`px-3 py-3 text-center font-bold ${isActive('/login') ? 'bg-emerald-50 text-emerald-900' : ''}`}
-                href="/login"
-                aria-current={isActive('/login') ? 'page' : undefined}
-              >
-                Log in
-              </a>
-              <a
-                className="bg-[#ff6b4a] px-3 py-3 text-center font-bold text-white"
-                href="/signup"
-                aria-current={isActive('/signup') ? 'page' : undefined}
-              >
-                Sign up
-              </a>
-            </div>
-          )}
-        </nav>
-      )}
+            </form>
+            <a
+              aria-current={isActive('/events') ? 'page' : undefined}
+              className={mobileNavClass('/events')}
+              href="/events"
+            >
+              Find events
+            </a>
+            <a
+              aria-current={isActive('/cities') ? 'page' : undefined}
+              className={mobileNavClass('/cities')}
+              href="/cities"
+            >
+              Browse cities
+            </a>
+            <a
+              aria-current={isActive('/about') ? 'page' : undefined}
+              className={mobileNavClass('/about')}
+              href="/about"
+            >
+              About us
+            </a>
+            {signedIn ? (
+              <div className="mt-2 grid gap-2">
+                <a
+                  className="flex min-h-12 items-center justify-center bg-emerald-100 px-3 py-3 text-center font-bold text-emerald-900"
+                  href={accountHome}
+                  aria-label={
+                    accountHome === '/account'
+                      ? 'Open my profile'
+                      : 'Open organiser workspace'
+                  }
+                  aria-current={isActive(accountHome) ? 'page' : undefined}
+                >
+                  {accountHome === '/account' ? (
+                    <CircleUserRound className="h-6 w-6" />
+                  ) : (
+                    'Organiser workspace'
+                  )}
+                </a>
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="bg-[#ff6b4a] px-3 py-3 text-center font-bold text-white"
+                >
+                  Log out
+                </button>
+              </div>
+            ) : (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <a
+                  className={`px-3 py-3 text-center font-bold ${isActive('/login') ? 'bg-emerald-50 text-emerald-900' : ''}`}
+                  href="/login"
+                  aria-current={isActive('/login') ? 'page' : undefined}
+                >
+                  Log in
+                </a>
+                <a
+                  className="bg-[#ff6b4a] px-3 py-3 text-center font-bold text-white"
+                  href="/signup"
+                  aria-current={isActive('/signup') ? 'page' : undefined}
+                >
+                  Sign up
+                </a>
+              </div>
+            )}
+          </nav>
+        </div>
+      </div>
     </header>
   );
 }

@@ -54,11 +54,11 @@ After a successful callback, `/payment/status` uses the random 36-character orde
 
 1. Verify the sending domain in Resend and finish the SPF and DKIM records shown in its dashboard.
 2. Create a sending-access API key, then add `RESEND_API_KEY` and an `EMAIL_FROM` address on the verified domain to `.env.local`.
-3. Set `APP_URL` to the exact public HTTPS origin, with no path, so emailed ticket links return to the correct Naija Tickets installation. Local development may use `http://localhost:3000`.
+3. Set `APP_URL` to the exact public HTTPS origin, with no path, so emailed ticket links return to the correct Naija Tickets installation. Actual email sending requires a public HTTPS URL; localhost links cannot be opened by customers on their own devices.
 4. Add those same values to production hosting only when the domain is ready. Keep `RESEND_API_KEY` server-only.
 5. The paid callback, signed webhook and free-checkout finaliser share one database delivery claim and use a stable Resend idempotency key. A failed delivery remains retryable, while a sent order is not deliberately sent twice.
 
-Email delivery runs as background work and is not required for the post-payment ticket page. The email includes the real event date, local time, timezone, venue, ticket tier, attendee and entry code, plus the private link to the server-verified QR ticket page. Verified tickets remain immediately available when Resend is missing or temporarily unavailable.
+Email delivery runs as background work and is not required for the post-payment ticket page. The email includes the amount paid, purchase date, order reference, real event date, local time, timezone, venue, ticket tier, attendee and entry code, plus the private link to the server-verified QR ticket page. Verified tickets remain immediately available when Resend is missing or temporarily unavailable.
 
 The branded confirmation and recovery templates are stored in `supabase/templates`. The hosted authentication service requires custom SMTP or a qualifying paid configuration before those templates and a Naija Tickets sender address can be activated. Use a dedicated authentication sender such as `no-reply@auth.yourdomain.com` with SPF, DKIM and DMARC configured.
 
@@ -130,3 +130,18 @@ Apply `supabase/migrations/202609290001_automatic_payout_recording.sql`. The org
 Only live NGN settlements whose complete transaction list matches verified payments, recorded split details and organiser earnings can be imported. Provider batches are idempotent, payment allocation is unique, and unknown deductions, missing transactions, conflicting legacy manual records or mismatched amounts are flagged for reconciliation instead of guessed. Fully refunded sales remain in the accounting history. Real-money totals exclude test transactions. Disconnected subaccounts can still be reconciled through the historical split codes on their payments.
 
 The organiser connects a bank under Settings for future split payments. Payments taken without a split account cannot be made into direct settlements retroactively; support must arrange those separately. Test mode displays an explicit notice and never imports simulated payouts. Current production limitations: reconciliation runs when Payouts is open, not while all users are offline, and exceptional deductions require support review. A live bank settlement still needs end-to-end validation when the account is switched from test to live mode.
+
+
+### Google sign-up activation
+
+The app already starts Google OAuth and retains the selected customer/organiser profile. In the hosted Supabase project, Google is currently disabled. To activate it, create a Google OAuth **Web application** client, register the Supabase project URL followed by `/auth/v1/callback` as the Google authorised redirect URI, then enable Google in Supabase Authentication → Providers using that client ID and secret. Keep the client secret in Supabase, never in browser environment variables or source files.
+
+Add the actual application `/login?oauth=1...` destinations to Supabase's redirect allow list, including the public HTTPS site and any localhost ports used for development (e.g. `http://localhost:3002/login**`). Local `supabase/config.toml` does not enable the provider on the hosted project. Reference: https://supabase.com/docs/guides/auth/social-login/auth-google . The UI checks availability before redirecting so a disabled provider leaves the customer on the login page with an email-sign-in alternative.
+
+For Resend accounts without a domain, `onboarding@resend.dev` can send test emails only to the email address associated with that Resend account. It cannot send customer tickets generally. Add the API key directly to the ignored `.env.local` file; never paste it into chat or commit it. A reachable HTTPS `APP_URL` is still needed for usable ticket links. See https://resend.com/docs/knowledge-base/403-error-resend-dev-domain .
+
+### Verified confirmation emails and retries
+
+Apply `supabase/migrations/202609290002_verified_ticket_emails.sql`. A paid order must also have a matching verified payment before its ticket email can be claimed. Failed, pending, refunded and privacy-erased purchases cannot send valid-ticket confirmations. The confirmation page reads the stored delivery status and offers a retry for unsent mail; it never accepts a replacement recipient address. A delivery claim prevents concurrent sends and failed attempts have a one-minute retry cooldown. Group buyers receive their booking link and a count of admissions awaiting claims; unclaimed slots have no usable admission code.
+
+Email sending is not active until `RESEND_API_KEY`, a verified-domain `EMAIL_FROM` and a reachable HTTPS `APP_URL` are configured. No production email has been sent or mailbox delivery verified as part of the local tests.

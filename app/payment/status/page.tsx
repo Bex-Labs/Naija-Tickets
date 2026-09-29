@@ -1,3 +1,4 @@
+import { TicketEmailStatus } from '@/components/ticket-email-status';
 import type { Metadata } from 'next';
 import {
   AlertTriangle,
@@ -82,11 +83,7 @@ function emptyState(lookup: TicketOrderLookup) {
 }
 
 export default async function PaymentStatusPage({ searchParams }: Props) {
-  const {
-    reference = '',
-    paymentReference = '',
-    delivery = '',
-  } = await searchParams;
+  const { reference = '', paymentReference = '' } = await searchParams;
   let lookup: TicketOrderLookup;
   try {
     lookup = await getTicketOrder(reference);
@@ -116,11 +113,7 @@ export default async function PaymentStatusPage({ searchParams }: Props) {
                   ? 'Share your group registration link below. Each member claims their own admission and receives a unique QR code. Your admissions are already reserved.'
                   : 'Show each QR code at the entrance. Keep this private link and every ticket code secure.'}
               </p>
-              <p className="mt-2 text-sm font-semibold text-emerald-700">
-                {['sent', 'already_sent'].includes(delivery)
-                  ? 'A ticket confirmation was also sent to the purchase email address.'
-                  : 'Your tickets are available here even while email delivery is pending.'}
-              </p>
+              <TicketEmailStatus reference={lookup.order.reference} />
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <PrintTicketsButton />

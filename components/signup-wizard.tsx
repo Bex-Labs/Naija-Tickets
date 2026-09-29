@@ -12,6 +12,7 @@ import {
 import type { SyntheticEvent } from 'react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { startGoogleSignIn } from '@/lib/google-auth';
 import { GoogleAuthButton } from '@/components/google-auth-button';
 import { Input } from '@/components/ui/input';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
@@ -109,14 +110,9 @@ export function SignupWizard() {
             accountType === 'organisation' ? profile.organisation.trim() : null,
         }),
       );
-      const { error: oauthError } =
-        await getSupabaseBrowserClient().auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: `${window.location.origin}/login?oauth=1&next=${encodeURIComponent(accountType === 'customer' ? '/account' : '/organiser')}`,
-          },
-        });
-      if (oauthError) throw oauthError;
+      await startGoogleSignIn(
+        `${window.location.origin}/login?oauth=1&next=${encodeURIComponent(accountType === 'customer' ? '/account' : '/organiser')}`,
+      );
     } catch (oauthError) {
       window.localStorage.removeItem('naija-tickets-google-profile');
       setError(

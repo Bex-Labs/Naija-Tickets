@@ -11,6 +11,7 @@ import {
 import type { SyntheticEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { startGoogleSignIn } from '@/lib/google-auth';
 import { GoogleAuthButton } from '@/components/google-auth-button';
 import { Input } from '@/components/ui/input';
 import {
@@ -40,6 +41,15 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
       setIsSubmitting(true);
       setError('');
       try {
+        const callbackError =
+          params.get('error') ||
+          new URLSearchParams(window.location.hash.slice(1)).get('error');
+        if (callbackError)
+          throw new Error(
+            callbackError === 'access_denied'
+              ? 'Google sign-in was cancelled. You can try again or sign in with email.'
+              : 'Google sign-in could not be completed. Please try again.',
+          );
         const client = getSupabaseBrowserClient();
         const { data, error: sessionError } = await client.auth.getSession();
         if (sessionError) throw sessionError;
@@ -53,7 +63,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
         let accountHome = accountHomeFromMetadata(
           data.session.user.user_metadata,
         );
-        if (pending) {
+        if (pending && !data.session.user.user_metadata.account_purpose) {
           const profile = JSON.parse(pending) as {
             full_name: string;
             phone: string;
@@ -78,6 +88,26 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
           window.localStorage.removeItem('naija-tickets-google-profile');
         }
 
+        if (
+          !pending &&
+          !data.session.user.user_metadata.account_purpose &&
+          !data.session.user.user_metadata.account_type
+        ) {
+          const { data: memberships, error: membershipError } = await client
+            .from('organiser_memberships')
+            .select('organiser_id')
+            .eq('user_id', data.session.user.id)
+            .limit(1);
+          if (membershipError) throw membershipError;
+          if (!memberships?.length) {
+            const { error: purposeError } = await client.auth.updateUser({
+              data: { account_purpose: 'customer', account_type: 'individual' },
+            });
+            if (purposeError) throw purposeError;
+            accountHome = '/account';
+          }
+        }
+        window.localStorage.removeItem('naija-tickets-google-profile');
         setNotice('Google login successful. Opening your account...');
         window.location.replace(
           authenticatedDestination(params.get('next'), accountHome),
@@ -108,14 +138,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
       const callback = new URL('/login', window.location.origin);
       callback.searchParams.set('oauth', '1');
       if (next) callback.searchParams.set('next', next);
-      const { error: oauthError } =
-        await getSupabaseBrowserClient().auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: callback.toString(),
-          },
-        });
-      if (oauthError) throw oauthError;
+      await startGoogleSignIn(callback.toString());
     } catch (oauthError) {
       setError(
         oauthError instanceof Error

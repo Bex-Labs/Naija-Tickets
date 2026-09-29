@@ -1,3 +1,4 @@
+import { MobileTicketButton } from '@/components/mobile-ticket-button';
 import type { Metadata } from 'next';
 import {
   ArrowLeft,
@@ -232,14 +233,7 @@ export default async function EventDetails({ params }: Props) {
           </div>
         </aside>
       </div>
-      {!event.soldOut && (
-        <a
-          href="#tickets"
-          className="fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-30 bg-emerald-500 px-5 py-4 text-center font-bold text-emerald-950 shadow-xl lg:hidden"
-        >
-          Choose tickets
-        </a>
-      )}
+      {!event.soldOut && <MobileTicketButton />}
       <SiteFooter />
     </main>
   );

@@ -15,6 +15,9 @@ export type TicketEmailDetails = {
   eventTimezone: string;
   eventTimezoneLabel: string;
   tickets: TicketEmailItem[];
+  totalKobo?: number;
+  currency?: string;
+  paidAt?: string | null;
 };
 
 function escapeHtml(value: string) {
@@ -83,6 +86,10 @@ export function buildTicketEmail(
   const registered = details.tickets.filter((ticket) =>
     Boolean(ticket.display_code),
   );
+  const receipt =
+    details.totalKobo !== undefined
+      ? `Amount paid: ${new Intl.NumberFormat('en-NG', { style: 'currency', currency: details.currency || 'NGN' }).format(details.totalKobo / 100)}${details.paidAt ? ` · Paid on ${new Intl.DateTimeFormat('en-NG', { dateStyle: 'medium', timeZone: details.eventTimezone }).format(new Date(details.paidAt))}` : ''}`
+      : '';
   const ticketCards = registered
     .map(
       (ticket, index) => `
@@ -112,7 +119,7 @@ export function buildTicketEmail(
     subject: `Your tickets for ${details.eventTitle}`,
     ticketUrl,
     idempotencyKey: ticketEmailIdempotencyKey(details.orderReference),
-    text: `Your Naija Tickets booking is confirmed\n\n${details.eventTitle}\n${timing.date}\n${timing.time} ${details.eventTimezoneLabel}\n${details.eventVenue}, ${details.eventCity}\n${details.eventAddress}\n\n${groupMessage}\n\n${textTickets}\n\nOpen your booking securely: ${ticketUrl}\n\nOrder ${details.orderReference}\nKeep this private ticket link and every entry code secure.`,
+    text: `Your Naija Tickets booking is confirmed\n\n${details.eventTitle}\n${timing.date}\n${timing.time} ${details.eventTimezoneLabel}\n${details.eventVenue}, ${details.eventCity}\n${details.eventAddress}\n\n${groupMessage}\n\n${textTickets}\n\nOpen your booking securely: ${ticketUrl}\n\n${receipt}\nOrder ${details.orderReference}\nKeep this private ticket link and every entry code secure.`,
     html: `
       <div style="margin:0;background:#fffaf0;padding:24px 12px;font-family:Arial,sans-serif;color:#241b3f">
         <div style="max-width:640px;margin:auto;background:#ffffff;border:1px solid #ded6e8">
@@ -128,6 +135,7 @@ export function buildTicketEmail(
               ${escapeHtml(details.eventVenue)}, ${escapeHtml(details.eventCity)}<br>
               ${escapeHtml(details.eventAddress)}
             </p>
+            <p style="margin-top:16px;font-size:14px;font-weight:700">${escapeHtml(receipt)}</p>
             <a href="${escapeHtml(ticketUrl)}" style="display:inline-block;margin-top:22px;background:#ff6b4a;color:#ffffff;padding:14px 18px;text-decoration:none;font-weight:800">Open your booking and tickets</a>
             <p style="margin:12px 0 0;color:#655d78;font-size:12px;line-height:1.5">This private link gives access to the issued tickets. Do not forward it.</p>
             <p style="margin-top:20px;color:#079669;line-height:1.6">${escapeHtml(groupMessage)}</p>

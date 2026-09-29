@@ -14,17 +14,31 @@ type DeliveryClaim = {
   event_timezone: string | null;
   event_timezone_label: string | null;
   tickets: TicketEmailItem[] | null;
+  total_kobo: number | string;
+  currency: string;
+  paid_at: string | null;
 };
 
 function configuredAppOrigin() {
   const value = process.env.APP_URL?.trim();
   if (!value) throw new Error('APP_URL is required for ticket email links.');
-  return value;
+  const url = new URL(value);
+  if (
+    url.protocol !== 'https:' ||
+    ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) ||
+    url.username ||
+    url.password
+  ) {
+    throw new Error(
+      'A public HTTPS APP_URL is required so customers can open emailed tickets.',
+    );
+  }
+  return url.origin;
 }
 
 async function deliverOrderTicketsAttempt(orderId: string) {
   const admin = getSupabaseAdminClient();
-  const { data, error } = await admin.rpc('claim_ticket_delivery_v2', {
+  const { data, error } = await admin.rpc('claim_ticket_delivery_v3', {
     p_order_id: orderId,
   });
   if (error) throw error;
@@ -69,12 +83,16 @@ async function deliverOrderTicketsAttempt(orderId: string) {
         eventTimezone: claim.event_timezone,
         eventTimezoneLabel: claim.event_timezone_label,
         tickets: claim.tickets,
+        totalKobo: Number(claim.total_kobo),
+        currency: claim.currency,
+        paidAt: claim.paid_at,
       },
       configuredAppOrigin(),
     );
 
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
+      signal: AbortSignal.timeout(15000),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
@@ -129,6 +147,17 @@ async function deliverOrderTicketsAttempt(orderId: string) {
     }
     console.error('Ticket email delivery failed', deliveryError);
     return 'failed';
+  }
+}
+
+export function ticketEmailConfigured() {
+  if (!process.env.RESEND_API_KEY?.trim() || !process.env.EMAIL_FROM?.trim())
+    return false;
+  try {
+    configuredAppOrigin();
+    return true;
+  } catch {
+    return false;
   }
 }
 
