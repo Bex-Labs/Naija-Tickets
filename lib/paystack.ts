@@ -101,6 +101,7 @@ export async function initializePaystackTransaction(input: {
         metadata: {
           order_reference: input.orderReference,
           product: 'Naija Tickets',
+          cancel_action: `${input.callbackUrl}?reference=${encodeURIComponent(input.reference)}`,
         },
       }),
     },
@@ -208,23 +209,34 @@ export function isValidPaystackReference(value: string) {
 }
 
 export function getTrustedAppOrigin(requestUrl: string) {
-  const configured = process.env.APP_URL?.trim();
-  if (configured) {
-    const url = new URL(configured);
-    if (url.protocol !== 'https:' && url.hostname !== 'localhost') {
-      throw new Error('APP_URL must use HTTPS outside local development.');
-    }
-    return url.origin;
-  }
-
   const requestOrigin = new URL(requestUrl);
+  const isLocal = (url: URL) =>
+    ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  // Local dev servers can move ports. Return to the same browser origin so
+  // account sessions and the payment result stay in the app being tested.
   if (
-    requestOrigin.hostname === 'localhost' ||
-    requestOrigin.hostname === '127.0.0.1'
+    process.env.NODE_ENV !== 'production' &&
+    isLocal(requestOrigin) &&
+    ['http:', 'https:'].includes(requestOrigin.protocol)
   ) {
     return requestOrigin.origin;
   }
-  throw new Error('APP_URL is not configured.');
+  const configured = process.env.APP_URL?.trim();
+  if (!configured) throw new Error('APP_URL is not configured.');
+  const url = new URL(configured);
+  if (
+    url.username ||
+    url.password ||
+    !['http:', 'https:'].includes(url.protocol) ||
+    (url.protocol !== 'https:' &&
+      !(isLocal(url) && process.env.NODE_ENV !== 'production')) ||
+    (isLocal(url) && process.env.NODE_ENV === 'production')
+  ) {
+    throw new Error(
+      'APP_URL must be a public HTTPS website address in production.',
+    );
+  }
+  return url.origin;
 }
 
 function hex(buffer: ArrayBuffer) {

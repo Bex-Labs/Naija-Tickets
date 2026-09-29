@@ -7,6 +7,7 @@ import {
   recordPaystackVerification,
 } from '@/lib/payments';
 import {
+  getTrustedAppOrigin,
   isValidPaystackReference,
   verifyPaystackTransaction,
 } from '@/lib/paystack';
@@ -19,7 +20,7 @@ function statusRedirect(
   delivery = '',
   paymentReference = '',
 ) {
-  const url = new URL('/payment/status', request.url);
+  const url = new URL('/payment/status', getTrustedAppOrigin(request.url));
   url.searchParams.set('result', result);
   if (reference) url.searchParams.set('reference', reference);
   if (delivery) url.searchParams.set('delivery', delivery);

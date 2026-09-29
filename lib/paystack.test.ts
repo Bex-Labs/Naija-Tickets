@@ -5,6 +5,7 @@ import {
   deactivatePaystackSubaccount,
   getTrustedAppOrigin,
   isValidPaystackReference,
+  initializePaystackTransaction,
   paystackSplitFields,
   verifyPaystackWebhookSignature,
 } from './paystack.ts';
@@ -59,4 +60,71 @@ void test('uses only a configured HTTPS application origin in production', () =>
   assert.throws(() =>
     getTrustedAppOrigin('https://untrusted.example.net/checkout'),
   );
+});
+
+void test('local checkout returns to the active port, not a stale APP_URL', (t) => {
+  const environment: Record<string, string | undefined> = process.env;
+  const previousNodeEnv = environment.NODE_ENV;
+  const previousAppUrl = process.env.APP_URL;
+  t.after(() => {
+    if (previousNodeEnv === undefined) delete environment.NODE_ENV;
+    else environment.NODE_ENV = previousNodeEnv;
+    if (previousAppUrl === undefined) delete process.env.APP_URL;
+    else process.env.APP_URL = previousAppUrl;
+  });
+  environment.NODE_ENV = 'development';
+  process.env.APP_URL = 'http://localhost:3000';
+  assert.equal(
+    getTrustedAppOrigin(
+      'http://localhost:3002/api/payments/paystack/initialize',
+    ),
+    'http://localhost:3002',
+  );
+  assert.equal(
+    getTrustedAppOrigin('http://127.0.0.1:3003/payment/callback'),
+    'http://127.0.0.1:3003',
+  );
+  environment.NODE_ENV = 'production';
+  assert.throws(
+    () => getTrustedAppOrigin('https://tickets.example.com'),
+    /public HTTPS/,
+  );
+  process.env.APP_URL = 'https://tickets.example.com';
+  assert.equal(
+    getTrustedAppOrigin('https://untrusted.example.com/payment/callback'),
+    'https://tickets.example.com',
+  );
+});
+
+void test('initialization supplies the app return URL and a cancellation return route', async (t) => {
+  t.mock.method(
+    globalThis,
+    'fetch',
+    async (_url: string | URL | Request, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      assert.equal(body.callback_url, 'http://localhost:3002/payment/callback');
+      assert.equal(
+        body.metadata.cancel_action,
+        'http://localhost:3002/payment/callback?reference=NT-ABC123456789',
+      );
+      return new Response(
+        JSON.stringify({
+          status: true,
+          data: {
+            reference: body.reference,
+            authorization_url: 'https://checkout.paystack.com/example',
+            access_code: 'fixture',
+          },
+        }),
+      );
+    },
+  );
+  await initializePaystackTransaction({
+    email: 'buyer@example.com',
+    amountKobo: 100000,
+    currency: 'NGN',
+    reference: 'NT-ABC123456789',
+    callbackUrl: 'http://localhost:3002/payment/callback',
+    orderReference: 'NT-ORDER123',
+  });
 });
