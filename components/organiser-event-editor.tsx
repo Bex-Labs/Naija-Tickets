@@ -20,6 +20,13 @@ import {
 import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type {
   OrganiserEvent,
   OrganiserTicketType,
@@ -438,7 +445,7 @@ export function OrganiserEventEditor({
                   ) : (
                     <ImagePlus className="h-4 w-4" />
                   )}
-                  {imageUploading ? 'Uploading…' : 'Choose from computer'}
+                  {imageUploading ? 'Uploading…' : 'Choose image'}
                 </label>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
                   JPEG, PNG or WebP. Maximum file size 5 MB.
@@ -737,7 +744,7 @@ export function OrganiserEventEditor({
                       }
                     />
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid items-start gap-4 sm:grid-cols-2">
                     <div>
                       <label
                         className="auth-label"
@@ -745,18 +752,18 @@ export function OrganiserEventEditor({
                       >
                         Ticket type
                       </label>
-                      <select
-                        id={`ticket-kind-${index}`}
+                      <Select
                         value={isGroup ? 'group' : 'individual'}
                         disabled={
                           ticket.quantitySold + ticket.quantityReserved > 0
                         }
-                        onChange={(event) => {
+                        onValueChange={(kind) => {
+                          if (!kind) return;
                           setGroupTicketKeys((current) => ({
                             ...current,
-                            [ticketKey]: event.target.value === 'group',
+                            [ticketKey]: kind === 'group',
                           }));
-                          const size = event.target.value === 'group' ? 5 : 1;
+                          const size = kind === 'group' ? 5 : 1;
                           update(
                             'ticketTypes',
                             value.ticketTypes.map((type, typeIndex) =>
@@ -774,11 +781,33 @@ export function OrganiserEventEditor({
                             ),
                           );
                         }}
-                        className="auth-input"
                       >
-                        <option value="individual">Individual ticket</option>
-                        <option value="group">Group ticket</option>
-                      </select>
+                        <SelectTrigger
+                          id={`ticket-kind-${index}`}
+                          className="w-full rounded-lg border-[#241b3f]/15 bg-white px-3 text-sm font-semibold text-[#241b3f] data-[size=default]:h-12 hover:border-emerald-500 focus-visible:border-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-500/20"
+                        >
+                          <SelectValue>
+                            {isGroup ? 'Group ticket' : 'Individual ticket'}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent
+                          align="start"
+                          className="border border-[#241b3f]/10 bg-white p-1 shadow-xl"
+                        >
+                          <SelectItem
+                            value="individual"
+                            className="min-h-11 px-3 text-[#241b3f] focus:bg-emerald-50 focus:text-emerald-900"
+                          >
+                            Individual ticket
+                          </SelectItem>
+                          <SelectItem
+                            value="group"
+                            className="min-h-11 px-3 text-[#241b3f] focus:bg-emerald-50 focus:text-emerald-900"
+                          >
+                            Group ticket
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     {isGroup && (
                       <div>
@@ -813,7 +842,7 @@ export function OrganiserEventEditor({
                         />
                       </div>
                     )}
-                    <div className="sm:col-span-2 lg:col-span-2">
+                    <div className={isGroup ? 'sm:col-span-2' : ''}>
                       <label
                         className="auth-label"
                         htmlFor={`ticket-name-${index}`}
@@ -869,7 +898,50 @@ export function OrganiserEventEditor({
                           : 'Applied automatically after any early bird offer'}
                       </p>
                     </div>
-                    <div className="border border-amber-300/60 bg-amber-50 p-4 sm:col-span-2 lg:col-span-3">
+                    <div>
+                      <label
+                        className="auth-label"
+                        htmlFor={`ticket-capacity-${index}`}
+                      >
+                        {(ticket.admissionsPerTicket || 1) > 1
+                          ? 'Group packages available'
+                          : 'Quantity available'}
+                      </label>
+                      <Input
+                        id={`ticket-capacity-${index}`}
+                        type="number"
+                        min={Math.ceil(
+                          (ticket.quantitySold + ticket.quantityReserved) /
+                            (ticket.admissionsPerTicket || 1),
+                        )}
+                        max={1000000}
+                        step={1}
+                        required
+                        value={ticket.quantityTotal}
+                        onChange={(event) =>
+                          updateTicket(
+                            'quantityTotal',
+                            Number(event.target.value),
+                          )
+                        }
+                        className="auth-input"
+                      />
+                      {(ticket.admissionsPerTicket || 1) > 1 && (
+                        <p className="mt-1 text-xs text-emerald-700">
+                          {ticket.quantityTotal *
+                            (ticket.admissionsPerTicket || 1)}{' '}
+                          total admissions · Price is per group package
+                        </p>
+                      )}
+                      {(ticket.quantitySold > 0 ||
+                        ticket.quantityReserved > 0) && (
+                        <p className="mt-1 text-xs text-slate-500">
+                          {ticket.quantitySold} sold, {ticket.quantityReserved}{' '}
+                          reserved admissions
+                        </p>
+                      )}
+                    </div>
+                    <div className="border border-amber-300/60 bg-amber-50 p-4 sm:col-span-2">
                       <label className="flex min-h-11 items-center gap-3 text-sm font-black text-amber-950">
                         <input
                           type="checkbox"
@@ -950,7 +1022,7 @@ export function OrganiserEventEditor({
                         </div>
                       )}
                     </div>
-                    <div className="sm:col-span-2 lg:col-span-3">
+                    <div className="sm:col-span-2">
                       <label
                         className="auth-label"
                         htmlFor={`ticket-description-${index}`}
@@ -966,49 +1038,6 @@ export function OrganiserEventEditor({
                         }
                         className="auth-input"
                       />
-                    </div>
-                    <div>
-                      <label
-                        className="auth-label"
-                        htmlFor={`ticket-capacity-${index}`}
-                      >
-                        {(ticket.admissionsPerTicket || 1) > 1
-                          ? 'Group packages available'
-                          : 'Quantity available'}
-                      </label>
-                      <Input
-                        id={`ticket-capacity-${index}`}
-                        type="number"
-                        min={Math.ceil(
-                          (ticket.quantitySold + ticket.quantityReserved) /
-                            (ticket.admissionsPerTicket || 1),
-                        )}
-                        max={1000000}
-                        step={1}
-                        required
-                        value={ticket.quantityTotal}
-                        onChange={(event) =>
-                          updateTicket(
-                            'quantityTotal',
-                            Number(event.target.value),
-                          )
-                        }
-                        className="auth-input"
-                      />
-                      {(ticket.admissionsPerTicket || 1) > 1 && (
-                        <p className="mt-1 text-xs text-emerald-700">
-                          {ticket.quantityTotal *
-                            (ticket.admissionsPerTicket || 1)}{' '}
-                          total admissions · Price is per group package
-                        </p>
-                      )}
-                      {(ticket.quantitySold > 0 ||
-                        ticket.quantityReserved > 0) && (
-                        <p className="mt-1 text-xs text-slate-500">
-                          {ticket.quantitySold} sold, {ticket.quantityReserved}{' '}
-                          reserved admissions
-                        </p>
-                      )}
                     </div>
                     <div>
                       <label
@@ -1058,7 +1087,7 @@ export function OrganiserEventEditor({
                         className="auth-input"
                       />
                     </div>
-                    <div className="sm:col-span-2 lg:col-span-3">
+                    <div className="sm:col-span-2">
                       <label
                         className="auth-label"
                         htmlFor={`ticket-inclusions-${index}`}
