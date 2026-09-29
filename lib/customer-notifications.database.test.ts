@@ -76,6 +76,47 @@ void test('purchase and event notifications stay scoped to their recipients', as
       `select count(*)::integer as count from public.customer_notifications where user_id='${other}'`,
     );
     assert.equal(otherCount.count, 0);
+
+    // Exercise database policies as a browser client, without API-side filters.
+    await db.exec(`
+      create or replace function auth.uid() returns uuid language sql as $$
+        select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+      $$;
+      grant usage on schema public, auth to authenticated, anon;
+      set role authenticated;
+      select set_config('request.jwt.claim.sub', '${other}', false);
+    `);
+    assert.equal(
+      (await db.query('select id from public.customer_notifications')).rows
+        .length,
+      0,
+    );
+    assert.equal(
+      (
+        await db.query(
+          'update public.customer_notifications set read_at=now() returning id',
+        )
+      ).rows.length,
+      0,
+    );
+    await db.query("select set_config('request.jwt.claim.sub', $1, false)", [
+      customer,
+    ]);
+    assert.equal(
+      (await db.query('select id from public.customer_notifications')).rows
+        .length,
+      3,
+    );
+    await assert.rejects(
+      db.query('update public.customer_notifications set user_id=$1', [other]),
+      /row-level security/,
+    );
+    await db.exec('reset role; set role anon;');
+    await assert.rejects(
+      db.query('select * from public.customer_notifications'),
+      /permission denied/,
+    );
+    await db.exec('reset role;');
   } finally {
     await db.close();
   }

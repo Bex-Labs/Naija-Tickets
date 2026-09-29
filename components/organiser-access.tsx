@@ -9,28 +9,20 @@ import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 type AccessState = 'loading' | 'signed-out' | 'signed-in';
 
 export function OrganiserAccess() {
+  const [userId, setUserId] = useState('');
   const [access, setAccess] = useState<AccessState>('loading');
 
   useEffect(() => {
     const client = getSupabaseBrowserClient();
 
-    void client.auth.getSession().then(({ data }) => {
-      if (
-        data.session &&
-        accountHomeFromMetadata(data.session.user.user_metadata) === '/account'
-      ) {
-        window.location.replace('/account');
-        return;
-      }
-      setAccess(data.session ? 'signed-in' : 'signed-out');
-    });
-
     const { data: listener } = client.auth.onAuthStateChange(
       (_event, session) => {
+        setUserId(session?.user.id ?? '');
         if (
           session &&
           accountHomeFromMetadata(session.user.user_metadata) === '/account'
         ) {
+          setAccess('loading');
           window.location.replace('/account');
           return;
         }
@@ -73,5 +65,5 @@ export function OrganiserAccess() {
     );
   }
 
-  return <OrganiserWorkspace />;
+  return <OrganiserWorkspace key={userId} />;
 }

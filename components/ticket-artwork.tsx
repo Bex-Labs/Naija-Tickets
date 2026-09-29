@@ -89,7 +89,7 @@ export function TicketArtwork({
       className="ticket-artwork"
     >
       <title id={`${id}-title`}>
-        {details.eventTitle} — {details.attendeeName}
+        {`${details.eventTitle} — ${details.attendeeName}`}
       </title>
       <desc id={`${id}-description`}>
         {details.ticketType}. {details.date}, {details.time}. {details.venue}.{' '}

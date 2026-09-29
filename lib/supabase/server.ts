@@ -39,5 +39,5 @@ export async function getAuthenticatedUser(request: Request) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data, error } = await client.auth.getUser(token);
-  return error ? null : data.user;
+  return error || data.user?.is_anonymous ? null : data.user;
 }

@@ -122,40 +122,49 @@ export function TicketShareButton({
   const buttonClass =
     'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 text-sm font-semibold shadow-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:opacity-50';
   return (
-    <fieldset className="no-print mt-4 flex min-w-0 flex-wrap items-center justify-end gap-3">
+    <fieldset className="no-print mt-4 grid min-w-0 grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end sm:gap-3">
       <legend className="sr-only">Actions for {attendeeName}’s ticket</legend>
       <button
         type="button"
+        aria-label="Print ticket"
         onClick={print}
         className={`${buttonClass} border-emerald-700/20 bg-white text-emerald-800 hover:bg-emerald-50`}
       >
-        <Printer className="h-4 w-4" />
-        Print ticket
+        <Printer className="h-4 w-4 shrink-0" />
+        Print<span className="hidden sm:inline">ticket</span>
       </button>
       {canShare && (
         <>
           <button
             type="button"
             disabled={busy}
+            aria-label="Share ticket"
             onClick={() => void share()}
             className={`${buttonClass} border-emerald-700/20 bg-white text-emerald-800 hover:bg-emerald-50`}
           >
-            <Share2 className="h-4 w-4" />
-            {busy ? 'Preparing…' : 'Share ticket'}
+            <Share2 className="h-4 w-4 shrink-0" />
+            {busy ? (
+              'Wait…'
+            ) : (
+              <>
+                Share<span className="hidden sm:inline">ticket</span>
+              </>
+            )}
           </button>
           <button
             type="button"
             disabled={busy}
+            aria-label="Save ticket"
             onClick={() => void share(true)}
             className={`${buttonClass} border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800`}
           >
-            <Download className="h-4 w-4" />
-            Save ticket
+            <Download className="h-4 w-4 shrink-0" />
+            Save<span className="hidden sm:inline">ticket</span>
           </button>
         </>
       )}
       {notice && (
-        <output className="w-full text-right text-sm text-slate-600">
+        <output className="col-span-3 w-full text-right text-sm text-slate-600">
           {notice}
         </output>
       )}

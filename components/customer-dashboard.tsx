@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  Bell,
   CalendarDays,
   CircleUserRound,
   Heart,
@@ -14,12 +13,12 @@ import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { GroupBookingCard } from '@/components/group-booking-card';
 import { AccountSignOut } from '@/components/account-sign-out';
+import { CustomerNotifications } from '@/components/customer-notifications';
 import { CustomerProfileForm } from '@/components/customer-profile-form';
 import { EventSaveButton } from '@/components/event-save-button';
 import { accountHomeFromMetadata } from '@/lib/auth-destination';
 import type {
   CustomerAccount,
-  CustomerNotification,
   CustomerPurchase,
   CustomerSavedEvent,
 } from '@/lib/customer-account';
@@ -241,46 +240,6 @@ function SavedEventCard({
   );
 }
 
-function NotificationCard({
-  notification,
-}: {
-  notification: CustomerNotification;
-}) {
-  const content = (
-    <>
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-800">
-        <Bell className="h-4 w-4" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-black">{notification.title}</span>
-        <span className="mt-1 block text-sm leading-6 text-slate-600">
-          {notification.message}
-        </span>
-        <span className="mt-2 block text-xs text-slate-400">
-          {formatDate(notification.createdAt)}
-        </span>
-      </span>
-      {notification.link && (
-        <span className="shrink-0 text-sm font-black text-emerald-700">
-          Open →
-        </span>
-      )}
-    </>
-  );
-  const className =
-    'flex items-start gap-4 border border-[#241b3f]/10 bg-white p-5 shadow-sm transition';
-  return notification.link ? (
-    <a
-      href={notification.link}
-      className={`${className} hover:border-emerald-400`}
-    >
-      {content}
-    </a>
-  ) : (
-    <article className={className}>{content}</article>
-  );
-}
-
 export function CustomerDashboard() {
   const [account, setAccount] = useState<CustomerAccount | null>(null);
   const [state, setState] = useState<
@@ -288,49 +247,67 @@ export function CustomerDashboard() {
   >('loading');
   const [error, setError] = useState('');
   const [reload, setReload] = useState(0);
+  const [userId, setUserId] = useState('');
 
   useEffect(() => {
-    const controller = new AbortController();
-    void (async () => {
-      try {
-        const { data } = await getSupabaseBrowserClient().auth.getSession();
-        if (!data.session) {
+    const client = getSupabaseBrowserClient();
+    let controller: AbortController | undefined;
+    const { data: listener } = client.auth.onAuthStateChange(
+      (_event, session) => {
+        controller?.abort();
+        controller = new AbortController();
+        const signal = controller.signal;
+        setAccount(null);
+        setError('');
+        setUserId(session?.user.id ?? '');
+        if (!session) {
           setState('signed-out');
           return;
         }
+        setState('loading');
         if (
-          accountHomeFromMetadata(data.session.user.user_metadata) ===
-          '/organiser'
+          accountHomeFromMetadata(session.user.user_metadata) === '/organiser'
         ) {
           window.location.replace('/organiser');
           return;
         }
-        const response = await fetch('/api/customer/account', {
-          headers: { Authorization: `Bearer ${data.session.access_token}` },
-          cache: 'no-store',
-          signal: controller.signal,
-        });
-        const result = (await response.json()) as CustomerAccount & {
-          error?: string;
-        };
-        if (!response.ok)
-          throw new Error(result.error || 'Your account could not be loaded.');
-        if (!controller.signal.aborted) {
-          setAccount(result);
-          setState('ready');
-        }
-      } catch (cause) {
-        if (!controller.signal.aborted) {
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : 'Your account could not be loaded.',
-          );
-          setState('error');
-        }
-      }
-    })();
-    return () => controller.abort();
+        void (async () => {
+          try {
+            const response = await fetch('/api/customer/account', {
+              headers: { Authorization: `Bearer ${session.access_token}` },
+              cache: 'no-store',
+              signal,
+            });
+            const result = (await response.json()) as CustomerAccount & {
+              error?: string;
+            };
+            if (signal.aborted) return;
+            if (response.status === 401) {
+              setState('signed-out');
+              return;
+            }
+            if (!response.ok)
+              throw new Error(
+                result.error || 'Your account could not be loaded.',
+              );
+            setAccount(result);
+            setState('ready');
+          } catch (cause) {
+            if (signal.aborted) return;
+            setError(
+              cause instanceof Error
+                ? cause.message
+                : 'Your account could not be loaded.',
+            );
+            setState('error');
+          }
+        })();
+      },
+    );
+    return () => {
+      controller?.abort();
+      listener.subscription.unsubscribe();
+    };
   }, [reload]);
 
   if (state === 'loading') {
@@ -409,12 +386,6 @@ export function CustomerDashboard() {
               Refresh bookings
             </button>
             <a
-              href="/entry"
-              className="min-h-11 py-3 text-sm font-bold text-emerald-700"
-            >
-              Event entry
-            </a>
-            <a
               href="/events"
               className="min-h-11 py-3 text-sm font-bold text-emerald-700"
             >
@@ -426,6 +397,13 @@ export function CustomerDashboard() {
       </section>
       <section className="mx-auto max-w-7xl px-5 py-12 md:px-10 md:py-16">
         <CustomerProfileForm
+          key={userId}
+          headerAction={
+            <CustomerNotifications
+              userId={userId}
+              notifications={account.notifications}
+            />
+          }
           profile={account.profile}
           onSaved={(profile) =>
             setAccount((current) =>
@@ -433,35 +411,6 @@ export function CustomerDashboard() {
             )
           }
         />
-
-        <div className="mb-7 mt-14 border-t border-[#241b3f]/10 pt-12">
-          <p className="eyebrow">Updates</p>
-          <h2 className="mt-2 text-3xl font-black tracking-[-.03em]">
-            Notifications
-          </h2>
-          <p className="mt-2 text-sm text-slate-600">
-            Purchase confirmations and important changes to your events appear
-            here.
-          </p>
-        </div>
-        {account.notifications.length ? (
-          <div className="grid gap-3">
-            {account.notifications.map((notification) => (
-              <NotificationCard
-                key={notification.id}
-                notification={notification}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="border border-dashed border-[#241b3f]/15 bg-white p-8 text-center">
-            <Bell className="mx-auto h-8 w-8 text-emerald-600" />
-            <h3 className="mt-4 text-xl font-black">No notifications yet</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Ticket confirmations and relevant event updates will appear here.
-            </p>
-          </div>
-        )}
 
         <div className="mb-7 mt-14 border-t border-[#241b3f]/10 pt-12">
           <p className="eyebrow">Considering</p>

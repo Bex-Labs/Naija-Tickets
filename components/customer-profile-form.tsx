@@ -1,15 +1,17 @@
 'use client';
 
 import { Mail, Phone, Save, UserRound } from 'lucide-react';
-import { useState, type SyntheticEvent } from 'react';
+import { useState, type ReactNode, type SyntheticEvent } from 'react';
 import type { CustomerProfile } from '@/lib/customer-account';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export function CustomerProfileForm({
   profile,
   onSaved,
+  headerAction,
 }: {
   profile: CustomerProfile;
+  headerAction?: ReactNode;
   onSaved: (profile: CustomerProfile) => void;
 }) {
   const [fullName, setFullName] = useState(profile.name);
@@ -66,14 +68,17 @@ export function CustomerProfileForm({
       onSubmit={submit}
       className="grid gap-5 border border-[#241b3f]/10 bg-white p-5 shadow-sm sm:grid-cols-2 sm:p-7"
     >
-      <div className="sm:col-span-2">
-        <p className="eyebrow">Account details</p>
-        <h2 className="mt-2 text-3xl font-black tracking-[-.03em]">
-          My profile
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          These details prefill checkout when you buy tickets while signed in.
-        </p>
+      <div className="flex items-start justify-between gap-4 sm:col-span-2">
+        <div>
+          <p className="eyebrow">Account details</p>
+          <h2 className="mt-2 text-3xl font-black tracking-[-.03em]">
+            My profile
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            These details prefill checkout when you buy tickets while signed in.
+          </p>
+        </div>
+        {headerAction}
       </div>
       <label className="text-sm font-bold" htmlFor="customer-full-name">
         <span className="flex items-center gap-2">
