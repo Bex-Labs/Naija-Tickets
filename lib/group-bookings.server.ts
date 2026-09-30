@@ -32,6 +32,7 @@ async function allRows<T>(
 // Called only after the existing order/customer/organiser access checks.
 export async function getOrderGroupBookings(
   orderIds: string[],
+  includeTicketLinks = false,
 ): Promise<GroupBooking[]> {
   if (!orderIds.length) return [];
   const client = getSupabaseAdminClient();
@@ -74,7 +75,7 @@ export async function getOrderGroupBookings(
           client
             .from('tickets')
             .select(
-              'id,group_booking_id,attendee_name,claim_state,status,attendee_index',
+              'id,group_booking_id,attendee_name,claim_state,status,attendee_index,claim_access_token',
             )
             .in('group_booking_id', ids)
             .order('attendee_index')
@@ -96,6 +97,11 @@ export async function getOrderGroupBookings(
           name: slot.attendee_name,
           state: slot.claim_state,
           status: slot.status,
+          ...(includeTicketLinks &&
+          slot.claim_access_token &&
+          ['valid', 'used'].includes(slot.status)
+            ? { ticketPath: `/group-ticket/${slot.claim_access_token}` }
+            : {}),
         }),
       );
     return {

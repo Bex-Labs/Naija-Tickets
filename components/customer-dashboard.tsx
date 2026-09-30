@@ -164,7 +164,9 @@ export function PurchaseCard({ purchase }: { purchase: CustomerPurchase }) {
               href={`/payment/status?reference=${encodeURIComponent(purchase.reference)}`}
               className="mt-2 inline-flex min-h-9 items-center rounded border border-emerald-700/20 px-3 text-xs font-semibold text-emerald-800 hover:bg-emerald-50"
             >
-              Open booking
+              {purchase.groups?.length
+                ? 'Manage group tickets'
+                : 'Open booking'}
             </a>
           )}
       </div>

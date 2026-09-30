@@ -5,6 +5,7 @@ export type GroupMember = {
   name: string | null;
   state: 'UNCLAIMED' | 'CLAIMED' | 'CHECKED_IN';
   status: string;
+  ticketPath?: string;
 };
 
 export type GroupBooking = {

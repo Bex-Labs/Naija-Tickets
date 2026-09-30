@@ -110,8 +110,6 @@ The administrator's **Guest buyers** section lists guest purchases with their co
 
 The database operation anonymises purchaser and attendee data in the order, order items, tickets, payment provider payloads and email delivery record in one transaction. It keeps order totals, payment reconciliation, ticket validity, private ticket codes and the audit trail. It never hard-deletes the purchase, and the customer and organiser workspaces cannot call the operation.
 
-
-
 ## Useful commands
 
 The footer shows Instagram, Facebook, TikTok, and X links. Until official profile URLs are available, these links open each platform's homepage. Set `NEXT_PUBLIC_INSTAGRAM_URL`, `NEXT_PUBLIC_FACEBOOK_URL`, `NEXT_PUBLIC_TIKTOK_URL`, and `NEXT_PUBLIC_X_URL` to the official profile URLs when they are ready.
@@ -131,7 +129,6 @@ Only live NGN settlements whose complete transaction list matches verified payme
 
 The organiser connects a bank under Settings for future split payments. Payments taken without a split account cannot be made into direct settlements retroactively; support must arrange those separately. Test mode displays an explicit notice and never imports simulated payouts. Current production limitations: reconciliation runs when Payouts is open, not while all users are offline, and exceptional deductions require support review. A live bank settlement still needs end-to-end validation when the account is switched from test to live mode.
 
-
 ### Google sign-up activation
 
 The app already starts Google OAuth and retains the selected customer/organiser profile. In the hosted Supabase project, Google is currently disabled. To activate it, create a Google OAuth **Web application** client, register the Supabase project URL followed by `/auth/v1/callback` as the Google authorised redirect URI, then enable Google in Supabase Authentication → Providers using that client ID and secret. Keep the client secret in Supabase, never in browser environment variables or source files.
@@ -145,3 +142,7 @@ For Resend accounts without a domain, `onboarding@resend.dev` can send test emai
 Apply `supabase/migrations/202609290002_verified_ticket_emails.sql`. A paid order must also have a matching verified payment before its ticket email can be claimed. Failed, pending, refunded and privacy-erased purchases cannot send valid-ticket confirmations. The confirmation page reads the stored delivery status and offers a retry for unsent mail; it never accepts a replacement recipient address. A delivery claim prevents concurrent sends and failed attempts have a one-minute retry cooldown. Group buyers receive their booking link and a count of admissions awaiting claims; unclaimed slots have no usable admission code.
 
 Email sending is not active until `RESEND_API_KEY`, a verified-domain `EMAIL_FROM` and a reachable HTTPS `APP_URL` are configured. No production email has been sent or mailbox delivery verified as part of the local tests.
+
+### Group member registration options
+
+After a verified group purchase, the buyer opens the booking from the payment confirmation or **My tickets → Manage group tickets**. They can share the group registration link so each attendee enters their own details, or enter each attendee's name, email and phone themselves. Buyer-entered details immediately claim one reserved admission and generate that attendee's individual ticket link, which the buyer can copy or share on WhatsApp. Both options use the same claim endpoint and database checks; the remaining admissions can be filled using either method. A group invitation does not expose other attendees' private ticket links. No additional migration is needed for this UI change.

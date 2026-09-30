@@ -16,7 +16,7 @@ function first<T>(relation: Relation<T>) {
 }
 
 const supabaseTicketOrderSource: TicketOrderSource = {
-  findGroupBookings: (orderId) => getOrderGroupBookings([orderId]),
+  findGroupBookings: (orderId) => getOrderGroupBookings([orderId], true),
   async findOrder(reference): Promise<StoredTicketOrder | null> {
     const admin = getSupabaseAdminClient();
     const { data, error } = await admin

@@ -101,7 +101,7 @@ void test('initialization supplies the app return URL and a cancellation return 
     globalThis,
     'fetch',
     async (_url: string | URL | Request, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body));
+      const body = JSON.parse(typeof init?.body === 'string' ? init.body : '');
       assert.equal(body.callback_url, 'http://localhost:3002/payment/callback');
       assert.equal(
         body.metadata.cancel_action,

@@ -147,7 +147,7 @@ export async function GET(request: Request) {
       : { data: [], error: null };
     if (ticketsError) throw ticketsError;
 
-    const groups = await getOrderGroupBookings(orderIds);
+    const groups = await getOrderGroupBookings(orderIds, true);
     const account: CustomerAccount = {
       profile: {
         name: profile.full_name,

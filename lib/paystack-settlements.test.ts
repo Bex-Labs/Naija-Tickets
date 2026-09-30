@@ -65,7 +65,13 @@ void test('resolves the numeric subaccount and fetches every transaction before 
   const paths: string[] = [];
   let records = 0;
   t.mock.method(globalThis, 'fetch', async (input: string | URL | Request) => {
-    const url = new URL(String(input));
+    const url = new URL(
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url,
+    );
     paths.push(url.pathname + url.search);
     const body =
       url.pathname === '/subaccount/ACCT_fixture'

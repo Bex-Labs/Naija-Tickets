@@ -110,7 +110,7 @@ export default async function PaymentStatusPage({ searchParams }: Props) {
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
                 {lookup.order.groups?.length
-                  ? 'Share your group registration link below. Each member claims their own admission and receives a unique QR code. Your admissions are already reserved.'
+                  ? 'Your admissions are reserved. Enter member details yourself and share their individual ticket links, or send the group link so members can register themselves.'
                   : 'Show each QR code at the entrance. Keep this private link and every ticket code secure.'}
               </p>
               <TicketEmailStatus reference={lookup.order.reference} />

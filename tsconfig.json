@@ -27,5 +27,13 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist 2",
+    ".vinext",
+    ".wrangler",
+    "build",
+    "coverage"
+  ]
 }
