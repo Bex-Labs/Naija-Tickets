@@ -26,7 +26,9 @@ export async function GET(request: Request) {
       organiserIds.length
         ? client.from('events').select(fields).in('organiser_id', organiserIds)
         : { data: [], error: null },
-      assigned.data.length
+      // Organiser accounts can only enter events belonging to their own
+      // organiser, even if an older staff assignment exists elsewhere.
+      !organiserIds.length && assigned.data.length
         ? client
             .from('events')
             .select(fields)
@@ -65,15 +67,13 @@ export async function GET(request: Request) {
           .in('id', ids);
         if (profiles.error) throw profiles.error;
         for (const assignment of assignments.data) {
-          events
-            .get(assignment.event_id)
-            ?.staff.push({
-              id: assignment.staff_id,
-              name:
-                profiles.data.find(
-                  (profile) => profile.id === assignment.staff_id,
-                )?.full_name || 'Entry staff',
-            });
+          events.get(assignment.event_id)?.staff.push({
+            id: assignment.staff_id,
+            name:
+              profiles.data.find(
+                (profile) => profile.id === assignment.staff_id,
+              )?.full_name || 'Entry staff',
+          });
         }
       }
     }

@@ -48,6 +48,34 @@ export function AdminWorkspace() {
   );
 
   useEffect(() => {
+    let logoutPromise: Promise<unknown> | null = null;
+    const leaveAdmin = () => {
+      logoutPromise ??= fetch('/api/admin/logout', {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        keepalive: true,
+      }).catch(() => null);
+    };
+    const visibilityChanged = () => {
+      if (document.visibilityState === 'hidden') leaveAdmin();
+      else if (logoutPromise)
+        void logoutPromise.finally(() => window.location.reload());
+    };
+    const returnedFromHistory = (event: PageTransitionEvent) => {
+      if (event.persisted) window.location.reload();
+    };
+    window.addEventListener('pagehide', leaveAdmin);
+    window.addEventListener('pageshow', returnedFromHistory);
+    document.addEventListener('visibilitychange', visibilityChanged);
+    return () => {
+      window.removeEventListener('pagehide', leaveAdmin);
+      window.removeEventListener('pageshow', returnedFromHistory);
+      document.removeEventListener('visibilitychange', visibilityChanged);
+    };
+  }, []);
+
+  useEffect(() => {
     const loadEvents = async () => {
       const response = await fetch('/api/admin/events');
       const result = (await response.json()) as {
@@ -152,6 +180,24 @@ export function AdminWorkspace() {
         <div className="mx-auto flex h-18 max-w-[90rem] items-center justify-between">
           <a
             href="/"
+            onClick={(clickEvent) => {
+              if (
+                clickEvent.button !== 0 ||
+                clickEvent.metaKey ||
+                clickEvent.ctrlKey ||
+                clickEvent.shiftKey ||
+                clickEvent.altKey
+              )
+                return;
+              clickEvent.preventDefault();
+              void fetch('/api/admin/logout', {
+                method: 'POST',
+                credentials: 'same-origin',
+                cache: 'no-store',
+              })
+                .catch(() => null)
+                .then(() => window.location.assign('/'));
+            }}
             className="flex min-h-11 min-w-0 items-center gap-2 text-xl font-black"
           >
             <Ticket className="h-7 w-7 text-emerald-600" />

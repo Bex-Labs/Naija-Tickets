@@ -21,7 +21,7 @@ type GuestOrdersResponse = {
 };
 
 function statusClass(status: string) {
-  if (status === 'paid') return 'bg-emerald-100 text-emerald-800';
+  if (status === 'paid') return 'bg-emerald-500 text-black';
   if (status === 'pending') return 'bg-amber-100 text-amber-800';
   if (status.includes('refund')) return 'bg-violet-100 text-violet-800';
   return 'bg-slate-100 text-slate-700';

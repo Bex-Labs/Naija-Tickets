@@ -44,7 +44,9 @@ async function manageStaff(request: Request) {
         return Response.json(
           {
             error:
-              'Ask this staff member to create and confirm an account first.',
+              error.message === 'Organisers can only scan their own events.'
+                ? error.message
+                : 'Ask this staff member to create and confirm an account first.',
           },
           { status: 400 },
         );

@@ -14,6 +14,10 @@ const inputClass =
 const buttonClass =
   'inline-flex min-h-12 items-center justify-center gap-2 bg-emerald-600 px-5 py-3 font-bold text-white hover:bg-emerald-700 disabled:opacity-50';
 
+type NativeQrDetector = {
+  detect(source: HTMLVideoElement): Promise<{ rawValue: string }[]>;
+};
+
 async function entryRequest<T>(path: string, init?: RequestInit) {
   const { data } = await getSupabaseBrowserClient().auth.getSession();
   if (!data.session) throw new Error('Sign in to access event entry.');
@@ -149,7 +153,11 @@ export function EventEntry() {
         const { default: jsQR } = await import('jsqr');
         if (stopped) return;
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1280 } },
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
           audio: false,
         });
         if (stopped) {
@@ -169,31 +177,61 @@ export function EventEntry() {
           throw new Error(
             'Camera scanning is unavailable. Enter the ticket code below.',
           );
-        const scan = () => {
+        const Detector = (
+          window as Window & {
+            BarcodeDetector?: new (options: {
+              formats: string[];
+            }) => NativeQrDetector;
+          }
+        ).BarcodeDetector;
+        let detector: NativeQrDetector | null = null;
+        try {
+          detector = Detector ? new Detector({ formats: ['qr_code'] }) : null;
+        } catch {
+          // A browser may expose the API but not support QR codes on this device.
+        }
+        let frameCount = 0;
+        const scan = async () => {
           if (stopped) return;
           if (video.readyState >= 2 && video.videoWidth) {
-            canvas.width = Math.min(video.videoWidth, 960);
-            canvas.height = Math.round(
-              (video.videoHeight * canvas.width) / video.videoWidth,
-            );
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const pixels = context.getImageData(
-              0,
-              0,
-              canvas.width,
-              canvas.height,
-            );
-            const qr = jsQR(pixels.data, pixels.width, pixels.height);
-            if (qr?.data) {
+            frameCount += 1;
+            let found = '';
+            if (detector) {
+              try {
+                found = (await detector.detect(video))[0]?.rawValue || '';
+              } catch {
+                detector = null;
+              }
+            }
+            if (!found && (!detector || frameCount % 4 === 0)) {
+              // Preserve detail in QR codes held in front of laptop webcams.
+              canvas.width = Math.min(video.videoWidth, 1600);
+              canvas.height = Math.round(
+                (video.videoHeight * canvas.width) / video.videoWidth,
+              );
+              context.drawImage(video, 0, 0, canvas.width, canvas.height);
+              const pixels = context.getImageData(
+                0,
+                0,
+                canvas.width,
+                canvas.height,
+              );
+              found =
+                jsQR(pixels.data, pixels.width, pixels.height, {
+                  inversionAttempts: 'dontInvert',
+                })?.data || '';
+            }
+            if (stopped) return;
+            if (found) {
               stop();
-              setCode(qr.data);
-              void verify(qr.data);
+              setCode(found);
+              void verify(found);
               return;
             }
           }
-          timer = setTimeout(scan, 180);
+          if (!stopped) timer = setTimeout(() => void scan(), 120);
         };
-        scan();
+        void scan();
       } catch (err) {
         if (!stopped) {
           setError(
@@ -243,9 +281,7 @@ export function EventEntry() {
         Verify a ticket, check the guest details, then admit the guest.
       </p>
       {loading ? (
-        <output className="mt-8 block">
-          Loading your events…
-        </output>
+        <output className="mt-8 block">Loading your events…</output>
       ) : !signedIn ? (
         <a href="/login?next=/entry" className={`${buttonClass} mt-8`}>
           Sign in to verify tickets
@@ -340,7 +376,9 @@ export function EventEntry() {
                         className="max-h-80 w-full bg-black object-contain"
                       />
                       <p className="mt-2 text-sm text-slate-600">
-                        Point the camera at the ticket QR code.
+                        Keep the whole QR code in view and hold it steady. On a
+                        laptop, move the ticket farther from the camera if it
+                        looks blurry and turn up the screen brightness.
                       </p>
                     </div>
                   )}

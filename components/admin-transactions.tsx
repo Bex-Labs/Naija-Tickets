@@ -1,6 +1,6 @@
 'use client';
 
-import { RefreshCw, Search } from 'lucide-react';
+import { ChevronDown, RefreshCw, Search } from 'lucide-react';
 import { useEffect, useState, type SyntheticEvent } from 'react';
 import { AdminRefundActions } from '@/components/admin-refund-actions';
 import { formatNaira } from '@/lib/events';
@@ -29,7 +29,7 @@ const statusLabels: Record<TransactionStatusFilter, string> = {
 };
 
 function statusStyle(status: string) {
-  if (status === 'verified') return 'bg-emerald-100 text-emerald-800';
+  if (status === 'verified') return 'bg-emerald-500 text-black';
   if (status === 'needs_review') return 'bg-red-100 text-red-800';
   if (status === 'pending') return 'bg-amber-100 text-amber-800';
   if (status.includes('refund')) return 'bg-violet-100 text-violet-800';
@@ -196,64 +196,63 @@ export function AdminTransactions() {
         )}
       </div>
 
-      <div className="mt-3 overflow-x-auto border border-[#241b3f]/10 bg-white">
-        <table className="w-full min-w-[1100px] text-left text-sm">
-          <thead className="bg-[#fff3d8] text-xs uppercase tracking-wider text-slate-600">
-            <tr>
-              <th scope="col" className="px-4 py-4">
-                Order / date
-              </th>
-              <th scope="col" className="px-4 py-4">
-                Customer
-              </th>
-              <th scope="col" className="px-4 py-4">
-                Event
-              </th>
-              <th scope="col" className="px-4 py-4">
-                Amount
-              </th>
-              <th scope="col" className="px-4 py-4">
-                Payment method
-              </th>
-              <th scope="col" className="px-4 py-4">
-                Status
-              </th>
-              <th scope="col" className="px-4 py-4">
-                Refunds
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#241b3f]/10">
-            {!loading &&
-              !error &&
-              data?.transactions.map((transaction) => (
-                <tr key={transaction.id}>
-                  <td className="px-4 py-4 align-top">
-                    <span className="font-bold text-[#241b3f]">
+      <div className="mt-3 divide-y divide-[#241b3f]/10 border border-[#241b3f]/10 bg-white">
+        {!loading &&
+          !error &&
+          data?.transactions.map((transaction) => (
+            <details
+              key={transaction.id}
+              className="group min-w-0 open:bg-[#fffaf0]/50"
+            >
+              <summary
+                aria-label={`Order ${transaction.reference}, ${statusLabels[transaction.status] || transaction.status}. Expand transaction details`}
+                className="cursor-pointer list-none px-4 py-3 transition hover:bg-emerald-50/50 [&::-webkit-details-marker]:hidden"
+              >
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <span className="block break-all font-bold text-[#241b3f]">
                       {transaction.reference}
                     </span>
-                    <span className="mt-1 block text-xs text-slate-500">
+                    <span className="mt-0.5 block text-xs text-slate-500">
                       {dateFormatter.format(new Date(transaction.createdAt))}
                     </span>
-                  </td>
-                  <td className="px-4 py-4 align-top">
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span
+                      className={`px-2 py-1 text-xs font-bold ${statusStyle(transaction.status)}`}
+                    >
+                      {statusLabels[transaction.status] || transaction.status}
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-slate-500 transition-transform group-open:rotate-180" />
+                  </div>
+                </div>
+                <div className="mt-2 grid min-w-0 gap-x-4 gap-y-1 text-xs sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                  <p className="min-w-0 break-words">
+                    <span className="text-slate-500">Customer · </span>
                     <span className="font-semibold">
                       {transaction.customerName}
                     </span>
-                    {transaction.customerEmail && (
-                      <span className="mt-1 block text-xs text-slate-500">
-                        {transaction.customerEmail}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-4 align-top">
+                  </p>
+                  <p className="min-w-0 break-words">
+                    <span className="text-slate-500">Event · </span>
                     {transaction.eventTitle}
-                  </td>
-                  <td className="px-4 py-4 align-top font-bold">
+                  </p>
+                  <p className="font-bold tabular-nums sm:text-right">
                     {formatNaira(transaction.amountKobo)}
-                  </td>
-                  <td className="px-4 py-4 align-top">
-                    <span>
+                  </p>
+                </div>
+              </summary>
+              <div className="grid min-w-0 gap-4 border-t border-[#241b3f]/10 px-4 py-4 text-xs sm:grid-cols-2">
+                <dl className="min-w-0 space-y-2">
+                  <div>
+                    <dt className="font-bold">Customer email</dt>
+                    <dd className="break-all text-slate-600">
+                      {transaction.customerEmail || 'Not provided'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-bold">Payment method</dt>
+                    <dd className="break-words text-slate-600">
                       {transaction.paymentMethod === 'card'
                         ? 'Card (Paystack)'
                         : transaction.paymentMethod === 'bank_transfer'
@@ -261,57 +260,45 @@ export function AdminTransactions() {
                           : transaction.paymentMethod === 'ussd'
                             ? 'USSD (Paystack)'
                             : transaction.paymentMethod}
-                    </span>
-                    {transaction.providerReference && (
-                      <span className="mt-1 block text-xs text-slate-500">
-                        {transaction.providerReference}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-4 align-top">
-                    <span
-                      className={`inline-block px-2 py-1 text-xs font-bold ${statusStyle(transaction.status)}`}
-                    >
-                      {statusLabels[transaction.status] || transaction.status}
-                    </span>
-                    {transaction.status === 'needs_review' && (
-                      <span className="mt-1 block text-xs text-red-700">
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="font-bold">Provider reference</dt>
+                    <dd className="break-all text-slate-600">
+                      {transaction.providerReference || 'Not available'}
+                    </dd>
+                  </div>
+                  {transaction.status === 'needs_review' && (
+                    <div className="text-red-700">
+                      <dt className="font-bold">Review mismatch</dt>
+                      <dd>
                         Order: {transaction.orderStatus.replaceAll('_', ' ')} ·
                         Payment:{' '}
                         {transaction.paymentStatus.replaceAll('_', ' ')}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-4 align-top">
-                    <AdminRefundActions
-                      transaction={transaction}
-                      onUpdated={() => setRefresh((value) => value + 1)}
-                    />
-                  </td>
-                </tr>
-              ))}
-            {!loading && !error && data?.transactions.length === 0 && (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="px-4 py-12 text-center text-slate-500"
-                >
-                  No transactions match these filters.
-                </td>
-              </tr>
-            )}
-            {loading && (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="px-4 py-12 text-center text-slate-500"
-                >
-                  Loading transactions…
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+                <div className="min-w-0">
+                  <h3 className="mb-2 font-bold">Refunds</h3>
+                  <AdminRefundActions
+                    transaction={transaction}
+                    onUpdated={() => setRefresh((value) => value + 1)}
+                  />
+                </div>
+              </div>
+            </details>
+          ))}
+        {!loading && !error && data?.transactions.length === 0 && (
+          <p className="px-4 py-12 text-center text-sm text-slate-500">
+            No transactions match these filters.
+          </p>
+        )}
+        {loading && (
+          <p className="px-4 py-12 text-center text-sm text-slate-500">
+            Loading transactions…
+          </p>
+        )}
       </div>
 
       {data && !loading && !error && data.total > data.pageSize && (

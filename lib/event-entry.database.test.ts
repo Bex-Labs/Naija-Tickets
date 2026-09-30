@@ -8,7 +8,9 @@ void test('entry checks enforce event access, verified payment and one admission
   const owner = '10000000-0000-4000-8000-000000000001';
   const staff = '10000000-0000-4000-8000-000000000002';
   const outsider = '10000000-0000-4000-8000-000000000003';
+  const foreignOwner = '10000000-0000-4000-8000-000000000004';
   const organiser = '20000000-0000-4000-8000-000000000001';
+  const foreignOrganiser = '20000000-0000-4000-8000-000000000002';
   const category = '30000000-0000-4000-8000-000000000001';
   const event = '40000000-0000-4000-8000-000000000001';
   const otherEvent = '40000000-0000-4000-8000-000000000002';
@@ -50,11 +52,20 @@ void test('entry checks enforce event access, verified payment and one admission
         'utf8',
       ),
     );
+    await db.exec(
+      readFileSync(
+        new URL(
+          '../supabase/migrations/202609300001_isolate_event_entry.sql',
+          import.meta.url,
+        ),
+        'utf8',
+      ),
+    );
     await db.exec(`
-      insert into auth.users(id,email,email_confirmed_at) values ('${owner}','owner@example.com',now()),('${staff}','staff@example.com',now()),('${outsider}','other@example.com',now());
-      insert into public.profiles(id,full_name) values ('${owner}','Owner'),('${staff}','Staff'),('${outsider}','Other');
-      insert into public.organisers(id,name,slug,contact_email) values ('${organiser}','Events','events','owner@example.com');
-      insert into public.organiser_memberships(organiser_id,user_id,title) values ('${organiser}','${owner}','Owner');
+      insert into auth.users(id,email,email_confirmed_at) values ('${owner}','owner@example.com',now()),('${staff}','staff@example.com',now()),('${outsider}','other@example.com',now()),('${foreignOwner}','foreign@example.com',now());
+      insert into public.profiles(id,full_name) values ('${owner}','Owner'),('${staff}','Staff'),('${outsider}','Other'),('${foreignOwner}','Foreign organiser');
+      insert into public.organisers(id,name,slug,contact_email) values ('${organiser}','Events','events','owner@example.com'),('${foreignOrganiser}','Another events','another-events','foreign@example.com');
+      insert into public.organiser_memberships(organiser_id,user_id,title) values ('${organiser}','${owner}','Owner'),('${foreignOrganiser}','${foreignOwner}','Owner');
       insert into public.categories(id,name,slug) values ('${category}','Concert','concert');
       insert into public.events(id,organiser_id,category_id,title,slug,description,venue_name,address,city,state,starts_at,ends_at,status)
       values ('${event}','${organiser}','${category}','Lagos Live','lagos-live','Show','Hall','Road','Lagos','Lagos',now(),now()+interval '1 day','published'),
@@ -68,6 +79,23 @@ void test('entry checks enforce event access, verified payment and one admission
       values ('${ticket}','${item}','${event}','Guest Name','guest@example.com',repeat('b',64),'${code}','valid',0);
     `);
     await assert.rejects(() => verify(), /not assigned/);
+    await assert.rejects(() => verify(foreignOwner), /not assigned/);
+    await assert.rejects(
+      () =>
+        db.query('select public.assign_event_entry_staff($1,$2,$3)', [
+          owner,
+          event,
+          'foreign@example.com',
+        ]),
+      /Organisers can only scan their own events/,
+    );
+    // An assignment created before this rule does not bypass ownership.
+    await db.query(
+      'insert into public.event_staff_assignments(event_id,staff_id,assigned_by) values ($1,$2,$3)',
+      [event, foreignOwner, owner],
+    );
+    await assert.rejects(() => verify(foreignOwner), /not assigned/);
+    await assert.rejects(() => verify(foreignOwner, true), /not assigned/);
     await assert.rejects(
       () =>
         db.query('select public.assign_event_entry_staff($1,$2,$3)', [
