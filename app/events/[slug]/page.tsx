@@ -78,7 +78,7 @@ export default async function EventDetails({ params }: Props) {
           Back to events
         </a>
       </div>
-      <section className="mx-auto max-w-7xl px-5 pb-10 md:px-10">
+      <section className="mx-auto max-w-7xl px-5 pb-7 md:px-10 md:pb-10">
         <div className="relative aspect-[4/3] w-full overflow-hidden bg-white sm:aspect-[16/8] sm:min-h-72">
           <img
             src={event.image}
@@ -96,18 +96,18 @@ export default async function EventDetails({ params }: Props) {
           )}
         </div>
       </section>
-      <div className="mx-auto grid max-w-7xl gap-10 px-5 pb-28 md:px-10 lg:grid-cols-[1fr_23rem] lg:pb-20">
-        <article>
-          <div className="flex items-start justify-between gap-6">
-            <div>
+      <div className="mx-auto grid max-w-7xl gap-8 px-5 pb-28 md:px-10 lg:grid-cols-[minmax(0,1fr)_23rem] lg:gap-10 lg:pb-20">
+        <article className="min-w-0">
+          <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <div className="min-w-0">
               <p className="eyebrow">
                 {event.presenterLine || `${event.organiser} presents`}
               </p>
-              <h1 className="mt-3 text-4xl font-black leading-tight tracking-[-.04em] sm:text-5xl">
+              <h1 className="mt-3 text-3xl font-black leading-tight tracking-[-.04em] sm:text-5xl">
                 {event.title}
               </h1>
             </div>
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
               {event.id && (
                 <EventSaveButton
                   eventId={event.id}
@@ -118,7 +118,7 @@ export default async function EventDetails({ params }: Props) {
               <EventShareButton title={event.title} />
             </div>
           </div>
-          <div className="mt-7 grid gap-4 border border-[#241b3f]/10 bg-white p-5 sm:grid-cols-2">
+          <div className="mt-5 grid min-w-0 gap-4 border border-[#241b3f]/10 bg-white p-4 sm:mt-7 sm:grid-cols-2 sm:p-5">
             <div className="flex gap-3">
               <CalendarDays className="mt-0.5 h-5 w-5 text-emerald-400" />
               <div>

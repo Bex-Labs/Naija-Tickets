@@ -245,9 +245,12 @@ export function CheckoutFlow({
         completed?: boolean;
         statusUrl?: string;
         error?: string;
+        code?: string;
       };
       if (!response.ok) {
-        throw new Error(result.error || 'Payment could not be started.');
+        throw new Error(
+          `${result.error || 'Payment could not be started.'}${result.code ? ` (${result.code})` : ''}`,
+        );
       }
       if (result.completed && result.statusUrl) {
         window.location.assign(result.statusUrl);
@@ -276,8 +279,8 @@ export function CheckoutFlow({
 
   if (reservation) {
     return (
-      <section className="mx-auto max-w-3xl px-5 py-16 md:px-10 md:py-24">
-        <div className="border border-emerald-500/30 bg-white p-7 shadow-sm sm:p-10">
+      <section className="mx-auto max-w-3xl px-4 py-8 sm:px-5 sm:py-16 md:px-10 md:py-24">
+        <div className="border border-emerald-500/30 bg-white p-4 shadow-sm sm:p-10">
           <ol className="grid grid-cols-3 border border-[#241b3f]/10 bg-[#fffaf0] p-4 text-center text-xs font-bold">
             {['Tickets', 'Attendees', 'Payment'].map((label, index) => (
               <li
@@ -293,11 +296,11 @@ export function CheckoutFlow({
               </li>
             ))}
           </ol>
-          <span className="mt-8 grid h-14 w-14 place-items-center bg-emerald-500 text-emerald-950">
+          <span className="mt-5 grid h-12 w-12 place-items-center bg-emerald-500 text-emerald-950 sm:mt-8 sm:h-14 sm:w-14">
             <TicketCheck className="h-6 w-6" />
           </span>
-          <p className="eyebrow mt-7">Payment</p>
-          <h1 className="mt-3 text-4xl font-black tracking-[-.04em]">
+          <p className="eyebrow mt-5 sm:mt-7">Payment</p>
+          <h1 className="mt-3 text-3xl font-black tracking-[-.04em] sm:text-4xl">
             Your tickets are held. Pay securely now.
           </h1>
           <p className="mt-4 leading-7 text-slate-600">
@@ -313,7 +316,7 @@ export function CheckoutFlow({
             })}
             . Complete payment before this time to keep the selected inventory.
           </div>
-          <div className="mt-6 border border-[#241b3f]/10 bg-[#fffaf0] p-5">
+          <div className="mt-5 border border-[#241b3f]/10 bg-[#fffaf0] p-4 sm:mt-6 sm:p-5">
             <div className="flex items-start justify-between gap-5">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
@@ -383,7 +386,7 @@ export function CheckoutFlow({
   return (
     <form
       onSubmit={submit}
-      className="mx-auto grid max-w-7xl gap-8 px-5 py-10 md:px-10 lg:grid-cols-[1fr_23rem] lg:py-16"
+      className="mx-auto grid max-w-7xl gap-8 px-4 py-7 sm:px-5 sm:py-10 md:px-10 lg:grid-cols-[1fr_23rem] lg:py-16"
     >
       <section>
         <ol className="grid grid-cols-3 border border-[#241b3f]/10 bg-white p-4 text-center text-xs font-bold sm:p-5">
@@ -407,7 +410,7 @@ export function CheckoutFlow({
         </ol>
         <div className="mt-7">
           <p className="eyebrow">Checkout</p>
-          <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">
+          <h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">
             {hasGroupTickets
               ? 'Your booking details'
               : 'Who are the tickets for?'}

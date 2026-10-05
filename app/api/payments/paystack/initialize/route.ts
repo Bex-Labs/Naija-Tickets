@@ -2,6 +2,7 @@ import { NextResponse, after } from 'next/server';
 import {
   getTrustedAppOrigin,
   initializePaystackTransaction,
+  PaystackRequestError,
   sha256Hex,
 } from '@/lib/paystack';
 import { getSupabaseAdminClient } from '@/lib/supabase/server';
@@ -21,6 +22,54 @@ type PreparedPayment = {
   authorization_url: string | null;
   purchaser_email: string | null;
 };
+
+function paymentStartFailure(error: unknown) {
+  const message = error instanceof Error ? error.message : '';
+  const databaseCode =
+    error && typeof error === 'object' && 'code' in error
+      ? String(error.code)
+      : '';
+  if (message === 'Paystack is not configured.') {
+    return {
+      status: 503,
+      code: 'PAYMENT_KEY_MISSING',
+      error: 'Online payments are not configured yet. Please contact support.',
+    };
+  }
+  if (message.startsWith('APP_URL ')) {
+    return {
+      status: 503,
+      code: 'PAYMENT_RETURN_URL',
+      error: 'The payment return address is not configured. Please contact support.',
+    };
+  }
+  if (['PGRST202', 'PGRST204', '42883', '42703', '42P01'].includes(databaseCode)) {
+    return {
+      status: 503,
+      code: 'PAYMENT_DATABASE_SETUP',
+      error: 'Payment setup is incomplete. Please contact support.',
+    };
+  }
+  if (error instanceof PaystackRequestError) {
+    if (error.status === 401 || error.status === 403) {
+      return {
+        status: 503,
+        code: 'PAYMENT_PROVIDER_AUTH',
+        error: 'The payment provider is not connected correctly. Please contact support.',
+      };
+    }
+    return {
+      status: 502,
+      code: 'PAYMENT_PROVIDER_REJECTED',
+      error: 'The payment provider could not start this payment. Please try again shortly.',
+    };
+  }
+  return {
+    status: 502,
+    code: 'PAYMENT_START_FAILED',
+    error: 'Payment could not be started. Please try again.',
+  };
+}
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -224,9 +273,10 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     console.error('Paystack initialization failed', error);
+    const failure = paymentStartFailure(error);
     return NextResponse.json(
-      { error: 'Payment could not be started. Please try again.' },
-      { status: 502 },
+      { error: failure.error, code: failure.code },
+      { status: failure.status },
     );
   }
 }

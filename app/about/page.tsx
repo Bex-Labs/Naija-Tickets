@@ -55,11 +55,11 @@ export default async function AboutPage() {
           className="absolute inset-0 h-full w-full object-cover opacity-30"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-[#241b3f] via-[#241b3f]/90 to-[#241b3f]/45" />
-        <div className="relative mx-auto max-w-7xl px-5 py-20 text-white md:px-10 md:py-28">
+        <div className="relative mx-auto max-w-7xl px-5 py-12 text-white md:px-10 md:py-28">
           <p className="text-xs font-bold uppercase tracking-[.15em] text-[#ffd75e]">
             About Naija Tickets
           </p>
-          <h1 className="mt-4 max-w-4xl text-5xl font-black leading-[.98] tracking-[-.055em] sm:text-7xl">
+          <h1 className="mt-4 max-w-4xl text-4xl font-black leading-[.98] tracking-[-.055em] sm:text-7xl">
             Built for the moments Nigeria talks about tomorrow.
           </h1>
           <p className="mt-7 max-w-2xl text-lg leading-8 text-violet-100">
@@ -69,7 +69,7 @@ export default async function AboutPage() {
           </p>
         </div>
       </section>
-      <section className="mx-auto max-w-7xl px-5 py-14 md:px-10 md:py-20">
+      <section className="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-20">
         <div className="grid gap-5 md:grid-cols-3">
           {values.map(({ icon: Icon, title, text }) => (
             <article
@@ -82,7 +82,7 @@ export default async function AboutPage() {
             </article>
           ))}
         </div>
-        <section className="mt-16 border-y border-[#241b3f]/10 py-14">
+        <section className="mt-10 border-y border-[#241b3f]/10 py-10 md:mt-16 md:py-14">
           <p className="eyebrow">Pricing</p>
           <h2 className="mt-3 max-w-3xl text-4xl font-black tracking-[-.04em]">
             Clear before anyone pays.
@@ -129,7 +129,7 @@ export default async function AboutPage() {
             receives the displayed service fee.
           </p>
         </section>
-        <div className="mt-16 grid gap-10 border-t border-[#241b3f]/10 pt-14 lg:grid-cols-2 lg:items-center">
+        <div className="mt-10 grid gap-8 border-t border-[#241b3f]/10 pt-10 md:mt-16 md:gap-10 md:pt-14 lg:grid-cols-2 lg:items-center">
           <div>
             <p className="eyebrow">What we are building</p>
             <h2 className="mt-3 text-4xl font-black tracking-[-.04em]">
@@ -149,7 +149,7 @@ export default async function AboutPage() {
             </p>
           </div>
         </div>
-        <div className="mt-16 border border-emerald-400/25 bg-emerald-400/10 p-8 md:flex md:items-center md:justify-between md:gap-8">
+        <div className="mt-10 border border-emerald-400/25 bg-emerald-400/10 p-5 sm:p-8 md:mt-16 md:flex md:items-center md:justify-between md:gap-8">
           <div>
             <h2 className="text-2xl font-black">
               Come discover something new.

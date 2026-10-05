@@ -19,8 +19,8 @@ export default async function CitiesPage() {
     <main className="min-h-screen bg-[#fffaf0] text-[#241b3f]">
       <SiteHeader />
       <section className="border-b border-[#241b3f]/10 bg-[#fff3d8]">
-        <div className="mx-auto max-w-7xl px-5 py-14 md:px-10 md:py-20">
-          <h1 className="max-w-4xl text-5xl font-black leading-none tracking-[-.05em] sm:text-7xl">
+        <div className="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-20">
+          <h1 className="max-w-4xl text-4xl font-black leading-none tracking-[-.05em] sm:text-7xl">
             Find your city. Find your crowd.
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
@@ -36,7 +36,7 @@ export default async function CitiesPage() {
           </a>
         </div>
       </section>
-      <section className="mx-auto max-w-7xl px-5 py-14 md:px-10 md:py-20">
+      <section className="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-20">
         <p className="eyebrow mb-6">Featured cities</p>
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {featuredCities.map((city) => {

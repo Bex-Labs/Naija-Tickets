@@ -381,13 +381,13 @@ export function CustomerDashboard() {
   return (
     <main className="min-h-[70vh]">
       <section className="border-b border-[#241b3f]/10 bg-[#fff3d8]">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-end justify-between gap-5 px-5 py-12 md:px-10 md:py-16">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-end justify-between gap-4 px-5 py-8 md:px-10 md:py-16">
           <div>
             <p className="eyebrow">Customer account</p>
-            <h1 className="mt-3 text-4xl font-black tracking-[-.04em] sm:text-5xl">
+            <h1 className="mt-3 text-3xl font-black tracking-[-.04em] sm:text-5xl">
               My tickets
             </h1>
-            <p className="mt-3 flex items-center gap-2 text-sm text-slate-600">
+            <p className="mt-3 flex flex-wrap items-center gap-2 break-all text-sm text-slate-600">
               <CircleUserRound className="h-4 w-4" /> {account.profile.name} ·{' '}
               {account.profile.email}
             </p>
@@ -414,7 +414,7 @@ export function CustomerDashboard() {
           </div>
         </div>
       </section>
-      <section className="mx-auto max-w-7xl px-5 py-12 md:px-10 md:py-16">
+      <section className="mx-auto max-w-7xl px-5 py-8 md:px-10 md:py-16">
         <CustomerProfileForm
           key={userId}
           headerAction={
@@ -431,7 +431,7 @@ export function CustomerDashboard() {
           }
         />
 
-        <div className="mb-7 mt-14 border-t border-[#241b3f]/10 pt-12">
+        <div className="mb-7 mt-9 border-t border-[#241b3f]/10 pt-9 md:mt-14 md:pt-12">
           <p className="eyebrow">Considering</p>
           <h2 className="mt-2 text-3xl font-black tracking-[-.03em]">
             Saved events

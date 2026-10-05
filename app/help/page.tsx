@@ -114,12 +114,12 @@ export default function HelpPage() {
   return (
     <main className="min-h-screen bg-[#fffaf0] text-[#241b3f]">
       <SiteHeader />
-      <section className="overflow-hidden bg-[#241b3f] px-5 py-16 text-white md:px-10 md:py-24">
+      <section className="overflow-hidden bg-[#241b3f] px-5 py-10 text-white md:px-10 md:py-24">
         <div className="mx-auto max-w-7xl">
           <p className="text-xs font-bold uppercase tracking-[.18em] text-emerald-300">
             Naija Tickets help
           </p>
-          <h1 className="mt-4 max-w-3xl text-5xl font-black leading-tight tracking-[-.05em] sm:text-6xl">
+          <h1 className="mt-4 max-w-3xl text-4xl font-black leading-tight tracking-[-.05em] sm:text-6xl">
             Get back to the good part.
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-violet-100">
@@ -140,7 +140,7 @@ export default function HelpPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-14 md:px-10 md:py-20">
+      <section className="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-20">
         <div className="grid gap-4 lg:grid-cols-3">
           {quickLinks.map(({ icon: Icon, title, text, href, action }) => (
             <article
@@ -162,13 +162,13 @@ export default function HelpPage() {
           ))}
         </div>
 
-        <div className="mt-16 max-w-3xl">
+        <div className="mt-10 max-w-3xl md:mt-16">
           <p className="eyebrow">Frequently asked questions</p>
           <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
             What do you need to know?
           </h2>
         </div>
-        <div className="mt-10 grid gap-10 lg:grid-cols-2">
+        <div className="mt-7 grid gap-7 md:mt-10 md:gap-10 lg:grid-cols-2">
           {topics.map(({ id, icon: Icon, title, questions }) => (
             <section key={id} id={id} className="scroll-mt-24">
               <h3 className="flex items-center gap-3 border-b border-[#241b3f]/15 pb-4 text-xl font-black">
@@ -196,7 +196,7 @@ export default function HelpPage() {
             </section>
           ))}
         </div>
-        <section className="mt-16 border border-emerald-500/25 bg-emerald-50 p-6 sm:p-8">
+        <section className="mt-10 border border-emerald-500/25 bg-emerald-50 p-5 sm:p-8 md:mt-16">
           <h2 className="text-2xl font-black">Need help with a specific booking?</h2>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700">
             Check your ticket and payment history first. If a payment or entry

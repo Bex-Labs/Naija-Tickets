@@ -45,7 +45,7 @@ export default function SignupPage() {
           </div>
         </div>
       </section>
-      <section className="auth-content flex items-center justify-center px-4 py-6 sm:px-10 sm:py-12 lg:order-1 lg:h-dvh lg:items-start lg:overflow-y-auto lg:px-8 lg:py-3">
+      <section className="auth-content flex items-center justify-center px-3 py-3 sm:px-10 sm:py-12 lg:order-1 lg:h-dvh lg:items-start lg:overflow-y-auto lg:px-8 lg:py-3">
         <div className="auth-form-surface my-auto w-full max-w-2xl">
           <a
             href="/"
@@ -54,9 +54,9 @@ export default function SignupPage() {
             <ArrowLeft className="h-4 w-4" />
             Back home
           </a>
-          <div className="mt-3 lg:mt-2">
+          <div className="mt-2 lg:mt-2">
             <p className="eyebrow">Join Naija Tickets</p>
-            <h1 className="mt-1 text-3xl font-black tracking-[-.04em]">
+            <h1 className="mt-1 text-2xl font-black tracking-[-.04em] sm:text-3xl">
               Create your account
             </h1>
             <SignupWizard />

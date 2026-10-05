@@ -6,6 +6,7 @@ import {
   getTrustedAppOrigin,
   isValidPaystackReference,
   initializePaystackTransaction,
+  PaystackRequestError,
   paystackSplitFields,
   verifyPaystackWebhookSignature,
 } from './paystack.ts';
@@ -96,6 +97,31 @@ void test('local checkout returns to the active port, not a stale APP_URL', (t) 
   );
 });
 
+void test('uses the Vercel production domain when APP_URL is absent', (t) => {
+  const environment: Record<string, string | undefined> = process.env;
+  const previous = {
+    NODE_ENV: environment.NODE_ENV,
+    APP_URL: environment.APP_URL,
+    VERCEL_ENV: environment.VERCEL_ENV,
+    VERCEL_PROJECT_PRODUCTION_URL:
+      environment.VERCEL_PROJECT_PRODUCTION_URL,
+  };
+  t.after(() => {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete environment[key];
+      else environment[key] = value;
+    }
+  });
+  environment.NODE_ENV = 'production';
+  delete environment.APP_URL;
+  environment.VERCEL_ENV = 'production';
+  environment.VERCEL_PROJECT_PRODUCTION_URL = 'naija-tickets.vercel.app';
+  assert.equal(
+    getTrustedAppOrigin('https://untrusted.example.net/checkout'),
+    'https://naija-tickets.vercel.app',
+  );
+});
+
 void test('initialization supplies the app return URL and a cancellation return route', async (t) => {
   t.mock.method(
     globalThis,
@@ -103,8 +129,9 @@ void test('initialization supplies the app return URL and a cancellation return 
     async (_url: string | URL | Request, init?: RequestInit) => {
       const body = JSON.parse(typeof init?.body === 'string' ? init.body : '');
       assert.equal(body.callback_url, 'http://localhost:3002/payment/callback');
+      const metadata = JSON.parse(body.metadata);
       assert.equal(
-        body.metadata.cancel_action,
+        metadata.cancel_action,
         'http://localhost:3002/payment/callback?reference=NT-ABC123456789',
       );
       return new Response(
@@ -127,4 +154,25 @@ void test('initialization supplies the app return URL and a cancellation return 
     callbackUrl: 'http://localhost:3002/payment/callback',
     orderReference: 'NT-ORDER123',
   });
+});
+
+void test('preserves a safe Paystack HTTP status for payment diagnostics', async (t) => {
+  t.mock.method(globalThis, 'fetch', async () =>
+    new Response(JSON.stringify({ status: false, message: 'Invalid key' }), {
+      status: 401,
+    }),
+  );
+  await assert.rejects(
+    () =>
+      initializePaystackTransaction({
+        email: 'buyer@example.com',
+        amountKobo: 100000,
+        currency: 'NGN',
+        reference: 'NT-ABC123456789',
+        callbackUrl: 'https://naija-tickets.vercel.app/payment/callback',
+        orderReference: 'NT-ORDER123',
+      }),
+    (error: unknown) =>
+      error instanceof PaystackRequestError && error.status === 401,
+  );
 });

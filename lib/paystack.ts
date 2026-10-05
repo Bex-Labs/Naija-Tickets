@@ -8,6 +8,16 @@ type PaystackEnvelope<T> = {
   meta?: { pageCount?: number };
 };
 
+export class PaystackRequestError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'PaystackRequestError';
+    this.status = status;
+  }
+}
+
 export type PaystackInitialization = {
   authorization_url: string;
   access_code: string;
@@ -64,10 +74,13 @@ async function paystackRequest<T>(path: string, init?: RequestInit) {
     cache: 'no-store',
     headers,
   });
-  const payload = (await response.json()) as PaystackEnvelope<T>;
-  if (!response.ok || !payload.status) {
-    throw new Error(
-      payload.message || 'Paystack could not complete the request.',
+  const payload = (await response.json().catch(() => null)) as
+    | PaystackEnvelope<T>
+    | null;
+  if (!response.ok || !payload?.status) {
+    throw new PaystackRequestError(
+      payload?.message || 'Paystack could not complete the request.',
+      response.status,
     );
   }
   return payload;
@@ -98,11 +111,11 @@ export async function initializePaystackTransaction(input: {
         reference: input.reference,
         callback_url: input.callbackUrl,
         ...split,
-        metadata: {
+        metadata: JSON.stringify({
           order_reference: input.orderReference,
           product: 'Naija Tickets',
           cancel_action: `${input.callbackUrl}?reference=${encodeURIComponent(input.reference)}`,
-        },
+        }),
       }),
     },
   );
@@ -221,9 +234,21 @@ export function getTrustedAppOrigin(requestUrl: string) {
   ) {
     return requestOrigin.origin;
   }
-  const configured = process.env.APP_URL?.trim();
+  const configured =
+    process.env.APP_URL?.trim() ||
+    (process.env.VERCEL_ENV === 'production' &&
+    process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim()
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.trim()}`
+      : '');
   if (!configured) throw new Error('APP_URL is not configured.');
-  const url = new URL(configured);
+  let url: URL;
+  try {
+    url = new URL(configured);
+  } catch {
+    throw new Error(
+      'APP_URL must be a public HTTPS website address in production.',
+    );
+  }
   if (
     url.username ||
     url.password ||

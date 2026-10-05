@@ -19,19 +19,19 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-background text-foreground">
       <SiteHeader />
-      <section className="relative flex min-h-[min(760px,calc(100vh-72px))] overflow-hidden border-b border-[#241b3f]/10 bg-black">
+      <section className="relative flex min-h-[min(610px,calc(100vh-72px))] overflow-hidden border-b border-[#241b3f]/10 bg-black sm:min-h-[min(760px,calc(100vh-72px))]">
         <img
           src="/hero-daytime-concert.jpg"
           alt="Concertgoers enjoying a sunny outdoor performance beside the water"
           className="absolute inset-0 h-full w-full object-cover object-[62%_center] sm:object-center"
         />
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(36,27,63,.28),rgba(36,27,63,.05)_42%,rgba(36,27,63,.72))]" />
-        <div className="relative mx-auto flex w-full max-w-7xl flex-col justify-between px-5 pb-8 pt-20 text-center md:px-10 md:pb-12 md:pt-28">
+        <div className="relative mx-auto flex w-full max-w-7xl flex-col justify-between px-5 pb-6 pt-12 text-center sm:pb-8 sm:pt-20 md:px-10 md:pb-12 md:pt-28">
           <div className="animate-rise mx-auto my-auto max-w-4xl">
             <p className="text-xs font-bold uppercase tracking-[.24em] text-emerald-300">
               Live. Local. Unforgettable.
             </p>
-            <h1 className="mt-5 font-heading text-5xl font-black leading-none tracking-[-.055em] text-white sm:text-7xl lg:text-8xl">
+            <h1 className="mt-4 font-heading text-4xl font-black leading-none tracking-[-.055em] text-white sm:mt-5 sm:text-7xl lg:text-8xl">
               Discover new experiences
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-white/75 sm:text-lg">
@@ -95,7 +95,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-14 md:px-10 md:py-20">
+      <section className="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-20">
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <p className="eyebrow">Handpicked for you</p>
@@ -111,7 +111,7 @@ export default function Home() {
         <FeaturedEvents />
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-14 md:px-10 md:py-20">
+      <section className="mx-auto max-w-7xl px-5 py-10 md:px-10 md:py-20">
         <div className="grid gap-12 lg:grid-cols-[.72fr_1.28fr]">
           <div>
             <p className="eyebrow">Whatever moves you</p>

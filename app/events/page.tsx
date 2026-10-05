@@ -333,12 +333,12 @@ export default function EventsPage() {
     <main className="min-h-screen bg-[#fffaf0] text-[#241b3f]">
       <SiteHeader />
       <section className="border-b border-[#241b3f]/10 bg-[#fff3d8]">
-        <div className="mx-auto max-w-7xl px-5 py-12 md:px-10">
+        <div className="mx-auto max-w-7xl px-5 py-9 md:px-10 md:py-12">
           <p className="eyebrow">Across Nigeria</p>
-          <h1 className="mt-2 text-4xl font-black tracking-[-.04em] sm:text-5xl">
+          <h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-5xl">
             Find something worth showing up for.
           </h1>
-          <div className="mt-7 flex max-w-3xl items-center gap-3 border border-[#241b3f]/10 bg-white px-4 py-3">
+          <div className="mt-5 flex max-w-3xl items-center gap-3 border border-[#241b3f]/10 bg-white px-4 py-3 sm:mt-7">
             <Search className="h-5 w-5 text-emerald-400" />
             <label htmlFor="catalogue-search" className="sr-only">
               Search events
@@ -362,7 +362,7 @@ export default function EventsPage() {
           </div>
         </div>
       </section>
-      <div className="mx-auto grid max-w-7xl gap-8 px-5 py-10 md:px-10 lg:grid-cols-[18rem_minmax(0,1fr)]">
+      <div className="mx-auto grid max-w-7xl gap-8 px-5 py-7 md:px-10 md:py-10 lg:grid-cols-[18rem_minmax(0,1fr)]">
         <aside className="hidden lg:block">
           <div className="sticky top-28">
             <div className="mb-4 flex items-center justify-between px-1">
@@ -380,12 +380,12 @@ export default function EventsPage() {
           </div>
         </aside>
         <section aria-live="polite">
-          <div className="mb-6 flex items-center justify-between gap-3">
+          <div className="mb-5 flex min-w-0 flex-wrap items-center justify-between gap-3 sm:mb-6">
             <p className="text-sm text-slate-600">
               <strong className="text-[#241b3f]">{results.length}</strong>{' '}
               {results.length === 1 ? 'event' : 'events'}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 w-full items-center gap-2 sm:w-auto">
               <button
                 onClick={() => setMobileFilters(true)}
                 className="flex min-h-11 items-center gap-2 rounded-xl border border-[#241b3f]/10 bg-white px-3 text-sm font-bold shadow-sm lg:hidden"
@@ -393,12 +393,12 @@ export default function EventsPage() {
                 <SlidersHorizontal className="h-4 w-4" /> Filters{' '}
                 {activeCount > 0 && `(${activeCount})`}
               </button>
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex min-w-0 flex-1 items-center gap-2 text-sm sm:flex-none">
                 <span className="hidden text-slate-500 sm:inline">Sort</span>
                 <select
                   value={filters.sort}
                   onChange={(e) => update('sort', e.target.value)}
-                  className="h-11 rounded-xl border border-[#241b3f]/10 bg-white px-3 font-semibold text-[#241b3f] shadow-sm"
+                  className="h-11 min-w-0 w-full rounded-xl border border-[#241b3f]/10 bg-white px-2 font-semibold text-[#241b3f] shadow-sm sm:w-auto sm:px-3"
                 >
                   <option value="relevance">Most relevant</option>
                   <option value="trending">Trending</option>

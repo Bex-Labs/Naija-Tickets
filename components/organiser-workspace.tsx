@@ -222,9 +222,9 @@ export function OrganiserWorkspace() {
         </div>
       </div>
       <div className="mx-auto grid max-w-[90rem] md:grid-cols-[15rem_1fr]">
-        <aside className="border-b border-[#241b3f]/10 p-4 md:min-h-[calc(100vh-72px)] md:border-b-0 md:border-r">
+        <aside className="border-b border-[#241b3f]/10 p-3 sm:p-4 md:min-h-[calc(100vh-72px)] md:border-b-0 md:border-r">
           <nav
-            className="grid grid-cols-2 gap-2 md:grid-cols-1"
+            className="grid grid-cols-2 gap-1 sm:gap-2 md:grid-cols-1"
             aria-label="Organiser navigation"
           >
             {nav
@@ -239,7 +239,7 @@ export function OrganiserWorkspace() {
                       setEventForm(blankEvent(organiserProfile));
                     }
                   }}
-                  className={`flex items-center gap-3 px-3 py-3 text-left text-sm font-bold transition ${view === id ? 'bg-emerald-500 text-emerald-950' : 'text-slate-600 hover:bg-emerald-50 hover:text-[#241b3f]'}`}
+                  className={`flex min-h-11 items-center gap-2 px-2 py-2 text-left text-sm font-bold transition sm:gap-3 sm:px-3 sm:py-3 ${view === id ? 'bg-emerald-500 text-emerald-950' : 'text-slate-600 hover:bg-emerald-50 hover:text-[#241b3f]'}`}
                 >
                   <Icon className="h-4 w-4" />
                   {label}
@@ -247,7 +247,7 @@ export function OrganiserWorkspace() {
               ))}
           </nav>
         </aside>
-        <section className="min-w-0 p-5 sm:p-8 lg:p-10">
+        <section className="min-w-0 p-4 sm:p-8 lg:p-10">
           {loadError && (
             <p
               role="alert"
@@ -281,10 +281,10 @@ export function OrganiserWorkspace() {
           {view === 'overview' && (
             <div className="animate-rise">
               <p className="eyebrow">Good morning</p>
-              <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">
+              <h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">
                 Organiser overview
               </h1>
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              <div className="mt-5 grid gap-3 sm:mt-8 sm:grid-cols-3 sm:gap-4">
                 {[
                   ['Events', events.length],
                   ['Awaiting review', submitted],
@@ -326,7 +326,7 @@ export function OrganiserWorkspace() {
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="eyebrow">Event management</p>
-                  <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">
+                  <h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">
                     My events
                   </h1>
                 </div>

@@ -214,9 +214,9 @@ export function AdminWorkspace() {
         </div>
       </header>
       <div className="mx-auto grid max-w-[90rem] md:grid-cols-[15rem_1fr]">
-        <aside className="border-b border-[#241b3f]/10 p-4 md:min-h-[calc(100vh-72px)] md:border-b-0 md:border-r">
+        <aside className="border-b border-[#241b3f]/10 p-3 sm:p-4 md:min-h-[calc(100vh-72px)] md:border-b-0 md:border-r">
           <nav
-            className="grid grid-cols-2 gap-2 md:grid-cols-1"
+            className="grid grid-cols-2 gap-1 sm:gap-2 md:grid-cols-1"
             aria-label="Admin navigation"
           >
             {nav.map(({ id, label, icon: Icon }) => (
@@ -227,7 +227,7 @@ export function AdminWorkspace() {
                   setTab(id);
                   setNotice('');
                 }}
-                className={`flex items-center gap-3 px-3 py-3 text-left text-sm font-bold transition ${tab === id ? 'bg-emerald-500 text-emerald-950' : 'text-slate-600 hover:bg-emerald-50 hover:text-[#241b3f]'}`}
+                className={`flex min-h-11 items-center gap-2 px-2 py-2 text-left text-sm font-bold transition sm:gap-3 sm:px-3 sm:py-3 ${tab === id ? 'bg-emerald-500 text-emerald-950' : 'text-slate-600 hover:bg-emerald-50 hover:text-[#241b3f]'}`}
               >
                 <Icon className="h-4 w-4" />
                 {label}
@@ -236,7 +236,7 @@ export function AdminWorkspace() {
           </nav>
         </aside>
 
-        <section className="min-w-0 p-5 sm:p-8 lg:p-10">
+        <section className="min-w-0 p-4 sm:p-8 lg:p-10">
           {notice && (
             <output className="mb-6 block border border-emerald-500/25 bg-emerald-50 p-3 text-sm text-emerald-800">
               {notice}
@@ -246,10 +246,10 @@ export function AdminWorkspace() {
           {tab === 'overview' && (
             <div className="animate-rise">
               <p className="eyebrow">Platform operations</p>
-              <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">
+              <h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">
                 Admin overview
               </h1>
-              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-5 grid gap-3 sm:mt-8 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
                 {[
                   ['Customers', 'customers', 'Manage customer accounts'],
                   ['Guest buyers', 'guests', 'Review account-free purchases'],
@@ -270,7 +270,7 @@ export function AdminWorkspace() {
                     key={label}
                     type="button"
                     onClick={() => setTab(target as Tab)}
-                    className="border border-[#241b3f]/10 bg-white p-5 text-left transition hover:border-emerald-400/60 hover:shadow-sm"
+                    className="border border-[#241b3f]/10 bg-white p-4 text-left transition hover:border-emerald-400/60 hover:shadow-sm sm:p-5"
                   >
                     <p className="font-black">{label}</p>
                     <p className="mt-3 text-xs leading-5 text-slate-500">
@@ -307,7 +307,7 @@ export function AdminWorkspace() {
           {tab === 'events' && (
             <div className="animate-rise">
               <p className="eyebrow">Content quality</p>
-              <h1 className="mt-2 text-4xl font-black tracking-[-.04em]">
+              <h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">
                 Events & history
               </h1>
               <p className="mt-3 text-sm text-slate-600">

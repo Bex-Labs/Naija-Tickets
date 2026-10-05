@@ -180,7 +180,7 @@ export function SignupWizard() {
       </ol>
 
       {step === 1 && (
-        <section className="animate-rise mt-6">
+        <section className="animate-rise mt-4 sm:mt-6">
           <div className="min-h-52">
             {!showOrganiserTypes ? (
               <>
@@ -188,17 +188,17 @@ export function SignupWizard() {
                 <p className="mt-2 text-sm text-slate-600">
                   Choose whether you are here to buy tickets or manage events.
                 </p>
-                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <div className="mt-4 grid gap-3 sm:mt-5 sm:grid-cols-2 sm:gap-4">
                   <button
                     type="button"
                     onClick={() => {
                       setAccountUse('customer');
                       setAccountType('customer');
                     }}
-                    className={`group flex min-h-32 flex-col justify-center p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-500 hover:bg-emerald-50 ${accountUse === 'customer' ? 'border-2 border-emerald-500 bg-emerald-50' : 'border border-[#241b3f]/10 bg-white'}`}
+                    className={`group flex min-h-24 flex-col justify-center p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-500 hover:bg-emerald-50 sm:min-h-32 sm:p-5 ${accountUse === 'customer' ? 'border-2 border-emerald-500 bg-emerald-50' : 'border border-[#241b3f]/10 bg-white'}`}
                   >
                     <TicketCheck className="h-6 w-6 text-emerald-600 transition group-hover:scale-110" />
-                    <span className="mt-4 block text-lg font-black">
+                    <span className="mt-2 block text-lg font-black sm:mt-4">
                       Buy tickets
                     </span>
                   </button>
@@ -209,10 +209,10 @@ export function SignupWizard() {
                       setAccountType('individual');
                       setShowOrganiserTypes(true);
                     }}
-                    className="group flex min-h-32 flex-col justify-center border border-[#241b3f]/10 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#ff6b4a] hover:bg-[#fff0eb]"
+                    className="group flex min-h-24 flex-col justify-center border border-[#241b3f]/10 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#ff6b4a] hover:bg-[#fff0eb] sm:min-h-32 sm:p-5"
                   >
                     <Building2 className="h-6 w-6 text-[#ff6b4a] transition group-hover:scale-110" />
-                    <span className="mt-4 block text-lg font-black">
+                    <span className="mt-2 block text-lg font-black sm:mt-4">
                       Organise events
                     </span>
                   </button>
@@ -234,11 +234,11 @@ export function SignupWizard() {
                 <h2 className="mt-2 text-xl font-black">
                   How will you organise events?
                 </h2>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 sm:gap-4">
                   <button
                     type="button"
                     onClick={() => setAccountType('individual')}
-                    className={`group flex min-h-32 flex-col justify-center p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-500 ${accountType === 'individual' ? 'border-2 border-emerald-500 bg-emerald-50' : 'border border-[#241b3f]/10 bg-white'}`}
+                    className={`group flex min-h-24 flex-col justify-center p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-500 sm:min-h-32 sm:p-5 ${accountType === 'individual' ? 'border-2 border-emerald-500 bg-emerald-50' : 'border border-[#241b3f]/10 bg-white'}`}
                   >
                     <UserRound className="h-6 w-6 text-emerald-600 transition group-hover:scale-110" />
                     <span className="mt-3 block text-lg font-black">
@@ -248,7 +248,7 @@ export function SignupWizard() {
                   <button
                     type="button"
                     onClick={() => setAccountType('organisation')}
-                    className={`group flex min-h-32 flex-col justify-center p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#ff6b4a] ${accountType === 'organisation' ? 'border-2 border-[#ff6b4a] bg-[#fff0eb]' : 'border border-[#241b3f]/10 bg-white'}`}
+                    className={`group flex min-h-24 flex-col justify-center p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#ff6b4a] sm:min-h-32 sm:p-5 ${accountType === 'organisation' ? 'border-2 border-[#ff6b4a] bg-[#fff0eb]' : 'border border-[#241b3f]/10 bg-white'}`}
                   >
                     <Building2 className="h-6 w-6 text-[#ff6b4a] transition group-hover:scale-110" />
                     <span className="mt-3 block text-lg font-black">
@@ -262,7 +262,7 @@ export function SignupWizard() {
           <Button
             disabled={!accountUse}
             onClick={() => setStep(2)}
-            className="mt-5 h-11 w-full bg-[#ff6b4a] font-black text-white hover:bg-[#ee5535] disabled:bg-slate-300 disabled:text-slate-600"
+            className="mt-4 h-11 w-full bg-[#ff6b4a] font-black text-white hover:bg-[#ee5535] disabled:bg-slate-300 disabled:text-slate-600 sm:mt-5"
           >
             Continue <ArrowRight className="ml-2" />
           </Button>

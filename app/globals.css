@@ -155,6 +155,16 @@ a {
   }
 }
 
+@media (max-width: 40rem) {
+  .detail-section {
+    margin-top: 2rem;
+    padding-top: 1.75rem;
+  }
+  .auth-signup-shell .auth-form-surface {
+    padding: 1rem;
+  }
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
