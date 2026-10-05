@@ -6,9 +6,9 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "vite dev",
+    "dev": "vinext dev",
     "build": "vite build",
-    "start": "vinext start",
+    "start": "wrangler dev --config dist/server/wrangler.json",
     "lint": "oxlint",
     "format": "oxfmt",
     "test": "node --test lib/*.test.ts"
