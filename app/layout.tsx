@@ -22,6 +22,10 @@ export const metadata: Metadata = {
   title: 'Naija Tickets | Discover new experiences',
   description:
     'Discover concerts, festivals, conferences and remarkable nights across Nigeria.',
+  icons: {
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml', sizes: 'any' }],
+    shortcut: '/favicon.svg',
+  },
   openGraph: {
     title: 'Naija Tickets | Discover new experiences',
     description:

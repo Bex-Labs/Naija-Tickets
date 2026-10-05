@@ -7,6 +7,10 @@ import {
   type EntryEvent,
   type EntryResult,
 } from '@/lib/event-entry';
+import {
+  accountFetch,
+  accountResponseError,
+} from '@/lib/supabase/account-fetch';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 const inputClass =
@@ -19,14 +23,11 @@ type NativeQrDetector = {
 };
 
 async function entryRequest<T>(path: string, init?: RequestInit) {
-  const { data } = await getSupabaseBrowserClient().auth.getSession();
-  if (!data.session) throw new Error('Sign in to access event entry.');
-  const response = await fetch(`/api/entry/${path}`, {
+  const headers = new Headers(init?.headers);
+  headers.set('Content-Type', 'application/json');
+  const response = await accountFetch(`/api/entry/${path}`, {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${data.session.access_token}`,
-    },
+    headers,
     cache: 'no-store',
   });
   const result = (await response.json().catch(() => null)) as
@@ -34,8 +35,11 @@ async function entryRequest<T>(path: string, init?: RequestInit) {
     | null;
   if (!response.ok || !result)
     throw new Error(
-      result?.error ||
-        'Unable to confirm the result. Check your connection and try again.',
+      accountResponseError(
+        response,
+        result?.error ||
+          'Unable to confirm the result. Check your connection and try again.',
+      ),
     );
   return result;
 }
@@ -283,9 +287,15 @@ export function EventEntry() {
       {loading ? (
         <output className="mt-8 block">Loading your events…</output>
       ) : !signedIn ? (
-        <a href="/login?next=/entry" className={`${buttonClass} mt-8`}>
-          Sign in to verify tickets
-        </a>
+        <div className="mt-8">
+          <p className="mb-4 text-sm text-slate-600">
+            Sign in on this device with the organiser account for this event or
+            an entry-staff account assigned by that organiser.
+          </p>
+          <a href="/login?next=/entry" className={buttonClass}>
+            Sign in to verify tickets
+          </a>
+        </div>
       ) : (
         <>
           {error && (
