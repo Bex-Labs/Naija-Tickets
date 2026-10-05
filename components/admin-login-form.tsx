@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, EyeOff, LockKeyhole, Mail } from 'lucide-react';
+import { Eye, EyeOff, LockKeyhole, UserRound } from 'lucide-react';
 import type { SyntheticEvent } from 'react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -48,16 +48,16 @@ export function AdminLoginForm() {
     <form onSubmit={submit} className="mt-8 space-y-5">
       <div>
         <label htmlFor="admin-username" className="auth-label">
-          Email address
+          Admin login ID
         </label>
         <div className="relative">
-          <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          <UserRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
           <Input
             id="admin-username"
             name="username"
             required
             autoComplete="username"
-            placeholder="you@example.com"
+            placeholder="Your admin login ID"
             className="auth-input pl-11"
           />
         </div>

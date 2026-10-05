@@ -169,24 +169,6 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
     setIsSubmitting(true);
 
     try {
-      if (!identifier.includes('@')) {
-        const response = await fetch('/api/admin/login', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ username: identifier, password }),
-        });
-        const result = (await response.json()) as { error?: string };
-        if (!response.ok) {
-          throw new Error(
-            result.error || 'The email address or password is incorrect.',
-          );
-        }
-
-        setNotice('Login successful. Opening the admin dashboard...');
-        window.location.href = '/admin';
-        return;
-      }
-
       const { data: authData, error: authError } =
         await getSupabaseBrowserClient().auth.signInWithPassword({
           email: identifier,
@@ -248,8 +230,8 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
           <Input
             id="email"
             name="email"
-            type={isSignup ? 'email' : 'text'}
-            autoComplete={isSignup ? 'email' : 'username'}
+            type="email"
+            autoComplete="email"
             required
             placeholder="you@example.com"
             className="h-12 border-[#241b3f]/15 bg-white pl-11 text-[#241b3f] placeholder:text-slate-400"

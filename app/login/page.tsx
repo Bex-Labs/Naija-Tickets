@@ -65,6 +65,15 @@ export default function LoginPage() {
                 Create an account
               </a>
             </p>
+            <p className="mt-2 text-center text-sm text-slate-600">
+              Administrator?{' '}
+              <a
+                href="/admin"
+                className="inline-flex min-h-11 items-center font-bold text-emerald-700 hover:text-emerald-600"
+              >
+                Open admin sign-in
+              </a>
+            </p>
           </div>
         </div>
       </section>

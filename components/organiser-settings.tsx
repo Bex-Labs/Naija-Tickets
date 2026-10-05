@@ -21,6 +21,10 @@ import { Input } from '@/components/ui/input';
 import { OrganiserPayoutSettings } from '@/components/organiser-payout-settings';
 import { OrganiserVerification } from '@/components/organiser-verification';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import {
+  accountFetch,
+  accountResponseError,
+} from '@/lib/supabase/account-fetch';
 
 type OrganiserSettingsData = {
   fullName: string;
@@ -78,16 +82,13 @@ export function OrganiserSettings() {
   useEffect(() => {
     const load = async () => {
       try {
-        const token = await accessToken();
-        const response = await fetch('/api/organiser/settings', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await accountFetch('/api/organiser/settings');
         const result = (await response.json()) as {
           settings?: OrganiserSettingsData;
           error?: string;
         };
         if (!response.ok || !result.settings) {
-          throw new Error(result.error || 'Your settings could not be loaded.');
+          throw new Error(accountResponseError(response, result.error));
         }
         setSettings(result.settings);
       } catch (error) {

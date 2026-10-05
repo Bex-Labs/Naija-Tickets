@@ -3,7 +3,10 @@
 import { useEffect, useState } from 'react';
 import { formatNaira } from '@/lib/events';
 import type { OrganiserSalesAnalytics } from '@/lib/organiser-analytics';
-import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import {
+  accountFetch,
+  accountResponseError,
+} from '@/lib/supabase/account-fetch';
 
 export function OrganiserSalesAnalytics() {
   const [analytics, setAnalytics] = useState<OrganiserSalesAnalytics | null>(
@@ -16,21 +19,16 @@ export function OrganiserSalesAnalytics() {
     const controller = new AbortController();
     void (async () => {
       try {
-        const { data } = await getSupabaseBrowserClient().auth.getSession();
-        if (!data.session)
-          throw new Error('Your session has expired. Log in again.');
-        const response = await fetch('/api/organiser/analytics', {
-          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        const response = await accountFetch('/api/organiser/analytics', {
           cache: 'no-store',
           signal: controller.signal,
         });
         const result = (await response.json()) as OrganiserSalesAnalytics & {
           error?: string;
         };
-        if (!response.ok)
-          throw new Error(
-            result.error || 'Sales analytics could not be loaded.',
-          );
+        if (!response.ok) {
+          throw new Error(accountResponseError(response, result.error));
+        }
         if (!controller.signal.aborted) setAnalytics(result);
       } catch (cause) {
         if (!controller.signal.aborted)

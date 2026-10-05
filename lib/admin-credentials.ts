@@ -111,8 +111,9 @@ export async function getAdminAccountById(accountId: string) {
 export async function verifyConfiguredAdminCredentials(
   username: string,
   password: string,
+  configuredAccounts?: AdminCredentialRecord[],
 ) {
-  const accounts = await getAdminAccounts();
+  const accounts = configuredAccounts ?? (await getAdminAccounts());
   const results = await Promise.all(
     accounts.map(async (account) => ({
       account,

@@ -39,5 +39,12 @@ export async function getAuthenticatedUser(request: Request) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data, error } = await client.auth.getUser(token);
-  return error || data.user?.is_anonymous ? null : data.user;
+  if (error) {
+    console.warn('Supabase session verification failed', {
+      status: error.status,
+      code: error.code,
+    });
+    return null;
+  }
+  return data.user?.is_anonymous ? null : data.user;
 }

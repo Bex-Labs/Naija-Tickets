@@ -24,6 +24,10 @@ import {
   type EventEditorValue,
 } from '@/components/organiser-event-editor';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import {
+  accountFetch,
+  accountResponseError,
+} from '@/lib/supabase/account-fetch';
 import type { OrganiserEvent } from '@/lib/organiser-types';
 
 type View =
@@ -93,25 +97,40 @@ export function OrganiserWorkspace() {
   );
   const [organiserProfile, setOrganiserProfile] = useState<OrganiserProfile>();
   const [editorNotice, setEditorNotice] = useState('');
+  const [loadError, setLoadError] = useState<{
+    message: string;
+    authentication: boolean;
+  } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   useEffect(() => {
     const loadEvents = async () => {
-      const { data } = await getSupabaseBrowserClient().auth.getSession();
-      if (!data.session) return;
-      const response = await fetch('/api/organiser/events', {
-        headers: { Authorization: `Bearer ${data.session.access_token}` },
-      });
-      const result = (await response.json()) as {
-        events?: OrganiserEvent[];
-        organiser?: OrganiserProfile;
-        error?: string;
-      };
-      if (!response.ok) {
-        setEditorNotice(result.error || 'We could not load your events.');
-        return;
+      try {
+        const response = await accountFetch('/api/organiser/events');
+        const result = (await response.json()) as {
+          events?: OrganiserEvent[];
+          organiser?: OrganiserProfile;
+          error?: string;
+        };
+        if (!response.ok) {
+          setLoadError({
+            message: accountResponseError(response, result.error),
+            authentication: response.status === 401,
+          });
+          return;
+        }
+        setLoadError(null);
+        setOrganiserProfile(result.organiser);
+        setEvents(result.events || []);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'We could not load your events.';
+        setLoadError({
+          message,
+          authentication: message.startsWith('Your session has expired'),
+        });
       }
-      setOrganiserProfile(result.organiser);
-      setEvents(result.events || []);
     };
 
     void loadEvents();
@@ -229,6 +248,22 @@ export function OrganiserWorkspace() {
           </nav>
         </aside>
         <section className="min-w-0 p-5 sm:p-8 lg:p-10">
+          {loadError && (
+            <p
+              role="alert"
+              className="mb-6 border border-red-500/25 bg-red-50 p-4 text-sm text-red-700"
+            >
+              {loadError.message}{' '}
+              {loadError.authentication && (
+                <a
+                  href="/login?next=/organiser"
+                  className="font-bold underline"
+                >
+                  Log in again
+                </a>
+              )}
+            </p>
+          )}
           <OrganiserVerificationAlert
             onOpenSettings={() => setView('settings')}
           />
