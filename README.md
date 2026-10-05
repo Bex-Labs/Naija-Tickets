@@ -146,3 +146,9 @@ Email sending is not active until `RESEND_API_KEY`, a verified-domain `EMAIL_FRO
 ### Group member registration options
 
 After a verified group purchase, the buyer opens the booking from the payment confirmation or **My tickets → Manage group tickets**. They can share the group registration link so each attendee enters their own details, or enter each attendee's name, email and phone themselves. Buyer-entered details immediately claim one reserved admission and generate that attendee's individual ticket link, which the buyer can copy or share on WhatsApp. Both options use the same claim endpoint and database checks; the remaining admissions can be filled using either method. A group invitation does not expose other attendees' private ticket links. No additional migration is needed for this UI change.
+
+### Vercel deployment
+
+Import the repository with its root directory set to the directory containing this `package.json`. The checked-in `vercel.json` selects the Nitro framework and `npm run build`; leave any Output Directory override disabled in the Vercel project settings. Nitro writes Vercel's Build Output API to `.vercel/output`, including the server function and the route from `/` to that function. Serving `public` or `dist` as a static folder produces a 404 for app routes.
+
+Set the environment variables listed in `.env.example` in Vercel, with `APP_URL` equal to the public HTTPS deployment URL. Build variables beginning with `NEXT_PUBLIC_` must be set before the build. To verify the deployment output locally, run `VERCEL=1 NITRO_PRESET=vercel npm run build` and inspect `.vercel/output/config.json`.

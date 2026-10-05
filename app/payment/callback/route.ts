@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-import { waitUntil } from 'cloudflare:workers';
+import { NextResponse, after } from 'next/server';
 import {
   finalizePaystackPayment,
   findOrderReference,
@@ -86,7 +85,7 @@ export async function GET(request: Request) {
     ) {
       let delivery = 'not_ready';
       if (outcome.order_id) {
-        waitUntil(deliverOrderTickets(outcome.order_id));
+        after(deliverOrderTickets(outcome.order_id));
         delivery = 'in_progress';
       }
       return statusRedirect(

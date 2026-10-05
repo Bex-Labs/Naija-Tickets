@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-import { waitUntil } from 'cloudflare:workers';
+import { NextResponse, after } from 'next/server';
 import {
   getTrustedAppOrigin,
   initializePaystackTransaction,
@@ -71,7 +70,7 @@ export async function POST(request: Request) {
     if (prepared.outcome === 'already_paid') {
       let delivery = 'not_ready';
       if (prepared.order_id) {
-        waitUntil(deliverOrderTickets(prepared.order_id));
+        after(deliverOrderTickets(prepared.order_id));
         delivery = 'in_progress';
       }
       return NextResponse.json({
@@ -100,7 +99,7 @@ export async function POST(request: Request) {
           { status: 409 },
         );
       }
-      waitUntil(deliverOrderTickets(orderId));
+      after(deliverOrderTickets(orderId));
       return NextResponse.json({
         completed: true,
         statusUrl: `/payment/status?result=success&reference=${encodeURIComponent(completed.order_reference)}&delivery=in_progress`,

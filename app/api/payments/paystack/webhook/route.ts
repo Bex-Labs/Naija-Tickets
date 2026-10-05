@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-import { waitUntil } from 'cloudflare:workers';
+import { NextResponse, after } from 'next/server';
 import { parsePaystackRefund } from '@/lib/admin-refunds';
 import { finalizePaystackPayment } from '@/lib/payments';
 import {
@@ -161,7 +160,7 @@ export async function POST(request: Request) {
       outcome.order_id &&
       ['success', 'already_paid', 'duplicate_event'].includes(outcome.outcome)
     ) {
-      waitUntil(deliverOrderTickets(outcome.order_id));
+      after(deliverOrderTickets(outcome.order_id));
     }
     return NextResponse.json({ received: true, outcome: outcome.outcome });
   } catch (error) {
