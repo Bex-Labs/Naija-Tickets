@@ -76,6 +76,12 @@ The administrator overview shows verified bookings, tickets sold, ticket revenue
 
 Apply `supabase/migrations/202609200005_admin_sales_analytics.sql` before deploying this dashboard. The analytics function returns one aggregate JSON result without purchaser or attendee details and can only be called with the server role. The HTTP endpoint also requires a valid administrator session.
 
+### Admin visitor counts
+
+The admin overview shows total unique browsers, visitors today and visitors in the last 30 calendar days (including today), using Africa/Lagos time. A random identifier in browser local storage recognises repeat visitors. Only its SHA-256 hash and first/latest visit timestamps are stored; no account information, IP address or page history is recorded. Admin, organiser and event-entry pages, local development and Vercel previews are excluded. Do Not Track, automated browsers and browsers with blocked storage are skipped. Clearing storage or using another browser counts as a new visitor, so these figures estimate visitors rather than identify people.
+
+Apply `supabase/migrations/202610070001_admin_visitor_analytics.sql` and deploy the app to start counting. Earlier traffic cannot be reconstructed. The public recording endpoint accepts only a small visitor-identifier payload; totals are returned only through an authenticated admin endpoint, and browser database roles cannot read or write visitor records or execute either private function. **Refresh visitors** reloads the current totals.
+
 ### Organiser sales analytics
 
 The organiser overview displays tickets sold, ticket revenue, remaining inventory, sales by event category and a per-event breakdown. Sales count issued valid or used tickets on paid or partially refunded orders with a verified payment. Ticket revenue is the paid ticket subtotal after promo discounts and completed refunds, excluding service fees; fully refunded orders do not count. Remaining inventory excludes active holds and inactive ticket types, and expired holds are ignored.

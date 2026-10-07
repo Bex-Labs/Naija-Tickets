@@ -8,6 +8,10 @@ export const metadata: Metadata = {
 
 const sections = [
   {
+    title: 'Website visitor counts',
+    body: 'We store a random identifier in your browser to recognise repeat visits and show aggregate visitor counts to authorised administrators. The server stores a hash of this identifier and first and latest visit times, without recording your name, email, IP address or visited pages for these counts. Counting is skipped when Do Not Track is enabled or browser storage is unavailable. Clearing browser storage resets this identifier.',
+  },
+  {
     title: 'Information we collect',
     body: 'We collect account details such as your name, email address and phone number; attendee details supplied during checkout; order, payment-status and ticket records; organiser profile and verification information; and technical information needed to operate and secure the service.',
   },
@@ -43,7 +47,7 @@ export default function PrivacyPage() {
           Privacy Policy
         </h1>
         <p className="mt-4 text-sm text-slate-500">
-          Effective 23 September 2026
+          Effective 7 October 2026
         </p>
         <p className="mt-7 max-w-3xl leading-7 text-slate-600">
           This policy explains what information Naija Tickets handles and how it

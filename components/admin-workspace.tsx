@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AdminSalesOverview } from '@/components/admin-sales-analytics';
+import { AdminVisitorOverview } from '@/components/admin-visitor-analytics';
 import { AdminTransactions } from '@/components/admin-transactions';
 import { AdminAccounts } from '@/components/admin-accounts';
 import { AdminGuestOrders } from '@/components/admin-guest-orders';
@@ -279,6 +280,7 @@ export function AdminWorkspace() {
                   </button>
                 ))}
               </div>
+              <AdminVisitorOverview />
               <AdminSalesOverview />
               <div className="mt-8 border border-[#241b3f]/10 bg-white p-6">
                 <Shield className="h-6 w-6 text-emerald-600" />
