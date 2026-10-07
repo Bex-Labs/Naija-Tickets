@@ -7,6 +7,7 @@ import { getAuthenticatedAdmin } from '@/lib/admin-request';
 export const metadata: Metadata = {
   title: 'Admin workspace | Naija Tickets',
   description: 'Review organiser applications, events and roles.',
+  robots: { index: false, follow: false },
 };
 export const dynamic = 'force-dynamic';
 
