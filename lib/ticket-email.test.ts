@@ -60,6 +60,30 @@ void test('escapes attendee data before adding it to email HTML', () => {
   assert.match(email.html, /&lt;b&gt;Ada&lt;\/b&gt;/);
 });
 
+void test('embeds the exact ticket image in the email and attaches it for download', () => {
+  const email = buildTicketEmail(details, 'https://tickets.example.com', [
+    {
+      displayCode: 'NT-260919-08427',
+      contentId: 'naija-ticket-1-NT-260919-08427',
+      filename: 'NT-260919-08427.png',
+      content: 'cG5n',
+      contentType: 'image/png',
+    },
+  ]);
+
+  assert.match(email.html, /cid:naija-ticket-1-NT-260919-08427/);
+  assert.match(email.html, /NT-260919-08427\.png/);
+  assert.deepEqual(email.attachments, [
+    {
+      content: 'cG5n',
+      filename: 'NT-260919-08427.png',
+      content_type: 'image/png',
+      content_id: 'naija-ticket-1-NT-260919-08427',
+    },
+  ]);
+  assert.match(email.html, /Entry code/);
+});
+
 void test('uses one stable idempotency key and rejects insecure public links', () => {
   assert.equal(
     ticketEmailIdempotencyKey(details.orderReference),

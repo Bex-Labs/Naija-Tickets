@@ -1,23 +1,12 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- Inline vector artwork needs an image role and an accessible title. */
 import { QRCodeSVG } from 'qrcode.react';
-import { ticketTextLines } from '@/lib/ticket-artwork';
+import {
+  ticketArtworkLayout,
+  ticketTextLines,
+  type TicketArtworkDetails,
+} from '@/lib/ticket-artwork';
 
-export type TicketArtworkDetails = {
-  eventTitle: string;
-  category: string;
-  presenter: string;
-  date: string;
-  time: string;
-  venue: string;
-  address: string;
-  ticketType: string;
-  attendeeName: string;
-  price: string;
-  priceLabel: string;
-  displayCode: string;
-  orderReference?: string;
-  position: string;
-};
+export type { TicketArtworkDetails } from '@/lib/ticket-artwork';
 
 function Lines({
   lines,
@@ -56,26 +45,24 @@ export function TicketArtwork({
   id: string;
   details: TicketArtworkDetails;
 }) {
-  const title = ticketTextLines(details.eventTitle.toUpperCase(), 27);
-  const presenter = ticketTextLines(details.presenter, 45);
-  const category = ticketTextLines(details.category.toUpperCase(), 28);
-  const titleY = 90 + (presenter.length - 1 + category.length - 1) * 17;
-  const infoY = titleY + title.length * 38 + 16;
-  const date = ticketTextLines(details.date, 20);
-  const time = ticketTextLines(details.time, 14);
-  const venue = ticketTextLines(details.venue, 22);
-  const infoBottom =
-    infoY + 22 + Math.max(date.length, time.length, venue.length) * 22;
-  const address = ticketTextLines(details.address, 78);
-  const admissionY = infoBottom + 30 + address.length * 17;
-  const tier = ticketTextLines(details.ticketType, 24);
-  const attendee = ticketTextLines(details.attendeeName, 25);
-  const price = ticketTextLines(details.price, 15);
-  const height = Math.max(
-    360,
-    admissionY + 34 + Math.max(tier.length, attendee.length, price.length) * 22,
-  );
-  const qrY = (height - 280) / 2 + 40;
+  const {
+    title,
+    presenter,
+    category,
+    titleY,
+    infoY,
+    date,
+    time,
+    venue,
+    infoBottom,
+    address,
+    admissionY,
+    tier,
+    attendee,
+    price,
+    height,
+    qrY,
+  } = ticketArtworkLayout(details);
   return (
     <svg
       id={id}

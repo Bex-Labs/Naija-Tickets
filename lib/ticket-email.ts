@@ -5,6 +5,14 @@ export type TicketEmailItem = {
   ticket_type: string;
 };
 
+export type TicketEmailImage = {
+  displayCode: string;
+  contentId: string;
+  filename: string;
+  content: string;
+  contentType: 'image/png';
+};
+
 export type TicketEmailDetails = {
   orderReference: string;
   eventTitle: string;
@@ -34,7 +42,7 @@ function escapeHtml(value: string) {
   );
 }
 
-function eventTiming(value: string, timeZone: string) {
+export function ticketEventTiming(value: string, timeZone: string) {
   const date = new Date(value);
   return {
     date: new Intl.DateTimeFormat('en-NG', {
@@ -74,8 +82,9 @@ export function ticketStatusUrl(appOrigin: string, orderReference: string) {
 export function buildTicketEmail(
   details: TicketEmailDetails,
   appOrigin: string,
+  ticketImages: TicketEmailImage[] = [],
 ) {
-  const timing = eventTiming(details.eventDate, details.eventTimezone);
+  const timing = ticketEventTiming(details.eventDate, details.eventTimezone);
   const ticketUrl = ticketStatusUrl(appOrigin, details.orderReference);
   const unclaimed = details.tickets.filter(
     (ticket) => !ticket.display_code,
@@ -86,27 +95,39 @@ export function buildTicketEmail(
   const registered = details.tickets.filter((ticket) =>
     Boolean(ticket.display_code),
   );
+  const imagesByCode = new Map(
+    ticketImages.map((image) => [image.displayCode, image]),
+  );
   const receipt =
     details.totalKobo !== undefined
       ? `Amount paid: ${new Intl.NumberFormat('en-NG', { style: 'currency', currency: details.currency || 'NGN' }).format(details.totalKobo / 100)}${details.paidAt ? ` · Paid on ${new Intl.DateTimeFormat('en-NG', { dateStyle: 'medium', timeZone: details.eventTimezone }).format(new Date(details.paidAt))}` : ''}`
       : '';
   const ticketCards = registered
-    .map(
-      (ticket, index) => `
-        <div style="margin-top:16px;border:1px solid #ded6e8;background:#fffaf0">
-          <div style="padding:16px 18px;background:#079669;color:#ffffff">
-            <span style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase">Ticket ${index + 1} of ${details.tickets.length}</span>
-            <h3 style="margin:6px 0 0;font-size:20px">${escapeHtml(ticket.ticket_type)}</h3>
-          </div>
-          <div style="padding:18px">
-            <p style="margin:0;font-size:12px;color:#655d78;text-transform:uppercase;letter-spacing:.1em;font-weight:700">Attendee</p>
-            <p style="margin:5px 0 0;font-size:17px;font-weight:800;color:#241b3f">${escapeHtml(ticket.attendee_name || '')}</p>
-            <p style="margin:3px 0 0;font-size:13px;color:#655d78">${escapeHtml(ticket.attendee_email || '')}</p>
-            <p style="margin:18px 0 0;font-size:12px;color:#655d78;text-transform:uppercase;letter-spacing:.1em;font-weight:700">Entry code</p>
-            <p style="margin:6px 0 0;padding:12px;background:#ffffff;border:1px dashed #079669;font-family:monospace;font-size:17px;font-weight:800;letter-spacing:.08em;color:#241b3f">${escapeHtml(ticket.display_code || '')}</p>
-          </div>
-        </div>`,
-    )
+    .map((ticket, index) => {
+      const image = imagesByCode.get(ticket.display_code || '');
+      if (image) {
+        return `
+          <div style="margin-top:20px">
+            <p style="margin:0 0 8px;color:#655d78;font-size:12px;font-weight:700">Ticket ${index + 1} of ${registered.length} · ${escapeHtml(ticket.attendee_name || '')}</p>
+            <img src="cid:${escapeHtml(image.contentId)}" width="960" alt="Ticket for ${escapeHtml(ticket.attendee_name || '')} to ${escapeHtml(details.eventTitle)}" style="display:block;width:100%;height:auto;border:1px solid #ded6e8">
+            <p style="margin:7px 0 0;color:#655d78;font-size:11px">The same ticket is attached as ${escapeHtml(image.filename)} for saving or printing.</p>
+          </div>`;
+      }
+      return `
+          <div style="margin-top:16px;border:1px solid #ded6e8;background:#fffaf0">
+            <div style="padding:16px 18px;background:#079669;color:#ffffff">
+              <span style="font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase">Ticket ${index + 1} of ${registered.length}</span>
+              <h3 style="margin:6px 0 0;font-size:20px">${escapeHtml(ticket.ticket_type)}</h3>
+            </div>
+            <div style="padding:18px">
+              <p style="margin:0;font-size:12px;color:#655d78;text-transform:uppercase;letter-spacing:.1em;font-weight:700">Attendee</p>
+              <p style="margin:5px 0 0;font-size:17px;font-weight:800;color:#241b3f">${escapeHtml(ticket.attendee_name || '')}</p>
+              <p style="margin:3px 0 0;font-size:13px;color:#655d78">${escapeHtml(ticket.attendee_email || '')}</p>
+              <p style="margin:18px 0 0;font-size:12px;color:#655d78;text-transform:uppercase;letter-spacing:.1em;font-weight:700">Entry code</p>
+              <p style="margin:6px 0 0;padding:12px;background:#ffffff;border:1px dashed #079669;font-family:monospace;font-size:17px;font-weight:800;letter-spacing:.08em;color:#241b3f">${escapeHtml(ticket.display_code || '')}</p>
+            </div>
+          </div>`;
+    })
     .join('');
   const textTickets = registered
     .map(
@@ -119,6 +140,12 @@ export function buildTicketEmail(
     subject: `Your tickets for ${details.eventTitle}`,
     ticketUrl,
     idempotencyKey: ticketEmailIdempotencyKey(details.orderReference),
+    attachments: ticketImages.map((image) => ({
+      content: image.content,
+      filename: image.filename,
+      content_type: image.contentType,
+      content_id: image.contentId,
+    })),
     text: `Your Naija Tickets booking is confirmed\n\n${details.eventTitle}\n${timing.date}\n${timing.time} ${details.eventTimezoneLabel}\n${details.eventVenue}, ${details.eventCity}\n${details.eventAddress}\n\n${groupMessage}\n\n${textTickets}\n\nOpen your booking securely: ${ticketUrl}\n\n${receipt}\nOrder ${details.orderReference}\nKeep this private ticket link and every entry code secure.`,
     html: `
       <div style="margin:0;background:#fffaf0;padding:24px 12px;font-family:Arial,sans-serif;color:#241b3f">
