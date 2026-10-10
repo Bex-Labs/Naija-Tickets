@@ -4,7 +4,7 @@ An interactive Nigerian event discovery and ticketing platform. The current buil
 
 ## Local setup
 
-Requirements: Node.js 22.13 or newer and npm.
+Requirements: Node.js 24.x and npm.
 
 ```bash
 npm install
@@ -13,6 +13,13 @@ npm run dev
 ```
 
 Open `http://localhost:3000`. Public event pages, search, city counts, checkout, and both workspaces use the configured Supabase project as their event source.
+
+Local development uses Vinext's Node.js runtime, supporting
+the native `sharp` renderer for ticket email PNGs. After updating the runtime
+configuration, stop any existing dev server with Ctrl+C and run `npm run dev`
+again. For a local production preview, run `npm run build` followed by
+`npm start`. The legacy worker configuration requires explicitly setting
+`NAIJA_RUNTIME=cloudflare`; it cannot run native `sharp` ticket image rendering.
 
 ## Database setup
 
@@ -56,7 +63,7 @@ After a successful callback, `/payment/status` uses the random 36-character orde
 
 1. Verify the sending domain in Resend and finish the SPF and DKIM records shown in its dashboard.
 2. Create a sending-access API key, then add `RESEND_API_KEY` and an `EMAIL_FROM` address on the verified domain to `.env.local`.
-3. Set `APP_URL` to the exact public HTTPS origin, with no path, so emailed ticket links return to the correct Naija Tickets installation. Actual email sending requires a public HTTPS URL; localhost links cannot be opened by customers on their own devices.
+3. Set `APP_URL` to the exact public HTTPS origin in production. For local email testing, keep `APP_URL=http://localhost:3000` for payment callbacks and set `EMAIL_APP_URL=https://naija-tickets.vercel.app` for emailed ticket links. The public site must use the same Supabase project. Without `EMAIL_APP_URL`, emails use `APP_URL`; emailed links always require public HTTPS.
 4. Add those same values to production hosting only when the domain is ready. Keep `RESEND_API_KEY` server-only.
 5. The paid callback, signed webhook and free-checkout finaliser share one database delivery claim and use a stable Resend idempotency key. A failed delivery remains retryable, while a sent order is not deliberately sent twice.
 

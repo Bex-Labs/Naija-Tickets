@@ -9,6 +9,8 @@ import {
   type TicketEmailArtworkRequest,
 } from '@/lib/ticket-email-artwork';
 import { formatNaira } from '@/lib/events';
+import { ticketEmailOrigin } from './ticket-email-config.ts';
+export { ticketEmailConfigured } from './ticket-email-config.ts';
 
 type DeliveryClaim = {
   outcome: string;
@@ -99,10 +101,12 @@ async function ticketArtworkRequests(
 
   const itemById = new Map(items.map((item) => [item.id, item]));
   const itemByCode = new Map(
-    ((storedTickets || []) as Array<{
-      display_code: string;
-      order_item_id: string;
-    }>).map((ticket) => [
+    (
+      (storedTickets || []) as Array<{
+        display_code: string;
+        order_item_id: string;
+      }>
+    ).map((ticket) => [
       ticket.display_code,
       itemById.get(ticket.order_item_id),
     ]),
@@ -137,23 +141,6 @@ async function ticketArtworkRequests(
   });
 }
 
-function configuredAppOrigin() {
-  const value = process.env.APP_URL?.trim();
-  if (!value) throw new Error('APP_URL is required for ticket email links.');
-  const url = new URL(value);
-  if (
-    url.protocol !== 'https:' ||
-    ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) ||
-    url.username ||
-    url.password
-  ) {
-    throw new Error(
-      'A public HTTPS APP_URL is required so customers can open emailed tickets.',
-    );
-  }
-  return url.origin;
-}
-
 async function deliverOrderTicketsAttempt(orderId: string) {
   const admin = getSupabaseAdminClient();
   const { data, error } = await admin.rpc('claim_ticket_delivery_v3', {
@@ -170,8 +157,8 @@ async function deliverOrderTicketsAttempt(orderId: string) {
     throw new Error('Ticket delivery details are incomplete.');
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.EMAIL_FROM;
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const from = process.env.EMAIL_FROM?.trim();
   try {
     if (!apiKey || !from) {
       throw new Error('Ticket email delivery is not configured.');
@@ -208,7 +195,7 @@ async function deliverOrderTicketsAttempt(orderId: string) {
         currency: claim.currency,
         paidAt: claim.paid_at,
       },
-      configuredAppOrigin(),
+      ticketEmailOrigin(),
       ticketImages,
     );
 
@@ -270,17 +257,6 @@ async function deliverOrderTicketsAttempt(orderId: string) {
     }
     console.error('Ticket email delivery failed', deliveryError);
     return 'failed';
-  }
-}
-
-export function ticketEmailConfigured() {
-  if (!process.env.RESEND_API_KEY?.trim() || !process.env.EMAIL_FROM?.trim())
-    return false;
-  try {
-    configuredAppOrigin();
-    return true;
-  } catch {
-    return false;
   }
 }
 

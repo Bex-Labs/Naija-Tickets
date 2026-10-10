@@ -31,12 +31,18 @@ const localBindingConfig = {
     : [],
 };
 
-export default defineConfig(async () => {
+export default defineConfig(async ({ command, isPreview }) => {
   const isVercel = process.env.VERCEL === '1';
 
-  // Vercel build
-  if (isVercel) {
-    const { nitro } = await import('nitro/vite');
+  // Local development and Vercel both need Node.js for native ticket PNG rendering.
+  // Keep the worker configuration available only for explicit Cloudflare builds.
+  if (isVercel || process.env.NAIJA_RUNTIME !== 'cloudflare') {
+    // Vinext's own Node dev runner handles RSC/HMR. Nitro supplies production
+    // builds; its custom dev runner conflicts with the RSC middleware here.
+    const productionPlugins =
+      command === 'build' || isPreview
+        ? (await import('nitro/vite')).nitro()
+        : [];
 
     return {
       css: {
@@ -44,14 +50,12 @@ export default defineConfig(async () => {
           plugins: [tailwindcss()],
         },
       },
-      plugins: [
-        vinext(),
-        nitro(),
-      ],
+      ssr: { external: ['sharp'] },
+      plugins: [vinext(), productionPlugins],
     };
   }
 
-  // Local/OpenAI Sites/Cloudflare environment
+  // Explicit OpenAI Sites/Cloudflare environment
   process.env.WRANGLER_WRITE_LOGS ??= 'false';
   process.env.WRANGLER_LOG_PATH ??= '.wrangler/logs';
   process.env.MINIFLARE_REGISTRY_PATH ??= '.wrangler/registry';

@@ -1,6 +1,31 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import test from 'node:test';
 import { renderTicketEmailArtwork } from './ticket-email-artwork.ts';
+
+void test('loading ticket delivery artwork does not require the native renderer', () => {
+  const moduleUrl = new URL('./ticket-email-artwork.ts', import.meta.url).href;
+  execFileSync(process.execPath, [
+    '--input-type=module',
+    '-e',
+    `
+    import assert from 'node:assert/strict';
+    import { registerHooks } from 'node:module';
+    registerHooks({
+      resolve(specifier, context, nextResolve) {
+        if (specifier === 'sharp') throw new Error('Native renderer unavailable');
+        return nextResolve(specifier, context);
+      },
+    });
+    const { renderTicketEmailArtwork } = await import(${JSON.stringify(moduleUrl)});
+    assert.deepEqual(await renderTicketEmailArtwork([]), []);
+    await assert.rejects(
+      renderTicketEmailArtwork([{ displayCode: 'NT-TEST' }]),
+      /Native renderer unavailable/,
+    );
+  `,
+  ]);
+});
 
 void test('renders the issued ticket as an email-ready PNG attachment', async () => {
   const [ticket] = await renderTicketEmailArtwork([

@@ -80,13 +80,15 @@ export function TicketEmailStatus({ reference }: { reference: string }) {
       ? 'Your confirmation was sent to the email used at checkout. Check your inbox or spam folder.'
       : status === 'checking'
         ? 'Checking your confirmation email…'
-        : !enabled
-          ? 'Email delivery is temporarily unavailable. Your tickets are ready to view and save below.'
-          : status === 'processing'
-            ? 'Your confirmation email is being sent. Your tickets are ready below.'
-            : status === 'retry_later'
-              ? 'Please wait a minute before trying the email again.'
-              : 'Your confirmation email has not been sent yet. You can retry below.';
+        : status === 'unavailable'
+          ? 'We could not check email delivery. Your tickets are ready to view and save below.'
+          : !enabled
+            ? 'Email confirmations are not available yet. Your tickets are ready to view and save below.'
+            : status === 'processing'
+              ? 'Your confirmation email is being sent. Your tickets are ready below.'
+              : status === 'retry_later'
+                ? 'Please wait a minute before trying the email again.'
+                : 'Your confirmation email has not been sent yet. You can retry below.';
   return (
     <div className="no-print mt-3 text-sm text-slate-600">
       <p className="flex items-start gap-2">

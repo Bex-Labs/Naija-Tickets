@@ -1,5 +1,4 @@
 import QRCode from 'qrcode';
-import sharp from 'sharp';
 import {
   ticketArtworkLayout,
   ticketTextLines,
@@ -13,13 +12,10 @@ type SharpFactory = (
   input: Buffer,
   options: { density: number },
 ) => {
-  png(options: {
-    compressionLevel: number;
-    palette: boolean;
-  }): { toBuffer(): Promise<Buffer> };
+  png(options: { compressionLevel: number; palette: boolean }): {
+    toBuffer(): Promise<Buffer>;
+  };
 };
-
-const rasterise = sharp as unknown as SharpFactory;
 
 function escapeXml(value: string) {
   return value.replace(
@@ -164,6 +160,13 @@ function safeFilename(value: string) {
 export async function renderTicketEmailArtwork(
   tickets: TicketEmailArtworkRequest[],
 ): Promise<TicketEmailImage[]> {
+  if (tickets.length === 0) return [];
+
+  // Payment routes also import ticket delivery. Load the native renderer only
+  // when a verified purchase actually has ticket images to send.
+  const { default: sharp } = await import('sharp');
+  const rasterise = sharp as unknown as SharpFactory;
+
   return Promise.all(
     tickets.map(async (details, index) => {
       const safeCode = safeFilename(details.displayCode).slice(0, 72);

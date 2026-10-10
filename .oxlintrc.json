@@ -25,6 +25,9 @@
   "ignorePatterns": [
     ".next/**",
     ".vinext/**",
+    ".output/**",
+    ".nitro/**",
+    ".vercel/**",
     "out/**",
     "build/**",
     "dist/**",
