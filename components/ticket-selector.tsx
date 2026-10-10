@@ -68,6 +68,9 @@ export function TicketSelector({
       const maximum = Math.min(
         ticket.maxPerOrder || 6,
         ticket.remaining,
+        isEarlyBirdTicket(ticket, now)
+          ? (ticket.earlyBirdRemaining ?? ticket.remaining)
+          : ticket.remaining,
         Math.floor(
           (MAX_CHECKOUT_ADMISSIONS - otherAdmissions) /
             (ticket.admissionsPerTicket || 1),
@@ -136,6 +139,16 @@ export function TicketSelector({
                       </span>
                     )}
                   </div>
+                  {earlyBirdActive &&
+                    ticket.earlyBirdRemaining !== undefined && (
+                      <p className="mt-1 text-xs font-semibold text-amber-800">
+                        {ticket.earlyBirdRemaining} early bird{' '}
+                        {(ticket.admissionsPerTicket || 1) > 1
+                          ? 'group packages'
+                          : 'tickets'}{' '}
+                        left
+                      </p>
+                    )}
                   {ticket.description && (
                     <p className="mt-2 text-xs leading-5 text-slate-500">
                       {ticket.description}
@@ -179,7 +192,13 @@ export function TicketSelector({
                       ticket.status === 'not-on-sale' ||
                       ticket.status === 'sold-out' ||
                       (quantities[ticket.name] || 0) >=
-                        Math.min(ticket.maxPerOrder || 6, ticket.remaining) ||
+                        Math.min(
+                          ticket.maxPerOrder || 6,
+                          ticket.remaining,
+                          earlyBirdActive
+                            ? (ticket.earlyBirdRemaining ?? ticket.remaining)
+                            : ticket.remaining,
+                        ) ||
                       admissionCount +
                         (ticket.admissionsPerTicket || 1) *
                           (quantities[ticket.name] || 0

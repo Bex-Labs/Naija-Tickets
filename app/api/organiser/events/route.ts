@@ -152,6 +152,7 @@ export async function POST(request: Request) {
           price_kobo: ticket.priceKobo,
           early_bird_price_kobo: ticket.earlyBirdPriceKobo,
           early_bird_ends_at: ticket.earlyBirdEndAt,
+          early_bird_quantity: ticket.earlyBirdQuantity,
           quantity_total:
             ticket.quantityTotal * (ticket.admissionsPerTicket || 1),
           admissions_per_ticket: ticket.admissionsPerTicket || 1,

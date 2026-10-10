@@ -65,6 +65,7 @@ function ticketTemplate(): OrganiserTicketType {
     priceNaira: 0,
     earlyBirdPriceNaira: null,
     earlyBirdEnd: '',
+    earlyBirdQuantity: null,
     quantityTotal: 100,
     admissionsPerTicket: 1,
     quantitySold: 0,
@@ -885,6 +886,7 @@ export function OrganiserEventEditor({
                               ? {
                                   earlyBirdPriceNaira: null,
                                   earlyBirdEnd: '',
+                                  earlyBirdQuantity: null,
                                 }
                               : {}),
                           };
@@ -956,6 +958,9 @@ export function OrganiserEventEditor({
                                   100
                                 : null,
                               earlyBirdEnd: '',
+                              earlyBirdQuantity: event.target.checked
+                                ? ticket.quantityTotal
+                                : null,
                             };
                             update('ticketTypes', next);
                           }}
@@ -1014,11 +1019,39 @@ export function OrganiserEventEditor({
                               className="auth-input bg-white"
                             />
                           </div>
-                          <p className="text-xs leading-5 text-amber-900 sm:col-span-2">
-                            The discounted price runs from the ticket sales
-                            start until this deadline. The standard price takes
-                            over automatically when it ends.
-                          </p>
+                          <div className="sm:col-span-2">
+                            <label
+                              className="auth-label"
+                              htmlFor={`ticket-early-bird-quantity-${index}`}
+                            >
+                              {(ticket.admissionsPerTicket || 1) > 1
+                                ? 'Early bird group packages available'
+                                : 'Early bird tickets available'}
+                            </label>
+                            <Input
+                              id={`ticket-early-bird-quantity-${index}`}
+                              type="number"
+                              min={1}
+                              max={ticket.quantityTotal}
+                              step={1}
+                              required
+                              value={
+                                ticket.earlyBirdQuantity ?? ticket.quantityTotal
+                              }
+                              onChange={(event) =>
+                                updateTicket(
+                                  'earlyBirdQuantity',
+                                  Number(event.target.value),
+                                )
+                              }
+                              className="auth-input bg-white"
+                            />
+                            <p className="mt-1 text-xs leading-5 text-amber-900">
+                              Included in your total quantity, not extra
+                              tickets. The standard price takes over when these
+                              sell out or the early bird deadline passes.
+                            </p>
+                          </div>
                         </div>
                       )}
                     </div>

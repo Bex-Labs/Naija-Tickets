@@ -37,6 +37,7 @@ function validEvent() {
         priceNaira: 0,
         earlyBirdPriceNaira: null as number | null,
         earlyBirdEnd: '',
+        earlyBirdQuantity: null as number | null,
         quantityTotal: 100,
         admissionsPerTicket: 1,
         quantitySold: 0,
@@ -52,6 +53,7 @@ function validEvent() {
         priceNaira: 35000,
         earlyBirdPriceNaira: null as number | null,
         earlyBirdEnd: '',
+        earlyBirdQuantity: null as number | null,
         quantityTotal: 20,
         admissionsPerTicket: 1,
         quantitySold: 2,
@@ -183,4 +185,30 @@ void test('group packages use a package price and admission-based capacity valid
     input.ticketTypes[1].admissionsPerTicket = size;
     assert.match(parseOrganiserEventInput(input).error || '', /admit/);
   }
+});
+
+void test('early bird quantity is a subset of packages, validated independently of admissions', () => {
+  const input = validEvent();
+  const tier = input.ticketTypes[1];
+  tier.earlyBirdPriceNaira = 25000;
+  tier.earlyBirdEnd = '2026-09-01T09:00';
+  tier.admissionsPerTicket = 5;
+  tier.earlyBirdQuantity = 2;
+  assert.equal(
+    parseOrganiserEventInput(input).value?.ticketTypes[1].earlyBirdQuantity,
+    2,
+  );
+  for (const quantity of [0, -1, 1.5, 21, Number.NaN]) {
+    tier.earlyBirdQuantity = quantity;
+    assert.match(
+      parseOrganiserEventInput(input).error || '',
+      /Early bird quantity/,
+    );
+  }
+  tier.earlyBirdPriceNaira = null;
+  tier.earlyBirdEnd = '';
+  assert.equal(
+    parseOrganiserEventInput(input).value?.ticketTypes[1].earlyBirdQuantity,
+    null,
+  );
 });

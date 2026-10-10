@@ -6,6 +6,7 @@ export type TicketType = {
   price: number;
   earlyBirdPrice?: number;
   earlyBirdEndsAt?: string;
+  earlyBirdRemaining?: number;
   remaining: number;
   minPerOrder?: number;
   maxPerOrder?: number;
@@ -133,6 +134,7 @@ export const isEarlyBirdTicket = (
 ): boolean =>
   ticket.earlyBirdPrice !== undefined &&
   Boolean(ticket.earlyBirdEndsAt) &&
+  (ticket.earlyBirdRemaining === undefined || ticket.earlyBirdRemaining > 0) &&
   new Date(ticket.earlyBirdEndsAt || '').getTime() > at;
 
 export const ticketPrice = (ticket: TicketType, at = Date.now()) =>

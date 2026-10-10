@@ -196,6 +196,7 @@ export async function POST(request: Request) {
     }
     const safeMessage =
       message.startsWith('Promo code ') ||
+      message.startsWith('Only ') ||
       message.includes('availability') ||
       message.includes('not available') ||
       message.includes('sales')

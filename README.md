@@ -40,6 +40,8 @@ Apply `supabase/migrations/202609150002_event_detail_editor.sql` before using th
 
 The organiser editor saves the event, organiser profile, ordered schedule, ordered policies and all ticket tiers in one database transaction. Organisers enter prices in NGN; the server converts them to non-negative integer kobo. Existing sold and reserved counts are never accepted from the browser, and capacity cannot be reduced below committed inventory. Public checkout loads the saved ticket price from Supabase and recalculates the order total on the server.
 
+Apply `supabase/migrations/202610100001_early_bird_quantity.sql` before deploying the early bird quantity field. For each paid tier, enable **Offer early bird pricing**, enter the discounted price, deadline and **Early bird tickets available**. This allocation is included in the tier's total quantity; group tiers count packages. The standard price takes over when the allocation is exhausted or its deadline passes. Live checkout reservations hold early bird stock, expired/released reservations restore it, and paid bookings retain their allocation even after refunds. Existing offers remain unlimited until edited. Checkout snapshots the offer on each order item and locks selected tiers before checking the limit, keeping Paystack totals and group admission capacity unchanged.
+
 ## Live-service configuration
 
 The `.env.example` file lists the values needed for Supabase, Paystack and transactional email. Keep all service-role, payment and email secrets server-only. The application does not contain a simulated Paystack success path.

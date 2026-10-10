@@ -242,6 +242,9 @@ export function parseOrganiserEventInput(
       : null;
     const earlyBirdEndAt = optionalLocalIso(earlyBirdEnd);
     const quantityTotal = Number(ticket.quantityTotal);
+    const earlyBirdQuantity = earlyBirdEnabled
+      ? Number(ticket.earlyBirdQuantity ?? quantityTotal)
+      : null;
     const admissionsPerTicket = Number(ticket.admissionsPerTicket ?? 1);
     if (
       !Number.isSafeInteger(admissionsPerTicket) ||
@@ -318,6 +321,17 @@ export function parseOrganiserEventInput(
       };
     }
     if (
+      earlyBirdEnabled &&
+      (!Number.isSafeInteger(earlyBirdQuantity) ||
+        (earlyBirdQuantity ?? 0) < 1 ||
+        (earlyBirdQuantity ?? 0) > quantityTotal)
+    ) {
+      return {
+        error:
+          'Early bird quantity must be a whole number between 1 and the total ticket quantity.',
+      };
+    }
+    if (
       !Number.isSafeInteger(minPerOrder) ||
       !Number.isSafeInteger(maxPerOrder) ||
       minPerOrder < 1 ||
@@ -351,6 +365,7 @@ export function parseOrganiserEventInput(
       description: ticketDescription,
       priceKobo,
       earlyBirdPriceKobo,
+      earlyBirdQuantity,
       earlyBirdEnd,
       earlyBirdEndAt,
       quantityTotal,

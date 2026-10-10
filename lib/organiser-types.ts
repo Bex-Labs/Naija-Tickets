@@ -56,6 +56,7 @@ export type OrganiserTicketType = {
   priceNaira: number;
   earlyBirdPriceNaira: number | null;
   earlyBirdEnd: string;
+  earlyBirdQuantity?: number | null;
   quantityTotal: number;
   quantitySold: number;
   quantityReserved: number;

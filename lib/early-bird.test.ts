@@ -65,3 +65,20 @@ void test('database rejects incomplete or non-discounted early bird offers', () 
   assert.match(migration, /ticket_types_early_bird_pair/);
   assert.match(migration, /early_bird_price_kobo < standard_price_kobo/);
 });
+
+void test('sold-out early bird allocation uses the standard price before the deadline', () => {
+  const offer = ticket({
+    earlyBirdPrice: 1_500_000,
+    earlyBirdEndsAt: '2026-10-01T12:00:00.000Z',
+    earlyBirdRemaining: 0,
+  });
+  assert.equal(
+    ticketPrice(offer, new Date('2026-10-01T11:00:00Z').getTime()),
+    2_000_000,
+  );
+  offer.earlyBirdRemaining = 1;
+  assert.equal(
+    ticketPrice(offer, new Date('2026-10-01T11:00:00Z').getTime()),
+    1_500_000,
+  );
+});
