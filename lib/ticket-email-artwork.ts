@@ -164,7 +164,10 @@ export async function renderTicketEmailArtwork(
 
   // Payment routes also import ticket delivery. Load the native renderer only
   // when a verified purchase actually has ticket images to send.
-  const { default: sharp } = await import('sharp');
+  const [{ default: sharp }, { outlineTicketEmailText }] = await Promise.all([
+    import('sharp'),
+    import('./ticket-email-fonts.ts'),
+  ]);
   const rasterise = sharp as unknown as SharpFactory;
 
   return Promise.all(
@@ -172,7 +175,11 @@ export async function renderTicketEmailArtwork(
       const safeCode = safeFilename(details.displayCode).slice(0, 72);
       const contentId = `naija-ticket-${index + 1}-${safeCode}`.slice(0, 120);
       const image = await rasterise(
-        Buffer.from(ticketSvg(`email-ticket-${index + 1}`, details)),
+        Buffer.from(
+          await outlineTicketEmailText(
+            ticketSvg(`email-ticket-${index + 1}`, details),
+          ),
+        ),
         { density: 144 },
       )
         .png({ compressionLevel: 9, palette: true })

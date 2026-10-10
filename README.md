@@ -69,6 +69,11 @@ After a successful callback, `/payment/status` uses the random 36-character orde
 
 Email delivery runs as background work and is not required for the post-payment ticket page. The email includes the amount paid, purchase date, order reference, real event date, local time, timezone, venue, ticket tier, attendee and entry code, plus the private link to the server-verified QR ticket page. Verified tickets remain immediately available when Resend is missing or temporarily unavailable.
 
+Ticket email PNGs use bundled Noto Sans fonts converted to vector paths before
+rasterisation. They do not depend on fonts installed on the server. The font
+files and their SIL Open Font License are in `assets/ticket-fonts`; they are
+included only in the server bundle and loaded when ticket images are generated.
+
 The branded confirmation and recovery templates are stored in `supabase/templates`. The hosted authentication service requires custom SMTP or a qualifying paid configuration before those templates and a Naija Tickets sender address can be activated. Use a dedicated authentication sender such as `no-reply@auth.yourdomain.com` with SPF, DKIM and DMARC configured.
 
 ### Platform service fee
