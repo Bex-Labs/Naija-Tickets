@@ -25,6 +25,7 @@ export type PaystackInitialization = {
 };
 
 export type PaystackVerification = {
+  domain?: string;
   id: number | string;
   status: string;
   reference: string;
@@ -72,11 +73,12 @@ async function paystackRequest<T>(path: string, init?: RequestInit) {
   const response = await fetch(`${PAYSTACK_API_URL}${path}`, {
     ...init,
     cache: 'no-store',
+    signal: init?.signal ?? AbortSignal.timeout(15000),
     headers,
   });
-  const payload = (await response.json().catch(() => null)) as
-    | PaystackEnvelope<T>
-    | null;
+  const payload = (await response
+    .json()
+    .catch(() => null)) as PaystackEnvelope<T> | null;
   if (!response.ok || !payload?.status) {
     throw new PaystackRequestError(
       payload?.message || 'Paystack could not complete the request.',

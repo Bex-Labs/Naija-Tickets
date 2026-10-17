@@ -2,6 +2,7 @@
 
 import {
   CalendarDays,
+  Code2,
   LayoutDashboard,
   Pencil,
   Plus,
@@ -17,6 +18,7 @@ import { OrganiserPayouts } from '@/components/organiser-payouts';
 import { OrganiserPromoCodes } from '@/components/organiser-promo-codes';
 import { OrganiserAttendees } from '@/components/organiser-attendees';
 import { AccountSignOut } from '@/components/account-sign-out';
+import { OrganiserIntegrations } from '@/components/organiser-integrations';
 import { OrganiserSettings } from '@/components/organiser-settings';
 import { OrganiserVerificationAlert } from '@/components/organiser-verification-alert';
 import {
@@ -37,7 +39,8 @@ type View =
   | 'settings'
   | 'attendees'
   | 'promos'
-  | 'payouts';
+  | 'payouts'
+  | 'integrations';
 type OrganiserProfile = {
   name: string;
   description: string;
@@ -190,6 +193,7 @@ export function OrganiserWorkspace() {
     { id: 'payouts', label: 'Payouts', icon: Wallet },
     { id: 'attendees', label: 'Attendees', icon: Users },
     { id: 'editor', label: 'Create event', icon: Plus },
+    { id: 'integrations', label: 'Developers & Integrations', icon: Code2 },
     { id: 'settings', label: 'Settings', icon: Settings },
   ] as const;
   return (
@@ -419,6 +423,7 @@ export function OrganiserWorkspace() {
           {view === 'payouts' && (
             <OrganiserPayouts onOpenSettings={() => setView('settings')} />
           )}
+          {view === 'integrations' && <OrganiserIntegrations />}
           {view === 'settings' && <OrganiserSettings />}
         </section>
       </div>

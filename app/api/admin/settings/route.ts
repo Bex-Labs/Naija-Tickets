@@ -1,5 +1,13 @@
+import {
+  ADMIN_COOKIE_NAME,
+  adminSessionCookieOptions,
+  createAdminSessionToken,
+} from '@/lib/admin-auth';
 import { NextResponse } from 'next/server';
-import { updateAdminCredentials } from '@/lib/admin-credentials';
+import {
+  updateAdminCredentials,
+  getAdminAccountById,
+} from '@/lib/admin-credentials';
 import { getAuthenticatedAdmin } from '@/lib/admin-request';
 
 export async function GET() {
@@ -62,7 +70,18 @@ export async function PATCH(request: Request) {
       currentPassword,
       newPassword: newPassword || undefined,
     });
-    return NextResponse.json({ ...result, ok: true });
+    const response = NextResponse.json(
+      { ...result, ok: true },
+      { headers: { 'Cache-Control': 'private, no-store' } },
+    );
+    const refreshed = await getAdminAccountById(account.id);
+    if (refreshed)
+      response.cookies.set(
+        ADMIN_COOKIE_NAME,
+        await createAdminSessionToken(refreshed.id, refreshed.passwordHash),
+        adminSessionCookieOptions,
+      );
+    return response;
   } catch (error) {
     const message =
       error instanceof Error
@@ -71,7 +90,7 @@ export async function PATCH(request: Request) {
     const expectedError =
       message.includes('incorrect') ||
       message.includes('letters') ||
-      message.includes('12 characters') ||
+      message.includes('12 to 1024') ||
       message.includes('already in use');
     if (!expectedError) console.error('Admin settings update failed', error);
     return NextResponse.json(

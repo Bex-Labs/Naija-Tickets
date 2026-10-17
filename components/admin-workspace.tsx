@@ -2,6 +2,7 @@
 
 import {
   Building2,
+  Code2,
   CalendarCheck2,
   Check,
   CreditCard,
@@ -16,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { AdminIntegrations } from '@/components/admin-integrations';
 import { AdminSalesOverview } from '@/components/admin-sales-analytics';
 import { AdminVisitorOverview } from '@/components/admin-visitor-analytics';
 import { AdminTransactions } from '@/components/admin-transactions';
@@ -37,7 +39,8 @@ type Tab =
   | 'organisers'
   | 'admins'
   | 'events'
-  | 'settings';
+  | 'settings'
+  | 'integrations';
 
 export function AdminWorkspace() {
   const [events, setEvents] = useState<OrganiserEvent[]>([]);
@@ -172,6 +175,7 @@ export function AdminWorkspace() {
     { id: 'organisers', label: 'Organisers', icon: Building2 },
     { id: 'admins', label: 'Admins', icon: ShieldCheck },
     { id: 'events', label: 'Events & history', icon: CalendarCheck2 },
+    { id: 'integrations', label: 'Integrations', icon: Code2 },
     { id: 'settings', label: 'Settings', icon: Settings },
   ] as const;
 
@@ -444,6 +448,7 @@ export function AdminWorkspace() {
               )}
             </div>
           )}
+          {tab === 'integrations' && <AdminIntegrations />}
           {tab === 'settings' && <AdminSettings />}
         </section>
       </div>

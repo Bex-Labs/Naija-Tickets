@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { accountHomeFromMetadata } from '@/lib/auth-destination';
 import { formatNaira } from '@/lib/events';
+import type { CheckoutReservation } from '@/lib/checkout-service';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export type CheckoutLine = {
@@ -37,6 +38,10 @@ export function CheckoutFlow({
   lines,
   subtotalKobo,
   feeKobo,
+  hostedCheckout,
+  initialReservation,
+  embedded = false,
+  onPayment,
 }: {
   eventId?: string;
   eventSlug: string;
@@ -46,6 +51,18 @@ export function CheckoutFlow({
   lines: CheckoutLine[];
   subtotalKobo: number;
   feeKobo: number;
+  hostedCheckout?: {
+    sessionId: string;
+    access: string;
+    promoCode: string | null;
+    permit?: string;
+  };
+  embedded?: boolean;
+  onPayment?: (result: {
+    authorizationUrl?: string;
+    completed?: boolean;
+  }) => Promise<void>;
+  initialReservation?: CheckoutReservation | null;
 }) {
   const hasGroupTickets = lines.some(
     (line) => (line.admissionsPerTicket || 1) > 1,
@@ -84,26 +101,19 @@ export function CheckoutFlow({
     'idle',
   );
   const [error, setError] = useState('');
-  const [promoCode, setPromoCode] = useState('');
+  const [promoCode, setPromoCode] = useState(hostedCheckout?.promoCode ?? '');
   const [accountPrefill, setAccountPrefill] = useState('');
   const [accountState, setAccountState] = useState<
     'checking' | 'guest' | 'signed-in'
   >('checking');
   const [checkoutLoginUrl, setCheckoutLoginUrl] = useState('/login');
   const [signedInCustomer, setSignedInCustomer] = useState(false);
-  const [reservation, setReservation] = useState<{
-    orderId: string;
-    reference: string;
-    expiresAt: string;
-    subtotalKobo: number;
-    feeKobo: number;
-    totalKobo: number;
-    checkoutToken: string;
-    discountKobo: number;
-    promoCode: string | null;
-  } | null>(null);
+  const [reservation, setReservation] = useState<CheckoutReservation | null>(
+    initialReservation ?? null,
+  );
 
   useEffect(() => {
+    if (embedded) return;
     const firstAdmission = admissions[0];
     if (!firstAdmission) return;
     let active = true;
@@ -146,7 +156,7 @@ export function CheckoutFlow({
     return () => {
       active = false;
     };
-  }, [admissions]);
+  }, [admissions, embedded]);
 
   const updateAttendee = (key: string, field: keyof Attendee, value: string) =>
     setAttendees((current) => ({
@@ -165,7 +175,9 @@ export function CheckoutFlow({
     setStatus('saving');
     setError('');
     try {
-      const { data } = await getSupabaseBrowserClient().auth.getSession();
+      const data = embedded
+        ? { session: null }
+        : (await getSupabaseBrowserClient().auth.getSession()).data;
       if (!eventId || lines.some((line) => !line.ticketTypeId)) {
         throw new Error(
           'This event is not available for checkout. Return to the event page and choose an available ticket.',
@@ -186,16 +198,29 @@ export function CheckoutFlow({
       if (data.session) {
         headers.Authorization = `Bearer ${data.session.access_token}`;
       }
-      const response = await fetch('/api/checkout/reservations', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          eventId,
-          items,
-          purchaser: firstAttendee,
-          promoCode,
-        }),
-      });
+      const response = await fetch(
+        hostedCheckout
+          ? `/api/integrations/checkout/${hostedCheckout.sessionId}/reserve`
+          : '/api/checkout/reservations',
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            ...(hostedCheckout
+              ? {
+                  access: hostedCheckout.access,
+                  ...(hostedCheckout.permit
+                    ? { permit: hostedCheckout.permit }
+                    : {}),
+                }
+              : {}),
+            eventId,
+            items,
+            purchaser: firstAttendee,
+            promoCode,
+          }),
+        },
+      );
       const result = (await response.json()) as {
         reservation?: {
           orderId: string;
@@ -230,16 +255,29 @@ export function CheckoutFlow({
     setPaymentStatus('starting');
     setError('');
     try {
-      const response = await fetch('/api/payments/paystack/initialize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        hostedCheckout
+          ? `/api/integrations/checkout/${hostedCheckout.sessionId}/pay`
+          : '/api/payments/paystack/initialize',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...(hostedCheckout
+              ? {
+                  access: hostedCheckout.access,
+                  ...(hostedCheckout.permit
+                    ? { permit: hostedCheckout.permit }
+                    : {}),
+                }
+              : {}),
+            orderId: reservation.orderId,
+            checkoutToken: reservation.checkoutToken,
+          }),
         },
-        body: JSON.stringify({
-          orderId: reservation.orderId,
-          checkoutToken: reservation.checkoutToken,
-        }),
-      });
+      );
       const result = (await response.json()) as {
         authorizationUrl?: string;
         completed?: boolean;
@@ -251,6 +289,11 @@ export function CheckoutFlow({
         throw new Error(
           `${result.error || 'Payment could not be started.'}${result.code ? ` (${result.code})` : ''}`,
         );
+      }
+      if (embedded && onPayment) {
+        await onPayment(result);
+        setPaymentStatus('idle');
+        return;
       }
       if (result.completed && result.statusUrl) {
         window.location.assign(result.statusUrl);
@@ -279,7 +322,13 @@ export function CheckoutFlow({
 
   if (reservation) {
     return (
-      <section className="mx-auto max-w-3xl px-4 py-8 sm:px-5 sm:py-16 md:px-10 md:py-24">
+      <section
+        className={
+          embedded
+            ? 'mx-auto max-w-3xl p-4'
+            : 'mx-auto max-w-3xl px-4 py-8 sm:px-5 sm:py-16 md:px-10 md:py-24'
+        }
+      >
         <div className="border border-emerald-500/30 bg-white p-4 shadow-sm sm:p-10">
           <ol className="grid grid-cols-3 border border-[#241b3f]/10 bg-[#fffaf0] p-4 text-center text-xs font-bold">
             {['Tickets', 'Attendees', 'Payment'].map((label, index) => (
@@ -370,14 +419,16 @@ export function CheckoutFlow({
               {error}
             </output>
           )}
-          <div className="mt-7 flex flex-wrap gap-5">
-            <a
-              href={`/events/${eventSlug}`}
-              className="inline-flex min-h-11 items-center gap-2 font-bold text-emerald-700"
-            >
-              <ArrowLeft className="h-4 w-4" /> Back to event
-            </a>
-          </div>
+          {!embedded && (
+            <div className="mt-7 flex flex-wrap gap-5">
+              <a
+                href={`/events/${eventSlug}`}
+                className="inline-flex min-h-11 items-center gap-2 font-bold text-emerald-700"
+              >
+                <ArrowLeft className="h-4 w-4" /> Back to event
+              </a>
+            </div>
+          )}
         </div>
       </section>
     );
@@ -386,7 +437,11 @@ export function CheckoutFlow({
   return (
     <form
       onSubmit={submit}
-      className="mx-auto grid max-w-7xl gap-8 px-4 py-7 sm:px-5 sm:py-10 md:px-10 lg:grid-cols-[1fr_23rem] lg:py-16"
+      className={
+        embedded
+          ? 'mx-auto grid max-w-3xl gap-5 p-4'
+          : 'mx-auto grid max-w-7xl gap-8 px-4 py-7 sm:px-5 sm:py-10 md:px-10 lg:grid-cols-[1fr_23rem] lg:py-16'
+      }
     >
       <section>
         <ol className="grid grid-cols-3 border border-[#241b3f]/10 bg-white p-4 text-center text-xs font-bold sm:p-5">
@@ -429,7 +484,7 @@ export function CheckoutFlow({
                 : '.'}
             </p>
           )}
-          {accountState === 'guest' && (
+          {!embedded && accountState === 'guest' && (
             <p className="mt-3 border border-amber-400/30 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950">
               <a href={checkoutLoginUrl} className="font-black underline">
                 Log in before checkout
@@ -548,7 +603,7 @@ export function CheckoutFlow({
               id="promo-code"
               value={promoCode}
               maxLength={32}
-              disabled={status !== 'idle'}
+              disabled={status !== 'idle' || Boolean(hostedCheckout?.promoCode)}
               autoComplete="off"
               onChange={(event) =>
                 setPromoCode(event.target.value.toUpperCase())

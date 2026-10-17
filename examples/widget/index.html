@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Naija Tickets · External widget example</title>
+    <link rel="stylesheet" href="example.css" />
+    <script src="example.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <span>EXTERNAL WEBSITE EXAMPLE</span>
+        <h1>Your event. Your website.<br />Tickets by Naija.</h1>
+        <p>
+          This page is a separate website. Its ticket chooser loads from your
+          configured Naija Tickets deployment.
+        </p>
+      </header>
+      <details open id="configuration">
+        <summary>Connect your public widget</summary>
+        <form id="setup">
+          <label for="api">Naija Tickets website origin</label
+          ><input id="api" type="url" value="http://127.0.0.1:3016" required />
+          <label for="widget">Public widget ID</label
+          ><input id="widget" placeholder="nt_widget_…" required />
+          <label for="event">Assigned event ID</label
+          ><input id="event" required /> <label for="mode">Environment</label
+          ><select id="mode">
+            <option value="test">Test</option>
+            <option value="live">Live</option>
+          </select>
+          <label for="appearance">Appearance</label><select id="appearance">
+            <option value="light">Light</option><option value="dark">Dark</option>
+          </select>
+          <label for="accent">Accent</label><select id="accent">
+            <option value="green">Green</option><option value="blue">Blue</option><option value="violet">Violet</option>
+          </select>
+          <label for="button">Button style</label><select id="button">
+            <option value="rounded">Rounded</option><option value="square">Square</option>
+          </select>
+          <button type="submit">Load ticket widget</button>
+          <p id="error" role="alert"></p>
+        </form>
+      </details>
+      <nav aria-label="Widget preview width">
+        <button type="button" data-width="320">320px</button
+        ><button type="button" data-width="390">390px</button
+        ><button type="button" data-width="768">768px</button
+        ><button type="button" data-width="100%">Full width</button>
+      </nav>
+      <section id="preview" aria-label="Ticket selection preview">
+        <div id="mount"></div>
+      </section>
+      <footer>
+        No API secrets, buyer details or payment information belong on this
+        page. A return URL or status parameter is not proof of payment. Use your
+        server’s authenticated checkout-status API to verify a purchase.
+      </footer>
+    </main>
+  </body>
+</html>

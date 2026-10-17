@@ -1,0 +1,450 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Naija Tickets Phase 4 webhooks",
+    "version": "2026-10-16",
+    "description": "Additive to the Phase 3 public API. See integrations-phase4.md for complete management DTOs, limits, signing and retry semantics."
+  },
+  "paths": {
+    "/api/organiser/integrations/{id}/webhooks": {
+      "get": {
+        "summary": "Endpoint metadata and 20 deliveries with bounded attempt history",
+        "security": [
+          {
+            "OrganiserJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private/no-store success envelope: data plus request metadata."
+          },
+          "401": {
+            "description": "Confirmed organiser sign-in required."
+          },
+          "403": {
+            "description": "Explicit management permission and same-origin required."
+          }
+        }
+      },
+      "post": {
+        "summary": "Create endpoint; returns ID and signing secret once",
+        "security": [
+          {
+            "OrganiserJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private/no-store success envelope: data plus request metadata."
+          },
+          "401": {
+            "description": "Confirmed organiser sign-in required."
+          },
+          "403": {
+            "description": "Explicit management permission and same-origin required."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["environment", "url", "events"],
+                "properties": {
+                  "environment": {
+                    "enum": ["test", "live"]
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 2048
+                  },
+                  "events": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 6,
+                    "uniqueItems": true,
+                    "items": {
+                      "enum": [
+                        "order.created",
+                        "order.paid",
+                        "group.admissions_reserved",
+                        "ticket.issued",
+                        "ticket.checked_in",
+                        "refund.completed"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organiser/integrations/{id}/webhooks/{endpointId}": {
+      "patch": {
+        "summary": "Enable, pause or rotate endpoint signing secret",
+        "security": [
+          {
+            "OrganiserJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "endpointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private/no-store success envelope: data plus request metadata."
+          },
+          "401": {
+            "description": "Confirmed organiser sign-in required."
+          },
+          "403": {
+            "description": "Explicit management permission and same-origin required."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["enabled"],
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "rotate": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Retire endpoint while retaining history",
+        "security": [
+          {
+            "OrganiserJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "endpointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private/no-store success envelope: data plus request metadata."
+          },
+          "401": {
+            "description": "Confirmed organiser sign-in required."
+          },
+          "403": {
+            "description": "Explicit management permission and same-origin required."
+          }
+        }
+      }
+    },
+    "/api/organiser/integrations/{id}/webhooks/deliveries/{deliveryId}/retry": {
+      "post": {
+        "summary": "Queue exhausted delivery for bounded retry",
+        "security": [
+          {
+            "OrganiserJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "deliveryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private/no-store success envelope: data plus request metadata."
+          },
+          "401": {
+            "description": "Confirmed organiser sign-in required."
+          },
+          "403": {
+            "description": "Explicit management permission and same-origin required."
+          }
+        }
+      }
+    },
+    "/api/internal/integrations/dispatch": {
+      "get": {
+        "summary": "Protected bounded dispatch; GET supports daily Vercel Cron",
+        "security": [
+          {
+            "SchedulerSecret": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attempted/succeeded counts"
+          },
+          "401": {
+            "description": "Incorrect or missing CRON_SECRET"
+          },
+          "503": {
+            "description": "Disabled, unconfigured or temporarily unavailable"
+          }
+        }
+      },
+      "post": {
+        "summary": "Protected bounded dispatch; GET supports daily Vercel Cron",
+        "security": [
+          {
+            "SchedulerSecret": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attempted/succeeded counts"
+          },
+          "401": {
+            "description": "Incorrect or missing CRON_SECRET"
+          },
+          "503": {
+            "description": "Disabled, unconfigured or temporarily unavailable"
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {
+    "integrationEvent": {
+      "post": {
+        "summary": "At-least-once signed notification. Verify exact raw body and durably deduplicate event ID.",
+        "parameters": [
+          {
+            "name": "Naija-Webhook-Id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Naija-Webhook-Timestamp",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Naija-Webhook-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Durably accepted, including duplicate IDs with the same body."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "OrganiserJWT": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "SchedulerSecret": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "WebhookEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "api_version",
+          "created_at",
+          "environment",
+          "integration_id",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "enum": [
+              "order.created",
+              "order.paid",
+              "group.admissions_reserved",
+              "ticket.issued",
+              "ticket.checked_in",
+              "refund.completed"
+            ]
+          },
+          "api_version": {
+            "const": "2026-10-16"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "environment": {
+            "enum": ["test", "live"]
+          },
+          "integration_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["checkout_session_id", "order_id", "event_id"],
+            "properties": {
+              "checkout_session_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "order_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "event_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "amount_kobo": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "currency": {
+                "const": "NGN"
+              },
+              "group_booking_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "admissions": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 400
+              },
+              "ticket_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "checked_in_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "refund_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

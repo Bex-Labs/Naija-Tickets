@@ -41,7 +41,11 @@ export default defineConfig(async ({ command, isPreview }) => {
     // builds; its custom dev runner conflicts with the RSC middleware here.
     const productionPlugins =
       command === 'build' || isPreview
-        ? (await import('nitro/vite')).nitro()
+        ? (await import('nitro/vite')).nitro({
+            vercel: {
+              functions: { maxDuration: 60 },
+            },
+          })
         : [];
 
     return {

@@ -1,76 +1,16 @@
 import { NextResponse, after } from 'next/server';
+import { startCheckoutPayment } from '@/lib/payment-start';
+import { getSupabaseAdminClient } from '@/lib/supabase/server';
 import {
   getTrustedAppOrigin,
   initializePaystackTransaction,
-  PaystackRequestError,
-  sha256Hex,
 } from '@/lib/paystack';
-import { getSupabaseAdminClient } from '@/lib/supabase/server';
 import { deliverOrderTickets } from '@/lib/ticket-delivery';
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-type PreparedPayment = {
-  outcome: string;
-  order_id: string | null;
-  order_reference: string | null;
-  payment_reference: string | null;
-  amount_kobo: number | string | null;
-  currency: string | null;
-  expires_at: string | null;
-  authorization_url: string | null;
-  purchaser_email: string | null;
-};
-
-function paymentStartFailure(error: unknown) {
-  const message = error instanceof Error ? error.message : '';
-  const databaseCode =
-    error && typeof error === 'object' && 'code' in error
-      ? String(error.code)
-      : '';
-  if (message === 'Paystack is not configured.') {
-    return {
-      status: 503,
-      code: 'PAYMENT_KEY_MISSING',
-      error: 'Online payments are not configured yet. Please contact support.',
-    };
-  }
-  if (message.startsWith('APP_URL ')) {
-    return {
-      status: 503,
-      code: 'PAYMENT_RETURN_URL',
-      error: 'The payment return address is not configured. Please contact support.',
-    };
-  }
-  if (['PGRST202', 'PGRST204', '42883', '42703', '42P01'].includes(databaseCode)) {
-    return {
-      status: 503,
-      code: 'PAYMENT_DATABASE_SETUP',
-      error: 'Payment setup is incomplete. Please contact support.',
-    };
-  }
-  if (error instanceof PaystackRequestError) {
-    if (error.status === 401 || error.status === 403) {
-      return {
-        status: 503,
-        code: 'PAYMENT_PROVIDER_AUTH',
-        error: 'The payment provider is not connected correctly. Please contact support.',
-      };
-    }
-    return {
-      status: 502,
-      code: 'PAYMENT_PROVIDER_REJECTED',
-      error: 'The payment provider could not start this payment. Please try again shortly.',
-    };
-  }
-  return {
-    status: 502,
-    code: 'PAYMENT_START_FAILED',
-    error: 'Payment could not be started. Please try again.',
-  };
-}
-
+import { UUID_PATTERN } from '@/lib/checkout-reservation-validation';
+import {
+  integrationCompletedUrl,
+  requireAttributedPaymentConfiguration,
+} from '@/lib/integrations/checkout-sessions.server';
 export async function POST(request: Request) {
   let body: unknown;
   try {
@@ -78,205 +18,45 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }
-  const orderId =
-    body && typeof body === 'object'
-      ? (body as Record<string, unknown>).orderId
-      : null;
-  const checkoutToken =
-    body && typeof body === 'object'
-      ? (body as Record<string, unknown>).checkoutToken
-      : null;
+  const values =
+    body && typeof body === 'object' ? (body as Record<string, unknown>) : {};
   if (
-    typeof orderId !== 'string' ||
-    !UUID_PATTERN.test(orderId) ||
-    typeof checkoutToken !== 'string' ||
-    !/^[a-f0-9]{64}$/.test(checkoutToken)
-  ) {
+    typeof values.orderId !== 'string' ||
+    !UUID_PATTERN.test(values.orderId) ||
+    typeof values.checkoutToken !== 'string' ||
+    !/^[a-f0-9]{64}$/.test(values.checkoutToken)
+  )
     return NextResponse.json({ error: 'Invalid order.' }, { status: 400 });
-  }
-
-  const admin = getSupabaseAdminClient();
+  // Attribution/mode checks protect hosted orders even at this legacy endpoint.
   try {
-    const { data, error } = await admin.rpc('prepare_paystack_payment', {
-      p_order_id: orderId,
-      p_checkout_token_hash: await sha256Hex(checkoutToken),
-    });
-    if (error) throw error;
-    const prepared = (Array.isArray(data) ? data[0] : data) as
-      | PreparedPayment
-      | undefined;
-    if (!prepared) throw new Error('The payment could not be prepared.');
-
-    if (prepared.outcome === 'not_found') {
-      return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
-    }
-    if (prepared.outcome === 'expired') {
-      return NextResponse.json(
-        { error: 'This ticket reservation has expired.' },
-        { status: 409 },
-      );
-    }
-    if (prepared.outcome === 'already_paid') {
-      let delivery = 'not_ready';
-      if (prepared.order_id) {
-        after(deliverOrderTickets(prepared.order_id));
-        delivery = 'in_progress';
-      }
-      return NextResponse.json({
-        completed: true,
-        statusUrl: `/payment/status?result=success&reference=${encodeURIComponent(prepared.order_reference || '')}&delivery=${encodeURIComponent(delivery)}`,
-      });
-    }
-    if (prepared.outcome === 'free') {
-      const { data: completedData, error: completedError } = await admin.rpc(
-        'complete_free_checkout',
-        {
-          p_order_id: orderId,
-          p_checkout_token_hash: await sha256Hex(checkoutToken),
-        },
-      );
-      if (completedError) throw completedError;
-      const completed = Array.isArray(completedData)
-        ? completedData[0]
-        : completedData;
-      if (
-        !completed ||
-        !['success', 'already_paid'].includes(completed.outcome)
-      ) {
-        return NextResponse.json(
-          { error: 'The free booking could not be completed.' },
-          { status: 409 },
-        );
-      }
-      after(deliverOrderTickets(orderId));
-      return NextResponse.json({
-        completed: true,
-        statusUrl: `/payment/status?result=success&reference=${encodeURIComponent(completed.order_reference)}&delivery=in_progress`,
-      });
-    }
-    if (prepared.outcome !== 'ready') {
-      return NextResponse.json(
-        { error: 'This order is not available for payment.' },
-        { status: 409 },
-      );
-    }
-    if (prepared.authorization_url) {
-      return NextResponse.json({
-        authorizationUrl: prepared.authorization_url,
-        reference: prepared.payment_reference,
-      });
-    }
-
-    const amountKobo = Number(prepared.amount_kobo);
-    if (
-      !Number.isSafeInteger(amountKobo) ||
-      amountKobo <= 0 ||
-      prepared.currency !== 'NGN' ||
-      !prepared.payment_reference ||
-      !prepared.order_reference ||
-      !prepared.purchaser_email
-    ) {
-      throw new Error('The stored order total is invalid.');
-    }
-
-    try {
-      const { data: settlementOrder, error: settlementOrderError } =
-        await admin
-          .from('orders')
-          .select('fee_kobo,events!inner(organiser_id)')
-          .eq('id', orderId)
-          .single();
-      if (settlementOrderError) throw settlementOrderError;
-      const eventRelation = settlementOrder.events as
-        | { organiser_id: string }
-        | { organiser_id: string }[];
-      const organiserId = Array.isArray(eventRelation)
-        ? eventRelation[0]?.organiser_id
-        : eventRelation?.organiser_id;
-      if (!organiserId) throw new Error('The event organiser is unavailable.');
-      const { data: payoutData, error: payoutError } = await admin
-        .from('organiser_payout_accounts')
-        .select('provider_subaccount_code,direct_settlement_enabled')
-        .eq('organiser_id', organiserId)
-        .eq('direct_settlement_enabled', true)
-        .maybeSingle();
-      const payoutTablePending = ['PGRST205', '42P01'].includes(
-        payoutError?.code || '',
-      );
-      if (payoutError && !payoutTablePending) throw payoutError;
-      const payout = payoutTablePending ? null : payoutData;
-      const feeKobo = Number(settlementOrder.fee_kobo);
-      if (!Number.isSafeInteger(feeKobo) || feeKobo < 0) {
-        throw new Error('The stored service fee is invalid.');
-      }
-      const callbackUrl = `${getTrustedAppOrigin(request.url)}/payment/callback`;
-      const initialization = await initializePaystackTransaction({
-        email: prepared.purchaser_email,
-        amountKobo,
-        currency: prepared.currency,
-        reference: prepared.payment_reference,
-        callbackUrl,
-        orderReference: prepared.order_reference,
-        subaccountCode: payout?.provider_subaccount_code,
-        transactionChargeKobo: payout ? feeKobo : undefined,
-      });
-      const result = initialization.data;
-      const checkoutUrl = new URL(result.authorization_url);
-      if (
-        result.reference !== prepared.payment_reference ||
-        checkoutUrl.protocol !== 'https:' ||
-        checkoutUrl.hostname !== 'checkout.paystack.com'
-      ) {
-        throw new Error('Paystack returned an invalid checkout session.');
-      }
-
-      const splitAudit = payout
-        ? {
-            provider_subaccount_code: payout.provider_subaccount_code,
-            platform_transaction_charge_kobo: feeKobo,
-          }
-        : {};
-      const { error: updateError } = await admin
-        .from('payments')
-        .update({
-          status: 'pending',
-          authorization_url: checkoutUrl.toString(),
-          access_code: result.access_code,
-          initialization_response: initialization,
-          provider_status: 'initialized',
-          ...splitAudit,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('provider', 'paystack')
-        .eq('provider_reference', prepared.payment_reference);
-      if (updateError) throw updateError;
-
-      return NextResponse.json({
-        authorizationUrl: checkoutUrl.toString(),
-        reference: prepared.payment_reference,
-      });
-    } catch (initializationError) {
-      const { error: cleanupError } = await admin
-        .from('payments')
-        .update({
-          status: 'failed',
-          provider_status: 'initialization_failed',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('provider', 'paystack')
-        .eq('provider_reference', prepared.payment_reference)
-        .eq('status', 'initialized');
-      if (cleanupError) {
-        console.error('Paystack attempt cleanup failed', cleanupError);
-      }
-      throw initializationError;
-    }
-  } catch (error) {
-    console.error('Paystack initialization failed', error);
-    const failure = paymentStartFailure(error);
+    await requireAttributedPaymentConfiguration(
+      values.orderId,
+      values.checkoutToken,
+    );
+  } catch {
     return NextResponse.json(
-      { error: failure.error, code: failure.code },
-      { status: failure.status },
+      {
+        error: 'This checkout is not available for payment.',
+        code: 'CHECKOUT_NOT_CONFIGURED',
+      },
+      { status: 503 },
     );
   }
+  const result = await startCheckoutPayment(
+    {
+      orderId: values.orderId,
+      checkoutToken: values.checkoutToken,
+      requestUrl: request.url,
+    },
+    {
+      client: getSupabaseAdminClient(),
+      initialize: initializePaystackTransaction,
+      origin: getTrustedAppOrigin,
+      deliver: (orderId) => after(deliverOrderTickets(orderId)),
+      completedUrl: integrationCompletedUrl,
+      log: (metadata) =>
+        console.info('payment_start', JSON.stringify(metadata)),
+    },
+  );
+  return NextResponse.json(result.body, { status: result.status });
 }

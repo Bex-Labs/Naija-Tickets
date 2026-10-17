@@ -11,7 +11,9 @@
     "start": "vite preview --port 3000",
     "lint": "oxlint",
     "format": "oxfmt",
-    "test": "node --test lib/*.test.ts"
+    "test": "node --test --test-concurrency=4 lib/*.test.ts",
+    "test:integrations:concurrency": "node --test scripts/integration-checkout-concurrency.test.ts",
+    "integrations:readiness": "node --env-file-if-exists=.env.local scripts/check-integration-readiness.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",

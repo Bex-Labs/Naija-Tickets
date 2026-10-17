@@ -1,0 +1,12 @@
+{
+  "schemaVersion":1,
+  "deploymentOrigin":null,
+  "environment":"test",
+  "public_purchase_return": {"status":"pending"},
+  "free_group_claim_entry": {"status":"pending"},
+  "widget_browser": {"status":"pending"},
+  "durable_receiver": {"status":"pending"},
+  "scheduled_delivery": {"status":"pending"},
+  "security_load_review": {"status":"pending"},
+  "physical_mobile": {"status":"pending"}
+}

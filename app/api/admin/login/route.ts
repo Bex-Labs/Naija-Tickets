@@ -1,3 +1,7 @@
+import { limitAdminSignIn, parseAdminSignIn } from '@/lib/admin-login';
+import { integrationApiDependencies } from '@/lib/integrations/store.server';
+import { readIntegrationJson } from '@/lib/integrations/validation';
+import { IntegrationError } from '@/lib/integrations/errors';
 import { NextResponse } from 'next/server';
 import {
   ADMIN_COOKIE_NAME,
@@ -10,23 +14,38 @@ import {
 } from '@/lib/admin-credentials';
 
 export async function POST(request: Request) {
-  let body: unknown;
-
+  let body: { username: string; password: string };
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
-  }
-
-  if (
-    !body ||
-    typeof body !== 'object' ||
-    !('username' in body) ||
-    !('password' in body) ||
-    typeof body.username !== 'string' ||
-    typeof body.password !== 'string'
-  ) {
-    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
+    const origin = request.headers.get('origin');
+    if (origin && origin !== new URL(request.url).origin)
+      throw new IntegrationError(
+        403,
+        'INVALID_ORIGIN',
+        'Use the administrator sign-in page.',
+      );
+    body = parseAdminSignIn(await readIntegrationJson(request, 4096));
+    await limitAdminSignIn(request, body.username, integrationApiDependencies);
+  } catch (cause) {
+    const error =
+      cause instanceof IntegrationError
+        ? cause
+        : new IntegrationError(
+            503,
+            'AUTH_UNAVAILABLE',
+            'Administrator sign-in is temporarily unavailable.',
+          );
+    return NextResponse.json(
+      { error: error.message },
+      {
+        status: error.status,
+        headers: {
+          'Cache-Control': 'private, no-store',
+          ...(error.retryAfter
+            ? { 'Retry-After': String(error.retryAfter) }
+            : {}),
+        },
+      },
+    );
   }
 
   const requiredSettings = {
@@ -78,10 +97,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const response = NextResponse.json({ ok: true });
+  const response = NextResponse.json(
+    { ok: true },
+    { headers: { 'Cache-Control': 'private, no-store' } },
+  );
   response.cookies.set(
     ADMIN_COOKIE_NAME,
-    await createAdminSessionToken(account.id),
+    await createAdminSessionToken(account.id, account.passwordHash),
     adminSessionCookieOptions,
   );
   return response;
