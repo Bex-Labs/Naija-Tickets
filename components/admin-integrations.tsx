@@ -1,4 +1,5 @@
 'use client';
+import { IntegrationSalesReport } from './integration-sales-report';
 import { useEffect, useState, useRef, type SyntheticEvent } from 'react';
 import type {
   AdminIntegrationOverview,
@@ -316,6 +317,9 @@ export function AdminIntegrations() {
               Close
             </button>
           </div>
+          {activity?.hosted && (
+            <IntegrationSalesReport report={activity.hosted} />
+          )}
           <h3 className="mt-4 font-bold">Recent API activity</h3>
           <div className="mt-2 divide-y border-y">
             {activity?.requests.map((r) => (

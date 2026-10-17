@@ -3,8 +3,8 @@ import test from 'node:test';
 import middleware from '../middleware.ts';
 const id = '10000000-0000-4000-8000-000000000001',
   access = 'a'.repeat(64);
-void test('hosted capability handoff works with a standard Web Request and strips its query', async () => {
-  const r = await middleware(
+void test('hosted capability handoff works with a standard Web Request and strips its query', () => {
+  const r = middleware(
     new Request(
       `https://sandbox.example/integrations/checkout/${id}?access=${access}&ignored=value`,
     ),
@@ -23,13 +23,13 @@ void test('hosted capability handoff works with a standard Web Request and strip
   assert.equal(r.headers.get('referrer-policy'), 'no-referrer');
   assert.equal(r.headers.get('x-middleware-next'), null);
 });
-void test('malformed capabilities and non-GET requests cannot create hosted cookies', async () => {
+void test('malformed capabilities and non-GET requests cannot create hosted cookies', () => {
   for (const [path, method] of [
     [`/integrations/checkout/${id}?access=invalid`, 'GET'],
     [`/integrations/checkout/${id}/other?access=${access}`, 'GET'],
     [`/integrations/checkout/${id}?access=${access}`, 'POST'],
   ]) {
-    const r = await middleware(
+    const r = middleware(
       new Request('https://sandbox.example' + path, { method }),
     );
     assert.equal(r.headers.get('set-cookie'), null);

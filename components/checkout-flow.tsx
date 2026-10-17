@@ -40,8 +40,9 @@ export function CheckoutFlow({
   feeKobo,
   hostedCheckout,
   initialReservation,
-  embedded = false,
-  onPayment,
+  standalone = false,
+  initialCustomer,
+  onReserved,
 }: {
   eventId?: string;
   eventSlug: string;
@@ -55,15 +56,13 @@ export function CheckoutFlow({
     sessionId: string;
     access: string;
     promoCode: string | null;
-    permit?: string;
   };
-  embedded?: boolean;
-  onPayment?: (result: {
-    authorizationUrl?: string;
-    completed?: boolean;
-  }) => Promise<void>;
+  standalone?: boolean;
+  onReserved?: () => void;
+  initialCustomer?: Partial<Attendee>;
   initialReservation?: CheckoutReservation | null;
 }) {
+  const Heading = standalone ? 'h2' : 'h1';
   const hasGroupTickets = lines.some(
     (line) => (line.admissionsPerTicket || 1) > 1,
   );
@@ -95,7 +94,17 @@ export function CheckoutFlow({
     ],
     [lines, hasGroupTickets],
   );
-  const [attendees, setAttendees] = useState<Record<string, Attendee>>({});
+  const [attendees, setAttendees] = useState<Record<string, Attendee>>(() =>
+    initialCustomer && admissions[0]
+      ? {
+          [admissions[0].key]: {
+            name: initialCustomer.name ?? '',
+            email: initialCustomer.email ?? '',
+            phone: initialCustomer.phone ?? '',
+          },
+        }
+      : {},
+  );
   const [status, setStatus] = useState<'idle' | 'saving' | 'reserved'>('idle');
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'starting'>(
     'idle',
@@ -113,7 +122,6 @@ export function CheckoutFlow({
   );
 
   useEffect(() => {
-    if (embedded) return;
     const firstAdmission = admissions[0];
     if (!firstAdmission) return;
     let active = true;
@@ -156,7 +164,7 @@ export function CheckoutFlow({
     return () => {
       active = false;
     };
-  }, [admissions, embedded]);
+  }, [admissions]);
 
   const updateAttendee = (key: string, field: keyof Attendee, value: string) =>
     setAttendees((current) => ({
@@ -175,9 +183,7 @@ export function CheckoutFlow({
     setStatus('saving');
     setError('');
     try {
-      const data = embedded
-        ? { session: null }
-        : (await getSupabaseBrowserClient().auth.getSession()).data;
+      const { data } = await getSupabaseBrowserClient().auth.getSession();
       if (!eventId || lines.some((line) => !line.ticketTypeId)) {
         throw new Error(
           'This event is not available for checkout. Return to the event page and choose an available ticket.',
@@ -209,9 +215,6 @@ export function CheckoutFlow({
             ...(hostedCheckout
               ? {
                   access: hostedCheckout.access,
-                  ...(hostedCheckout.permit
-                    ? { permit: hostedCheckout.permit }
-                    : {}),
                 }
               : {}),
             eventId,
@@ -239,6 +242,7 @@ export function CheckoutFlow({
         throw new Error(result.error || 'Tickets could not be reserved.');
       }
       setReservation(result.reservation);
+      onReserved?.();
       setStatus('reserved');
     } catch (submitError) {
       setError(
@@ -268,9 +272,6 @@ export function CheckoutFlow({
             ...(hostedCheckout
               ? {
                   access: hostedCheckout.access,
-                  ...(hostedCheckout.permit
-                    ? { permit: hostedCheckout.permit }
-                    : {}),
                 }
               : {}),
             orderId: reservation.orderId,
@@ -289,11 +290,6 @@ export function CheckoutFlow({
         throw new Error(
           `${result.error || 'Payment could not be started.'}${result.code ? ` (${result.code})` : ''}`,
         );
-      }
-      if (embedded && onPayment) {
-        await onPayment(result);
-        setPaymentStatus('idle');
-        return;
       }
       if (result.completed && result.statusUrl) {
         window.location.assign(result.statusUrl);
@@ -324,7 +320,7 @@ export function CheckoutFlow({
     return (
       <section
         className={
-          embedded
+          standalone
             ? 'mx-auto max-w-3xl p-4'
             : 'mx-auto max-w-3xl px-4 py-8 sm:px-5 sm:py-16 md:px-10 md:py-24'
         }
@@ -349,9 +345,9 @@ export function CheckoutFlow({
             <TicketCheck className="h-6 w-6" />
           </span>
           <p className="eyebrow mt-5 sm:mt-7">Payment</p>
-          <h1 className="mt-3 text-3xl font-black tracking-[-.04em] sm:text-4xl">
+          <Heading className="mt-3 text-3xl font-black tracking-[-.04em] sm:text-4xl">
             Your tickets are held. Pay securely now.
-          </h1>
+          </Heading>
           <p className="mt-4 leading-7 text-slate-600">
             Reference{' '}
             <strong className="text-[#241b3f]">{reservation.reference}</strong>
@@ -419,7 +415,7 @@ export function CheckoutFlow({
               {error}
             </output>
           )}
-          {!embedded && (
+          {!standalone && (
             <div className="mt-7 flex flex-wrap gap-5">
               <a
                 href={`/events/${eventSlug}`}
@@ -438,7 +434,7 @@ export function CheckoutFlow({
     <form
       onSubmit={submit}
       className={
-        embedded
+        standalone
           ? 'mx-auto grid max-w-3xl gap-5 p-4'
           : 'mx-auto grid max-w-7xl gap-8 px-4 py-7 sm:px-5 sm:py-10 md:px-10 lg:grid-cols-[1fr_23rem] lg:py-16'
       }
@@ -465,11 +461,11 @@ export function CheckoutFlow({
         </ol>
         <div className="mt-7">
           <p className="eyebrow">Checkout</p>
-          <h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">
+          <Heading className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">
             {hasGroupTickets
               ? 'Your booking details'
               : 'Who are the tickets for?'}
-          </h1>
+          </Heading>
           <p className="mt-3 text-sm leading-6 text-slate-600">
             {hasGroupTickets
               ? 'Enter your own details for the group booking. After payment, share the group link so each member can claim their ticket. Any individual tickets are registered below.'
@@ -484,7 +480,7 @@ export function CheckoutFlow({
                 : '.'}
             </p>
           )}
-          {!embedded && accountState === 'guest' && (
+          {!standalone && accountState === 'guest' && (
             <p className="mt-3 border border-amber-400/30 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950">
               <a href={checkoutLoginUrl} className="font-black underline">
                 Log in before checkout

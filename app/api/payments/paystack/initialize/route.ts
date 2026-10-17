@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       initialize: initializePaystackTransaction,
       origin: getTrustedAppOrigin,
       deliver: (orderId) => after(deliverOrderTickets(orderId)),
-      completedUrl: integrationCompletedUrl,
+      completedUrl: (orderId) => integrationCompletedUrl(orderId, request.url),
       log: (metadata) =>
         console.info('payment_start', JSON.stringify(metadata)),
     },

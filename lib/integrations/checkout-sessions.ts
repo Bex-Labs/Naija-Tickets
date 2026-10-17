@@ -1,4 +1,3 @@
-import { popupUrl } from './checkout-popup.ts';
 import { IntegrationError } from './errors.ts';
 import {
   integrationApiHandler,
@@ -25,6 +24,8 @@ export type CheckoutIntent = {
   promo_code: string | null;
   return_url: string;
   cancel_url: string;
+  customer?: { email?: string; name?: string; phone?: string };
+  external_reference?: string;
 };
 export type StoredCheckoutSession = HostedSessionIdentity & {
   event_id: string;
@@ -40,9 +41,10 @@ export type StoredCheckoutSession = HostedSessionIdentity & {
   tickets_issued: number;
   members_registered: number;
   capability_hash: string;
+  source?: 'hosted_api' | 'hosted_link' | 'legacy_widget';
+  external_reference?: string | null;
 };
 export type CheckoutSessionDependencies = {
-  popupEnabled?(): boolean;
   signingKeys(): CheckoutSigningKeys;
   requireConfiguration(context: IntegrationContext): void;
   origin(request: Request): string;
@@ -111,9 +113,14 @@ export function parseCheckoutIntent(
     'promo_code',
     'return_url',
     'cancel_url',
+    'customer',
+    'external_reference',
   ]);
-  if (!Array.isArray(row.items) || !row.items.length || row.items.length > 20)
-    return invalid('Choose 1 to 20 ticket types.');
+  if (row.items === undefined) row.items = [];
+  if (!Array.isArray(row.items) || row.items.length > 20)
+    return invalid(
+      'Choose up to 20 ticket types, or choose on the hosted checkout.',
+    );
   const items = row.items
     .map((value) => {
       const item = object(value, ['ticket_type_id', 'quantity']);
@@ -140,10 +147,41 @@ export function parseCheckoutIntent(
         : invalid('Enter a valid promo code.');
   if (promo && !promoCodePattern.test(promo))
     return invalid('Invalid Promo Code');
+  const customer: CheckoutIntent['customer'] = {};
+  if (row.customer !== undefined) {
+    const supplied = object(row.customer, ['email', 'name', 'phone']);
+    for (const field of ['email', 'name', 'phone'] as const) {
+      if (supplied[field] === undefined) continue;
+      const value = supplied[field];
+      if (
+        typeof value !== 'string' ||
+        value.trim().length <
+          (field === 'name' ? 2 : field === 'phone' ? 7 : 3) ||
+        value.length >
+          (field === 'email' ? 254 : field === 'name' ? 120 : 40) ||
+        Array.from(value).some((char) => char.charCodeAt(0) < 32) ||
+        (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+      )
+        invalid('Enter valid optional customer details.');
+      customer[field] = (value as string).trim();
+    }
+  }
+  if (
+    row.external_reference !== undefined &&
+    (typeof row.external_reference !== 'string' ||
+      !/^[A-Za-z0-9_.:-]{1,100}$/.test(row.external_reference))
+  )
+    invalid(
+      'Use a short external reference with letters, numbers, dots, underscores, colons or hyphens.',
+    );
   return {
     event_id: integrationId(row.event_id),
     items,
     promo_code: promo || null,
+    ...(Object.keys(customer).length ? { customer } : {}),
+    ...(row.external_reference
+      ? { external_reference: row.external_reference as string }
+      : {}),
     return_url: checkoutReturnUrl(row.return_url, context),
     cancel_url: checkoutReturnUrl(row.cancel_url ?? row.return_url, context),
   };
@@ -159,6 +197,11 @@ export function checkoutIdempotencyKey(request: Request) {
 export function projectCheckoutSession(row: StoredCheckoutSession) {
   if (
     !row ||
+    !['hosted_api', 'hosted_link', 'legacy_widget'].includes(
+      row.source ?? 'hosted_api',
+    ) ||
+    (row.external_reference != null &&
+      !/^[A-Za-z0-9_.:-]{1,100}$/.test(row.external_reference)) ||
     ![
       'open',
       'cancelled',
@@ -183,6 +226,8 @@ export function projectCheckoutSession(row: StoredCheckoutSession) {
       'Checkout information is temporarily unavailable.',
     );
   return {
+    source: row.source ?? 'hosted_api',
+    external_reference: row.external_reference ?? null,
     id: row.id,
     event_id: row.event_id,
     environment: row.environment,
@@ -260,18 +305,6 @@ export function createCheckoutSessionHandler(
       return {
         ...projectCheckoutSession(stored),
         checkout_url: url.toString(),
-        ...(checkout.popupEnabled?.() &&
-        Date.parse(stored.expires_at) > Date.now()
-          ? {
-              popup_url: await popupUrl(
-                stored,
-                recoveredAccess,
-                new URL(intent.return_url).origin,
-                checkout.origin(request),
-                signing,
-              ),
-            }
-          : {}),
       };
     },
     false,

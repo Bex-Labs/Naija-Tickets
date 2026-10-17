@@ -1,7 +1,7 @@
 import { after } from 'next/server';
 import { deliverOrderTickets } from '@/lib/ticket-delivery';
 import { hostedCheckoutAction } from '@/lib/integrations/checkout-sessions.server';
-const action = hostedCheckoutAction('verify', (orderId) =>
+const action = hostedCheckoutAction('selection', (orderId) =>
   after(deliverOrderTickets(orderId)),
 );
 async function handle(

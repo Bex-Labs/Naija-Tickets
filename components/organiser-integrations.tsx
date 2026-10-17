@@ -1,4 +1,5 @@
 'use client';
+import { OrganiserHostedCheckout } from '@/components/organiser-hosted-checkout';
 import { useEffect, useState, type SyntheticEvent } from 'react';
 import {
   Code2,
@@ -281,8 +282,9 @@ export function OrganiserIntegrations() {
         </Button>
       </div>
       <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-        Connect a website or application to your organiser account. Create
-        server credentials and control which events it can access.
+        Sell tickets from your own website with a Hosted Checkout Link — no
+        programming or API key needed. Developers can also connect a backend
+        using the Hosted Checkout API.
       </p>
       <div className="mt-4 flex items-start gap-3 border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
         <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
@@ -505,6 +507,13 @@ export function OrganiserIntegrations() {
               </Button>
             </div>
           </form>
+          {selected && (
+            <OrganiserHostedCheckout
+              key={'hosted-' + selected.id}
+              application={selected}
+              events={dashboard.events}
+            />
+          )}
           {selected && (
             <section
               className="mt-6 border border-[#241b3f]/10 bg-white p-4 sm:p-6"

@@ -18,11 +18,15 @@ export async function POST(request: Request) {
     )
   )
     return Response.json({ error: 'Unauthorised.' }, { status: 401, headers });
-  if (process.env.INTEGRATIONS_WEBHOOKS_ENABLED !== 'true')
-    return Response.json({ enabled: false }, { status: 503, headers });
   try {
     const mode = integrationResourceMode(process.env);
     await verifyIntegrationResourceBinding(mode);
+    await integrationRpc('purge_hosted_prefill', {
+      p_mode: mode,
+      p_limit: 2000,
+    });
+    if (process.env.INTEGRATIONS_WEBHOOKS_ENABLED !== 'true')
+      return Response.json({ enabled: false }, { status: 503, headers });
     const result = await dispatchWebhooks(
       {
         claim: () =>

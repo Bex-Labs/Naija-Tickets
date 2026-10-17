@@ -28,6 +28,7 @@ export type AdminIntegrationOverview = {
   nextCursor: string | null;
 };
 export type AdminIntegrationActivity = {
+  hosted?: import('./hosted-report.ts').HostedReport | null;
   requests: {
     id: string;
     keyId: string;

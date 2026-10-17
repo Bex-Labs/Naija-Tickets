@@ -1,8 +1,8 @@
 # Naija Tickets integrations progress
 
-Last updated: 16 October 2026 (Africa/Lagos).
+Last updated: 17 October 2026 (Africa/Lagos).
 
-Current status: **Phase 7 source and isolated public sandbox/Partner Demo deployments are implemented and verified. Real public Paystack TEST purchases, partner return, group claim/QR/entry, signed-in free checkout and durable manual webhook delivery passed. Automatic cron delivery, physical/Safari/blocked-cookie, public provider-refund/recovery and broad production readiness gates remain pending. Main production is unchanged; email is deferred.**
+Current status: **The replacement hosted-checkout upgrade is implemented and verified on the separate public sandbox and Partner Demo. No-code event links, optional API selections/prefill, focused checkout/confirmation, safe organiser return, source reporting and temporary-prefill cleanup are implemented. Main production is unchanged; email is deferred. Production migration/configuration and the earlier physical-device, scheduled-delivery, refund/recovery and security/load gates remain pending. Read the 17 October report before historical notes.**
 
 Source brief: the user's “NAIJA TICKETS — PUBLIC API & DEVELOPER INTEGRATION PLATFORM” pasted requirements. The brief explicitly says: “STOP after Phase 0 and present the findings. Wait for approval before starting Phase 1.” Each later phase also has a report/test/approval gate.
 
@@ -33,11 +33,28 @@ Source brief: the user's “NAIJA TICKETS — PUBLIC API & DEVELOPER INTEGRATION
 - [x] Phase 7 source/local verification: developer portal and combined public OpenAPI, private integration oversight/suspension/audit, admin hash/session/login-limit readiness fixes, fixed widget appearance controls, readiness command and rollout/recovery runbook.
 - [ ] Phase 7 operational completion: source/migration/configuration rollout to the separate sandbox, actual external developer purchase and return, durable receiver/scheduled delivery, physical mobile/browser and production security/throughput review. Local source checks do not satisfy these gates.
 
-## Secure popup follow-up — 16 October 2026
+## Hosted checkout upgrade — 17 October 2026
 
-User selected a secure checkout popup over the partner website. Source now extends the existing session response with an opt-in `popup_url`, a checkout-only frame, official Paystack InlineJS resume, capability-protected server verification and a small external modal SDK. It keeps the current reservation/payment/issuance/group system and requires no migration. Exact signed frame origin, current domain checks, no third-party cookies and server-owned payment verification are enforced. Existing redirect checkout remains available. Partner Demo uses the popup and independently verifies its original browser-owned booking before confirmation. Main production is unchanged; no email setup.
+The attached replacement brief supersedes the earlier popup choice. Implemented a checkout-only hosted page, reusable public no-code event links, optional API ticket selections and editable buyer prefill, safe confirmation/return, source analytics and bounded prefill cleanup using the existing orders/reservations/Paystack/QR/group system. No default iframe checkout or second financial/ticket ledger was added. The legacy ticket-selection widget remains supported. Hosted Checkout is prioritised before credential controls and clearly indicates deployment availability.
 
-Guide: `docs/integrations-popup-checkout.md`. Implementation and isolated deployment validation are in progress; final results will be recorded here after verification. Prior operational readiness gates remain pending.
+Replacement brief phases (separate from the original phases below):
+
+- [x] 1 — audit existing repository, session actors, keys, payment, issuance, groups, capacity and dashboards.
+- [x] 2 — backend/schema: reusable links, source binding, optional selections/prefill/reference, authenticated management, safe updates and reporting.
+- [x] 3 — standalone event-specific responsive checkout, guest/signed-in details, verified tickets, cancellation and approved organiser return.
+- [x] 4 — organiser no-code/API distinction, copyable URL/HTML, environments, recent sessions, channel/conversion reports and private admin visibility.
+- [x] 5 — existing verified Paystack/ticket/QR/group/email hooks retained; public Test payment, group claim/one-time QR entry and free guest purchase verified. Email delivery remains deferred by user preference.
+- [x] 6 — professional guides/OpenAPI, Node/Next/HTML examples, regression/database/browser/HTTP validation and engineering report.
+
+**Results:** main 339/339 tests; sandbox 340/340; Partner Demo 32/32; types/lint/Vercel builds and deployments passed. Twelve focused hosted database checks, nine real public purchase/QR checks, ten public boundary/contract checks and six final public lifecycle checks passed. Two additional expired-session recovery checks passed; eighty public assets contained no configured server secrets or complete integration credentials. A simulated Paystack payment of NGN 47,250 reserved five admissions, produced one independently claimed QR and retained four unclaimed sold slots. Actual rendered SVG QR decoded correctly; an unauthorised customer was rejected, organiser admission succeeded once and repetition was refused. A no-code free purchase issued one ticket. Partner Demo independently verified the paid result after the buyer returned. The first rejected/expired test attempt issued no tickets.
+
+**Schema/deployment:** `202610170001_hosted_checkout_links.sql` and `202610170002_hosted_report_efficiency.sql` were dry-run and applied only to Supabase test project `bergfstacaeqqhdjvyyf`. The second migration bounds expensive report snapshots, indexes time/source reads, separates remaining stock from order limits, clears consumed/expired prefill and reuses the existing authenticated daily dispatcher. No customer/order/ticket/financial records were deleted. `INTEGRATIONS_HOSTED_LINKS_ENABLED=true` is active only on the sandbox. An initial environment update timed out; its configuration was confirmed and redeployed before the successful no-code acceptance. Main production database/Vercel/keys remain unchanged.
+
+**Usability fixes:** provider completion now shows focused confirmation/tickets before the optional organiser return; expired/paid/cancelled Partner Demo intents start fresh instead of reopening old bookings. A return-page retry-state scope error was caught in the browser, fixed and reverified. The API key stays server-side; the browser receives only its short-lived private checkout URL. No-code links can be public, are revocable, and use registered return destinations. Expired checkouts offer an approved recovery return only after matching the private capability; ended holds no longer show payment actions. Final mobile content fits its 425px viewport without horizontal overflow.
+
+**Report/configuration/examples:** `docs/hosted-checkout-upgrade.md`, `examples/hosted-checkout/README.md`, the developer portal and updated Phase 3/combined OpenAPI. Canonical machine paths remain `/api/v1/checkout-sessions` and `/api/v1/checkout-sessions/{sessionId}`; private browser/management endpoints are documented separately. Public contract remains twenty implemented machine path patterns. Evidence: sandbox `SANDBOX-HOSTED-CHECKOUT-ACCEPTANCE.json` / `SANDBOX-HOSTED-CHECKOUT-SAFETY.json`. The generated public demo link remains enabled.
+
+**Remaining:** apply the earlier pending Phase 4–7/shared-limiter migrations plus these two migrations before any approved main rollout; configure the actual APP_URL, matching Live database/payment/signing settings, approved websites, incoming provider webhook and required feature flags. Email, real scheduled-outgoing delivery, physical phone/Safari, public provider refund/recovery and independent production security/load gates are not certified by this upgrade. No manual webhook dispatch consumed the existing scheduled probe. No main production deployment/push was performed.
 
 ## Public sandbox rollout and acceptance — 16 October 2026
 

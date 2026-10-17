@@ -20,7 +20,6 @@ import {
 import { generateIntegrationCredential } from './integrations/keys.ts';
 import { IntegrationError } from './integrations/errors.ts';
 import type { IntegrationContext } from './integrations/types.ts';
-import { verifyPopupPermit } from './integrations/checkout-popup.ts';
 import { authenticatedDestination } from './auth-destination.ts';
 const id = '10000000-0000-4000-8000-000000000001';
 const context: IntegrationContext = {
@@ -244,29 +243,7 @@ void test('external session API replays one signed URL, enforces scope/Idempoten
   const second = JSON.parse(await (await handler(request())).text());
   assert.equal(second.data.checkout_url, original.data.checkout_url);
   assert.equal(creates, 1);
-  assert.equal(original.data.popup_url, undefined);
-  deps.popupEnabled = () => true;
-  const withPopup = JSON.parse(await (await handler(request())).text());
-  const popup = new URL(withPopup.data.popup_url);
-  assert.equal(popup.pathname, `/embed/checkout/${original.data.id}`);
-  assert.equal(
-    popup.hash,
-    '#access=' + new URL(original.data.checkout_url).searchParams.get('access'),
-  );
-  assert.equal(
-    (
-      await verifyPopupPermit(
-        popup.searchParams.get('permit'),
-        original.data.id,
-        signing,
-      )
-    )?.parent,
-    'https://partner.example',
-  );
-  const popupRetry = JSON.parse(await (await handler(request())).text());
-  assert.equal(popupRetry.data.popup_url, withPopup.data.popup_url);
-  assert.equal(creates, 1);
-  deps.popupEnabled = () => false;
+
   assert.equal(
     (
       await handler(
@@ -322,7 +299,7 @@ void test('hosted login resumes a clean cookie-backed path, never an external re
   );
   assert.equal(authenticatedDestination('//evil.example'), '/account');
 });
-void test('unsafe numeric order data fails closed and committed status has no purchaser/QR/reference fields', () => {
+void test('unsafe numeric order data fails closed and committed status has no private purchaser/QR/order bearer fields', () => {
   const row: StoredCheckoutSession = {
     id,
     environment: 'live',

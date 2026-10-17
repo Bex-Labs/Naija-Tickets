@@ -28,7 +28,10 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
                     "data": {
                       "type": "object",
@@ -56,7 +59,10 @@
                         },
                         "environment": {
                           "type": "string",
-                          "enum": ["test", "live"]
+                          "enum": [
+                            "test",
+                            "live"
+                          ]
                         },
                         "scopes": {
                           "type": "array",
@@ -116,7 +122,9 @@
                     },
                     "meta": {
                       "type": "object",
-                      "required": ["request_id"],
+                      "required": [
+                        "request_id"
+                      ],
                       "properties": {
                         "request_id": {
                           "type": "string",
@@ -267,7 +275,10 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
                     "data": {
                       "type": "array",
@@ -279,14 +290,20 @@
                     "meta": {
                       "type": "object",
                       "additionalProperties": false,
-                      "required": ["request_id", "next_cursor"],
+                      "required": [
+                        "request_id",
+                        "next_cursor"
+                      ],
                       "properties": {
                         "request_id": {
                           "type": "string",
                           "format": "uuid"
                         },
                         "next_cursor": {
-                          "type": ["string", "null"]
+                          "type": [
+                            "string",
+                            "null"
+                          ]
                         }
                       }
                     }
@@ -486,7 +503,10 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
                     "data": {
                       "$ref": "#/components/schemas/Event"
@@ -494,7 +514,9 @@
                     "meta": {
                       "type": "object",
                       "additionalProperties": false,
-                      "required": ["request_id"],
+                      "required": [
+                        "request_id"
+                      ],
                       "properties": {
                         "request_id": {
                           "type": "string",
@@ -743,7 +765,10 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
                     "data": {
                       "type": "array",
@@ -755,14 +780,20 @@
                     "meta": {
                       "type": "object",
                       "additionalProperties": false,
-                      "required": ["request_id", "next_cursor"],
+                      "required": [
+                        "request_id",
+                        "next_cursor"
+                      ],
                       "properties": {
                         "request_id": {
                           "type": "string",
                           "format": "uuid"
                         },
                         "next_cursor": {
-                          "type": ["string", "null"]
+                          "type": [
+                            "string",
+                            "null"
+                          ]
                         }
                       }
                     }
@@ -987,7 +1018,10 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
                     "data": {
                       "$ref": "#/components/schemas/Availability"
@@ -995,7 +1029,9 @@
                     "meta": {
                       "type": "object",
                       "additionalProperties": false,
-                      "required": ["request_id"],
+                      "required": [
+                        "request_id"
+                      ],
                       "properties": {
                         "request_id": {
                           "type": "string",
@@ -1247,7 +1283,10 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
                     "data": {
                       "$ref": "#/components/schemas/CheckoutCreated"
@@ -1255,7 +1294,9 @@
                     "meta": {
                       "type": "object",
                       "additionalProperties": false,
-                      "required": ["request_id"],
+                      "required": [
+                        "request_id"
+                      ],
                       "properties": {
                         "request_id": {
                           "type": "string",
@@ -1495,7 +1536,10 @@
                 "schema": {
                   "type": "object",
                   "additionalProperties": false,
-                  "required": ["data", "meta"],
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
                   "properties": {
                     "data": {
                       "$ref": "#/components/schemas/CheckoutSession"
@@ -1503,7 +1547,9 @@
                     "meta": {
                       "type": "object",
                       "additionalProperties": false,
-                      "required": ["request_id"],
+                      "required": [
+                        "request_id"
+                      ],
                       "properties": {
                         "request_id": {
                           "type": "string",
@@ -1664,11 +1710,17 @@
     "schemas": {
       "Error": {
         "type": "object",
-        "required": ["error"],
+        "required": [
+          "error"
+        ],
         "properties": {
           "error": {
             "type": "object",
-            "required": ["code", "message", "request_id"],
+            "required": [
+              "code",
+              "message",
+              "request_id"
+            ],
             "properties": {
               "code": {
                 "type": "string"
@@ -1717,12 +1769,20 @@
             "type": "string"
           },
           "image_url": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "venue": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["name", "address", "city", "state"],
+            "required": [
+              "name",
+              "address",
+              "city",
+              "state"
+            ],
             "properties": {
               "name": {
                 "type": "string"
@@ -1750,17 +1810,27 @@
             "type": "string"
           },
           "sales_start_at": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
           },
           "sales_end_at": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
           },
           "organiser": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["id", "name", "verified"],
+            "required": [
+              "id",
+              "name",
+              "verified"
+            ],
             "properties": {
               "id": {
                 "type": "string",
@@ -1777,7 +1847,11 @@
           "category": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["id", "name", "slug"],
+            "required": [
+              "id",
+              "name",
+              "slug"
+            ],
             "properties": {
               "id": {
                 "type": "string",
@@ -1829,7 +1903,10 @@
             "type": "string"
           },
           "description": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "currency": {
             "const": "NGN",
@@ -1847,15 +1924,24 @@
           },
           "price_kind": {
             "type": "string",
-            "enum": ["standard", "early_bird"]
+            "enum": [
+              "standard",
+              "early_bird"
+            ]
           },
           "early_bird_price_kobo": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 0,
             "maximum": 9007199254740991
           },
           "early_bird_ends_at": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
           },
           "admissions_per_ticket": {
@@ -1873,11 +1959,17 @@
             "maximum": 9007199254740991
           },
           "sales_start_at": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
           },
           "sales_end_at": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
           },
           "sale_status": {
@@ -1950,7 +2042,10 @@
             "maximum": 9007199254740991
           },
           "early_bird_remaining_packages": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 0
           },
           "max_packages_at_current_price": {
@@ -2028,12 +2123,18 @@
       "ReadError": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["error"],
+        "required": [
+          "error"
+        ],
         "properties": {
           "error": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["code", "message", "request_id"],
+            "required": [
+              "code",
+              "message",
+              "request_id"
+            ],
             "properties": {
               "code": {
                 "type": "string"
@@ -2066,7 +2167,9 @@
           "fee_kobo",
           "total_kobo",
           "tickets_issued",
-          "members_registered"
+          "members_registered",
+          "source",
+          "external_reference"
         ],
         "properties": {
           "id": {
@@ -2079,7 +2182,10 @@
           },
           "environment": {
             "type": "string",
-            "enum": ["test", "live"]
+            "enum": [
+              "test",
+              "live"
+            ]
           },
           "status": {
             "type": "string",
@@ -2100,7 +2206,10 @@
             "format": "date-time"
           },
           "reservation_expires_at": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
           },
           "currency": {
@@ -2113,22 +2222,34 @@
             "maximum": 9007199254740991
           },
           "subtotal_kobo": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 0,
             "maximum": 9007199254740991
           },
           "discount_kobo": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 0,
             "maximum": 9007199254740991
           },
           "fee_kobo": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 0,
             "maximum": 9007199254740991
           },
           "total_kobo": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 0,
             "maximum": 9007199254740991
           },
@@ -2141,6 +2262,21 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "hosted_api",
+              "hosted_link",
+              "legacy_widget"
+            ]
+          },
+          "external_reference": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
           }
         },
         "description": "Minimal status of this integration-attributed session. Monetary fields are null before reservation. Admissions include unclaimed group slots; tickets_issued counts usable claimed/checked-in tickets, not unclaimed group slots. Paid/refund status requires stored verified payment. No private receipt, purchaser, attendee or QR data."
@@ -2176,7 +2312,10 @@
           },
           "environment": {
             "type": "string",
-            "enum": ["test", "live"]
+            "enum": [
+              "test",
+              "live"
+            ]
           },
           "status": {
             "type": "string",
@@ -2197,7 +2336,10 @@
             "format": "date-time"
           },
           "reservation_expires_at": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date-time"
           },
           "currency": {
@@ -2210,22 +2352,34 @@
             "maximum": 9007199254740991
           },
           "subtotal_kobo": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 0,
             "maximum": 9007199254740991
           },
           "discount_kobo": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 0,
             "maximum": 9007199254740991
           },
           "fee_kobo": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 0,
             "maximum": 9007199254740991
           },
           "total_kobo": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "minimum": 0,
             "maximum": 9007199254740991
           },
@@ -2244,17 +2398,27 @@
             "format": "uri",
             "description": "Short-lived private buyer capability. Return to the buyer only; redact from logs and analytics. It is not a server API credential."
           },
-          "popup_url": {
+          "source": {
             "type": "string",
-            "format": "uri",
-            "description": "Optional private, short-lived checkout modal URL when the server enables popup checkout. Use the official checkout-v1.js SDK. Frame access lives in the URL fragment. Do not log or persist this URL."
+            "enum": [
+              "hosted_api",
+              "hosted_link",
+              "legacy_widget"
+            ]
+          },
+          "external_reference": {
+            "type": "string",
+            "maxLength": 100
           }
         }
       },
       "CheckoutIntent": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["event_id", "items", "return_url"],
+        "required": [
+          "event_id",
+          "return_url"
+        ],
         "properties": {
           "event_id": {
             "type": "string",
@@ -2262,12 +2426,15 @@
           },
           "items": {
             "type": "array",
-            "minItems": 1,
+            "minItems": 0,
             "maxItems": 20,
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["ticket_type_id", "quantity"],
+              "required": [
+                "ticket_type_id",
+                "quantity"
+              ],
               "properties": {
                 "ticket_type_id": {
                   "type": "string",
@@ -2279,10 +2446,14 @@
                   "maximum": 20
                 }
               }
-            }
+            },
+            "description": "Optional package selections. Omit or send [] to let the customer choose on the hosted checkout."
           },
           "promo_code": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "maxLength": 32,
             "description": "Optional code; normalized to uppercase and validated during authoritative reservation."
           },
@@ -2297,6 +2468,32 @@
             "format": "uri",
             "maxLength": 2048,
             "description": "Same restrictions as return_url; defaults to return_url."
+          },
+          "customer": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email",
+                "maxLength": 254
+              },
+              "name": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 120
+              },
+              "phone": {
+                "type": "string",
+                "minLength": 7,
+                "maxLength": 40
+              }
+            },
+            "description": "Optional buyer prefill; never an authenticated customer identity."
+          },
+          "external_reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.:-]{1,100}$"
           }
         }
       }

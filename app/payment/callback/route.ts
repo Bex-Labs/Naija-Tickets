@@ -21,7 +21,7 @@ async function statusRedirect(
   paymentReference = '',
 ) {
   if (reference) {
-    const destination = await integrationReturnForReference(reference);
+    const destination = await integrationReturnForReference(reference, request.url);
     if (destination) {
       const response = NextResponse.redirect(destination, 303);
       response.headers.set('Referrer-Policy', 'no-referrer');

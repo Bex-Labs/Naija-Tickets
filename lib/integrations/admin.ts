@@ -1,3 +1,4 @@
+import { projectHostedReport } from './hosted-report.ts';
 import { IntegrationError } from './errors.ts';
 import { integrationId, readIntegrationJson } from './validation.ts';
 import type {
@@ -119,6 +120,7 @@ export function projectAdminActivity(value: unknown): AdminIntegrationActivity {
   return {
     requests,
     audit,
+    hosted: projectHostedReport(data.hosted),
     nextCursor: data.requests.length > 20 ? requests[19].id : null,
   };
 }

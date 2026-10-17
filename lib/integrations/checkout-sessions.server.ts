@@ -1,11 +1,3 @@
-import { verifyPopupPermit } from './checkout-popup.ts';
-import { verifyPopupPayment } from './popup-payment.ts';
-import { calculatePlatformFee, getPlatformFeeRule } from '@/lib/checkout';
-import { verifyPaystackTransaction } from '@/lib/paystack';
-import {
-  finalizePaystackPayment,
-  recordPaystackVerification,
-} from '@/lib/payments';
 import { verifyIntegrationResourceBinding } from './resource-mode.server.ts';
 import {
   getSupabaseAdminClient,
@@ -93,14 +85,13 @@ export function checkoutSigningKeys(): CheckoutSigningKeys {
   return configuration;
 }
 export const checkoutSessionDependencies: CheckoutSessionDependencies = {
-  popupEnabled: () => process.env.INTEGRATIONS_POPUP_ENABLED === 'true',
   signingKeys: checkoutSigningKeys,
   requireConfiguration: (context) =>
     requireHostedCheckoutConfiguration(context.environment, process.env),
   origin: (request) => getTrustedAppOrigin(request.url),
   create: async (proof, input) => {
     await verifyIntegrationResourceBinding(proof.environment);
-    return integrationRpc('create_integration_checkout_session', {
+    return integrationRpc('create_hosted_session_v2', {
       p_key_id: proof.keyId,
       p_digest: proof.digest,
       p_environment: proof.environment,
@@ -116,6 +107,8 @@ export const checkoutSessionDependencies: CheckoutSessionDependencies = {
       p_reservation_hash: input.reservationHash,
       p_signing_version: input.session.signing_key_version,
       p_expires_at: input.session.expires_at,
+      p_customer: input.intent.customer ?? {},
+      p_external_reference: input.intent.external_reference ?? null,
     });
   },
   status: async (proof, id) => {
@@ -131,6 +124,14 @@ export const checkoutSessionDependencies: CheckoutSessionDependencies = {
 export type HostedCheckoutView = {
   session: StoredCheckoutSession;
   promo_code: string | null;
+  customer: { name?: string; email?: string; phone?: string };
+  catalogue: {
+    ticket: unknown;
+    max_packages: number;
+    remaining_packages?: number;
+  }[];
+  return_url: string | null;
+  cancel_url: string | null;
   event: {
     id: string;
     title: string;
@@ -139,6 +140,9 @@ export type HostedCheckoutView = {
     timezone: string;
     venue_name: string;
     city: string;
+    description: string;
+    image_url: string | null;
+    organiser: { name: string };
   };
   intent: { ticket_type_id: string; quantity: number }[];
   lines: CheckoutLine[];
@@ -155,10 +159,13 @@ export async function getHostedCheckout(
   requireHostedCheckoutConfiguration(mode, process.env);
   checkoutSigningKeys();
   await verifyIntegrationResourceBinding(mode);
-  const row = await integrationRpc<HostedCheckoutView>('get_hosted_checkout', {
-    p_session_id: sessionId,
-    p_access_hash: await hostedSecretDigest(access),
-  });
+  const row = await integrationRpc<HostedCheckoutView>(
+    'hosted_checkout_details',
+    {
+      p_session: sessionId,
+      p_access: await hostedSecretDigest(access),
+    },
+  );
   if (
     !row?.session ||
     row.session.environment !== mode ||
@@ -177,6 +184,42 @@ export async function getHostedCheckout(
       'This checkout is temporarily unavailable.',
     );
   return row;
+}
+// Recovery may reveal only a still-approved public website, never expired
+// checkout data or new purchase authority. The original capability is required.
+export async function hostedRecoveryReturn(id: string, access: string) {
+  if (!isHostedSecret(access)) return null;
+  const mode = integrationResourceMode(process.env);
+  await verifyIntegrationResourceBinding(mode);
+  const { data, error } = await getSupabaseAdminClient()
+    .from('integration_checkout_sessions')
+    .select(
+      'id,integration_id,environment,cancel_url,cancelled_at,expires_at,integrations!inner(status)',
+    )
+    .eq('id', integrationId(id))
+    .eq('capability_hash', await hostedSecretDigest(access))
+    .eq('environment', mode)
+    .eq('integrations.status', 'active')
+    .abortSignal(AbortSignal.timeout(8000))
+    .maybeSingle();
+  if (error || !data) return null;
+  const allowed = await integrationRpc<boolean>('integration_return_allowed', {
+    p_integration_id: data.integration_id,
+    p_environment: mode,
+    p_url: data.cancel_url,
+  });
+  return allowed
+    ? buildIntegrationReturn({
+        url: data.cancel_url,
+        session_id: data.id,
+        environment: mode,
+        status: data.cancelled_at
+          ? 'cancelled'
+          : Date.parse(data.expires_at) <= Date.now()
+            ? 'expired'
+            : 'open',
+      })
+    : null;
 }
 export async function hostedReservation(view: HostedCheckoutView) {
   return view.reservation
@@ -222,19 +265,36 @@ export function buildIntegrationReturn(
   url.searchParams.set('nt_status', value.status);
   return url.toString();
 }
-export async function integrationCompletedUrl(orderId: string) {
+export async function integrationCompletedUrl(
+  orderId: string,
+  requestUrl = process.env.APP_URL ?? 'http://localhost:3000',
+) {
   try {
-    return buildIntegrationReturn(
-      await integrationRpc('integration_checkout_return', {
-        p_order_id: orderId,
-        p_cancel: false,
-      }),
+    const { data: session, error } = await getSupabaseAdminClient()
+      .from('integration_checkout_sessions')
+      .select('id,environment,expires_at,signing_key_version')
+      .eq('order_id', orderId)
+      .abortSignal(AbortSignal.timeout(8000))
+      .maybeSingle();
+    if (error || !session || Date.parse(session.expires_at) <= Date.now())
+      return null;
+    const target = new URL(
+      `/integrations/checkout/${session.id}`,
+      getTrustedAppOrigin(requestUrl),
     );
+    target.searchParams.set(
+      'access',
+      await hostedSessionSecret(session, 'access', checkoutSigningKeys()),
+    );
+    return target.toString();
   } catch {
     return null;
-  } // Private in-app receipt is the safe fallback, never an unchecked partner URL.
+  }
 }
-export async function integrationReturnForReference(reference: string) {
+export async function integrationReturnForReference(
+  reference: string,
+  requestUrl?: string,
+) {
   if (!/^[a-f0-9]{36}$/i.test(reference)) return null;
   const { data, error } = await getSupabaseAdminClient()
     .from('orders')
@@ -244,7 +304,7 @@ export async function integrationReturnForReference(reference: string) {
     .abortSignal(AbortSignal.timeout(8000))
     .maybeSingle();
   if (error || !data) return null;
-  return integrationCompletedUrl(data.id);
+  return integrationCompletedUrl(data.id, requestUrl);
 }
 export async function requireAttributedPaymentConfiguration(
   orderId: string,
@@ -272,7 +332,7 @@ export async function requireAttributedPaymentConfiguration(
     requireHostedPaymentMode(session.environment, process.env);
 }
 export function hostedCheckoutAction(
-  action: 'reserve' | 'pay' | 'cancel' | 'popup' | 'verify',
+  action: 'reserve' | 'pay' | 'cancel' | 'selection',
   scheduleDelivery: (orderId: string) => void,
 ) {
   return async (request: Request, id: string) => {
@@ -329,120 +389,30 @@ export function hostedCheckoutAction(
           'Checkout link not found.',
         );
       const view = await getHostedCheckout(sessionId, body.access);
-      if (
-        action === 'popup' ||
-        action === 'verify' ||
-        body.permit !== undefined
-      ) {
-        const permit =
-          process.env.INTEGRATIONS_POPUP_ENABLED === 'true'
-            ? await verifyPopupPermit(
-                body.permit,
-                sessionId,
-                checkoutSigningKeys(),
-              )
-            : null;
-        if (!permit || permit.environment !== view.session.environment)
-          throw new IntegrationError(
-            403,
-            'POPUP_UNAVAILABLE',
-            'Start checkout again from the original website.',
-          );
-        const admin = getSupabaseAdminClient();
-        const { data: session, error } = await admin
-          .from('integration_checkout_sessions')
-          .select('return_url')
-          .eq('id', sessionId)
-          .abortSignal(AbortSignal.timeout(8000))
-          .single();
-        if (
-          error ||
-          !session ||
-          new URL(session.return_url).origin !== permit.parent
-        )
-          throw new IntegrationError(
-            403,
-            'POPUP_UNAVAILABLE',
-            'This checkout website is unavailable.',
-          );
-        const { data: domain, error: domainError } = await admin
-          .from('integration_domains')
-          .select('origin')
-          .eq('integration_id', view.session.integration_id)
-          .eq('environment', permit.environment)
-          .eq('origin', permit.parent)
-          .abortSignal(AbortSignal.timeout(8000))
-          .maybeSingle();
-        if (domainError || !domain)
-          throw new IntegrationError(
-            403,
-            'POPUP_UNAVAILABLE',
-            'This checkout website is no longer authorised.',
-          );
-      }
-      if (
-        action === 'verify' &&
-        view.reservation &&
-        !['paid', 'refunded', 'partially_refunded'].includes(
-          view.session.status,
-        ) &&
-        view.reservation.totalKobo > 0
-      ) {
-        requireHostedPaymentMode(view.session.environment, process.env);
-        const { data: payment, error } = await getSupabaseAdminClient()
-          .from('payments')
-          .select('provider_reference,amount_kobo,currency')
-          .eq('provider', 'paystack')
-          .eq('order_id', view.reservation.orderId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .abortSignal(AbortSignal.timeout(8000))
-          .maybeSingle();
-        if (error) throw error;
-        if (payment)
-          await verifyPopupPayment(
-            {
-              reference: payment.provider_reference,
-              amount: Number(payment.amount_kobo),
-              currency: payment.currency,
-              environment: view.session.environment,
-            },
-            {
-              verify: verifyPaystackTransaction,
-              record: recordPaystackVerification,
-              finalize: finalizePaystackPayment,
-              deliver: scheduleDelivery,
-            },
-          );
-      }
-      if (action === 'popup' || action === 'verify') {
-        const current =
-          action === 'verify'
-            ? await getHostedCheckout(sessionId, body.access)
-            : view;
-        const subtotal = current.lines.reduce(
-          (sum, line) => sum + line.lineTotalKobo,
-          0,
-        );
-        const fee = calculatePlatformFee(
-          await getPlatformFeeRule(),
-          subtotal,
-          current.lines.reduce((sum, line) => sum + line.quantity, 0),
-        );
-        return Response.json(
+      if (action === 'selection') {
+        const { parseCheckoutIntent } = await import('./checkout-sessions.ts');
+        const selection = parseCheckoutIntent(
           {
-            event: current.event,
-            lines: current.lines,
-            status: current.session.status,
-            environment: current.session.environment,
-            sessionId,
-            promoCode: current.promo_code,
-            reservation: await hostedReservation(current),
-            subtotal,
-            fee,
+            event_id: view.event.id,
+            items: body.items,
+            promo_code: body.promo_code,
+            return_url: 'https://selection.invalid/',
           },
-          { headers },
+          { environment: view.session.environment },
         );
+        if (!selection.items.length)
+          throw new IntegrationError(
+            400,
+            'INVALID_REQUEST',
+            'Select at least one ticket.',
+          );
+        await integrationRpc('update_hosted_selection', {
+          p_session: sessionId,
+          p_access: await hostedSecretDigest(body.access),
+          p_items: selection.items,
+          p_promo: selection.promo_code,
+        });
+        return Response.json({ saved: true }, { headers });
       }
       if (action === 'cancel') {
         const result = await integrationRpc<{
@@ -483,7 +453,8 @@ export function hostedCheckoutAction(
             initialize: initializePaystackTransaction,
             origin: getTrustedAppOrigin,
             deliver: scheduleDelivery,
-            completedUrl: integrationCompletedUrl,
+            completedUrl: (orderId) =>
+              integrationCompletedUrl(orderId, request.url),
             log: (metadata) =>
               console.info('payment_start', JSON.stringify(metadata)),
           },

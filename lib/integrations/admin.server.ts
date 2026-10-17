@@ -15,11 +15,13 @@ export const integrationOversightDependencies: IntegrationOversightDependencies 
         p_status: status,
         p_after: after,
       }),
-    activity: (app, before) =>
-      integrationRpc('admin_integration_activity', {
-        p_app: app,
-        p_before: before,
-      }),
+    activity: async (app, before) => ({
+      ...(await integrationRpc<Record<string, unknown>>(
+        'admin_integration_activity',
+        { p_app: app, p_before: before },
+      )),
+      hosted: await integrationRpc('integration_hosted_report', { p_app: app }),
+    }),
     decide: (app, admin, suspend, reason) =>
       integrationRpc('admin_suspend_integration', {
         p_app: app,

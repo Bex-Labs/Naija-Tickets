@@ -121,12 +121,13 @@ export function OrganiserWidget({
       aria-labelledby="widget-heading"
     >
       <h2 id="widget-heading" className="text-xl font-black">
-        Embed ticket selection
+        Legacy: embed ticket selection
       </h2>
       <p className="mt-2 text-sm text-slate-600">
-        Show ticket choices on a registered website. Buyers continue to Naija
-        Tickets to enter their details and pay. Only assigned, published and
-        upcoming events can load.
+        Existing integrations remain supported. Use Hosted Checkout above for
+        new websites. Show ticket choices on a registered website. Buyers
+        continue to Naija Tickets to enter their details and pay. Only assigned,
+        published and upcoming events can load.
       </p>
       {error && (
         <p role="alert" className="mt-3 text-sm text-red-700">

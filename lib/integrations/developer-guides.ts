@@ -77,38 +77,37 @@ export const developerGuides: Record<string, DeveloperGuide> = {
     ],
   },
   checkout: {
-    title: 'Hosted checkout',
+    title: 'Hosted Checkout',
     intro:
       'Keep one reservation and payment engine. Your server supplies ticket choices; authoritative prices, fees, capacity and payment verification remain on Naija Tickets.',
     sections: [
       {
-        heading: 'Create a purchase intent',
+        heading: 'Hosted Checkout Link · no programming',
         body: [
-          'POST with checkout:write and a stable Idempotency-Key (8–128 letters/numbers/dots/underscores/hyphens). The same normalized request/key recovers the same session; a different request with that key conflicts.',
-          'Send ticket-type UUIDs and package quantities only. Do not send price, amount, buyer/customer IDs or attendee records. Return/cancel URLs must use a registered origin plus a simple path, without query, fragment, credentials or escaped paths. Creation does not hold inventory.',
+          'In your organiser workspace, open Developers & Integrations, create/select an application, register your website origin and assign the event. Under Hosted Checkout choose the event, Test/Live and an approved return address, then Create checkout link. Copy the link or HTML Buy Tickets button. No API key is needed for this method.',
+          'A public event link opens a fresh private checkout session. Buyers select tickets, enter their details, pay and see their tickets on a standalone Naija Tickets page. Disable a link to block new and unpaid checkouts. Paid tickets and refunds keep their normal rules.',
         ],
-        code: 'const response = await fetch(`${process.env.NT_API_BASE}/api/v1/checkout-sessions`, {\n  method: "POST",\n  headers: {\n    Authorization: `Bearer ${process.env.NT_API_KEY}`,\n    "Content-Type": "application/json",\n    "Idempotency-Key": purchaseIntentId,\n  },\n  body: JSON.stringify({\n    event_id: eventId,\n    items: [{ ticket_type_id: ticketTypeId, quantity: 2 }],\n    return_url: "https://partner.example/complete",\n    cancel_url: "https://partner.example/cancel",\n  }),\n});\n// Send result.data.popup_url to your buyer and open it using checkout-v1.js.\n// checkout_url remains available for an explicit redirect integration.\n// The checkout URL is private: do not log, cache or publish it.',
+        code: '<a href="https://YOUR_NAIJA_HOST/checkout/link/YOUR_PUBLIC_LINK_ID">Buy Tickets</a>',
       },
       {
-        heading: 'Open a secure checkout popup',
+        heading: 'Hosted Checkout API · create a purchase intent',
         body: [
-          'When INTEGRATIONS_POPUP_ENABLED is enabled, session creation also returns popup_url. Load /integrations/checkout-v1.js from the same Naija deployment, then call NaijaTicketsCheckout.open({ popupUrl, onComplete, onClose }). The popup contains only checkout; it does not require a Naija account or third-party cookies.',
-          'onComplete provides sessionId only. Query that session from your server with orders:read before confirming the purchase. Closing the modal is not a refund or immediate reservation cancellation. Reopen the same unexpired purchase intent to resume. Payment authentication may require a provider-controlled window.',
-          'Your CSP must allow the exact Naija deployment in script-src, style-src and frame-src. Only the registered return_url origin can embed this session. Keep all API secrets on your server. The private popup URL must not be logged, cached or published.',
+          'POST with checkout:write and a stable Idempotency-Key (8–128 letters/numbers/dots/underscores/hyphens). The same normalized request/key recovers the same session; a different request with that key conflicts.',
+          'Send the event UUID. Optional items contains ticket-type UUIDs and package quantities; omit it to let the buyer choose on the hosted page. Optional customer may prefill email/name/phone, and external_reference is a short reference for your own system. Never send price, amount, ownership/customer IDs or attendee records. Return/cancel URLs must use a registered origin plus a simple path, without query, fragment, credentials or escaped paths. Creation does not hold inventory.',
         ],
-        code: 'NaijaTicketsCheckout.open({\n  popupUrl: result.popup_url,\n  onComplete: ({ sessionId }) => verifyOnYourServer(sessionId),\n  onClose: () => showResumeButton(),\n});',
+        code: 'const response = await fetch(`${process.env.NT_API_BASE}/api/v1/checkout-sessions`, {\n  method: "POST",\n  headers: {\n    Authorization: `Bearer ${process.env.NT_API_KEY}`,\n    "Content-Type": "application/json",\n    "Idempotency-Key": purchaseIntentId,\n  },\n  body: JSON.stringify({\n    event_id: eventId,\n    items: [{ ticket_type_id: ticketTypeId, quantity: 2 }],\n    return_url: "https://partner.example/complete",\n    cancel_url: "https://partner.example/cancel",\n  }),\n});\n// Redirect this buyer to result.data.checkout_url.\n// The checkout URL is private: do not log, cache or publish it.',
       },
       {
         heading: 'Let the buyer complete checkout',
         body: [
-          'The buyer enters their own details on Naija Tickets. Ordinary tickets retain normal attendee collection; group packages use buyer plus attendee claims. Reservation counts admissions, so two Group-of-5 packages reserve ten places. Prices and availability are checked again transactionally.',
+          'The buyer sees the event artwork, organiser, current ticket choices and fees on a dedicated hosted checkout page, with no marketplace navigation. They can check out as a guest and edit their details. Ordinary tickets retain normal attendee collection; group packages use buyer plus attendee claims. Reservation counts admissions, so two Group-of-5 packages reserve ten places. Prices and availability are checked again transactionally.',
           'Sessions last up to 30 minutes, bounded by key expiry. A reservation lasts up to ten minutes and cannot outlive its session. Use the existing cancel action for an unpaid checkout; cancellation is not a refund. Unclaimed paid group places stay sold.',
         ],
       },
       {
         heading: 'Verify the result on your server',
         body: [
-          'The return contains nt_session and a bounded nt_status. Ignore that status as payment proof; query the session with orders:read. Amounts are integer NGN kobo and can be null before reservation. Ticket counts distinguish unclaimed reserved admissions from usable claimed tickets.',
+          'After server-verified payment, the hosted confirmation shows tickets and group links plus Return to organiser. That return contains nt_session and a bounded nt_status. Ignore that status as payment proof; query the session with orders:read. Amounts are integer NGN kobo and can be null before reservation. Ticket counts distinguish unclaimed reserved admissions from usable claimed tickets.',
           'Failed, expired or mismatched payments do not issue usable tickets. Duplicate verified callbacks do not issue twice. An already-authorised payment can finish safely after key revocation. Email failure does not invalidate a verified paid booking.',
         ],
         code: 'curl "$NT_API_BASE/api/v1/checkout-sessions/$SESSION_ID" \\\n  -H "Authorization: Bearer $NT_API_KEY"',
