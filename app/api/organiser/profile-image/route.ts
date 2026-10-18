@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { EVENT_IMAGE_MAX_BYTES, validEventImageType } from '@/lib/event-image';
+import {
+  PROFILE_IMAGE_MAX_BYTES,
+  validEventImageType,
+} from '@/lib/event-image';
 import { ensureOrganiser } from '@/lib/organiser-account';
 import {
   getAuthenticatedUser,
@@ -28,7 +31,7 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  if (image.size > EVENT_IMAGE_MAX_BYTES) {
+  if (image.size > PROFILE_IMAGE_MAX_BYTES) {
     return NextResponse.json(
       { error: 'Profile images must be 5 MB or smaller.' },
       { status: 413 },

@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   }
   if (image.size > EVENT_IMAGE_MAX_BYTES) {
     return NextResponse.json(
-      { error: 'Event images must be 5 MB or smaller.' },
+      { error: 'Event images must be 200 KB or smaller.' },
       { status: 413 },
     );
   }

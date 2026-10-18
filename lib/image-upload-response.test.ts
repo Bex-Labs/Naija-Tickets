@@ -1,14 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import nextConfig from '../next.config.ts';
-import { EVENT_IMAGE_MAX_BYTES } from './event-image.ts';
+import { PROFILE_IMAGE_MAX_BYTES } from './event-image.ts';
 import { readImageUploadResponse } from './image-upload-response.ts';
 import { parseBodySizeLimit } from 'vinext/internal/config/next-config';
 
 void test('plain-text 413 is shown as an upload error instead of a JSON syntax error', async () => {
   await assert.rejects(
-    readImageUploadResponse(new Response('Payload Too Large', { status: 413 })),
-    /image is too large/,
+    readImageUploadResponse(
+      new Response('Payload Too Large', { status: 413 }),
+      '200 KB',
+    ),
+    /image is too large.*200 KB or smaller/,
   );
 });
 void test('keeps useful JSON upload errors and handles HTML failures', async () => {
@@ -50,7 +53,7 @@ void test('configured multipart limit accommodates a full 5 MB image and form ov
   const form = new FormData();
   form.set(
     'image',
-    new File([new Uint8Array(EVENT_IMAGE_MAX_BYTES)], 'profile.png', {
+    new File([new Uint8Array(PROFILE_IMAGE_MAX_BYTES)], 'profile.png', {
       type: 'image/png',
     }),
   );
@@ -62,6 +65,6 @@ void test('configured multipart limit accommodates a full 5 MB image and form ov
   const limit = parseBodySizeLimit(
     nextConfig.experimental?.serverActions?.bodySizeLimit,
   );
-  assert.ok(bytes > EVENT_IMAGE_MAX_BYTES);
+  assert.ok(bytes > PROFILE_IMAGE_MAX_BYTES);
   assert.ok(bytes < limit);
 });

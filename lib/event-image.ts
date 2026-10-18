@@ -1,4 +1,5 @@
-export const EVENT_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+export const EVENT_IMAGE_MAX_BYTES = 200 * 1024;
+export const PROFILE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
 const MIME_BY_EXTENSION = {
   jpg: 'image/jpeg',

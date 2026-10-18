@@ -176,7 +176,7 @@ export function OrganiserEventEditor({
       return;
     }
     if (file.size > EVENT_IMAGE_MAX_BYTES) {
-      setImageNotice('Event images must be 5 MB or smaller.');
+      setImageNotice('Event images must be 200 KB or smaller.');
       return;
     }
 
@@ -194,7 +194,7 @@ export function OrganiserEventEditor({
         headers: { Authorization: `Bearer ${data.session.access_token}` },
         body: formData,
       });
-      const url = await readImageUploadResponse(response);
+      const url = await readImageUploadResponse(response, '200 KB');
       update('imageName', url);
       setImageNotice('Image uploaded and ready to use.');
     } catch (error) {
@@ -449,7 +449,7 @@ export function OrganiserEventEditor({
                   {imageUploading ? 'Uploading…' : 'Choose image'}
                 </label>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  JPEG, PNG or WebP. Maximum file size 5 MB.
+                  JPEG, PNG or WebP. Maximum file size 200 KB.
                 </p>
                 {imageNotice && (
                   <p
