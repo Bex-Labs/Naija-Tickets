@@ -1,10 +1,14 @@
 # Naija Tickets integrations progress
 
-Last updated: 17 October 2026 (Africa/Lagos).
+Last updated: 18 October 2026 (Africa/Lagos).
 
-Current status: **The replacement hosted-checkout upgrade is implemented and verified on the separate public sandbox and Partner Demo. No-code event links, optional API selections/prefill, focused checkout/confirmation, safe organiser return, source reporting and temporary-prefill cleanup are implemented. Main production is unchanged; email is deferred. Production migration/configuration and the earlier physical-device, scheduled-delivery, refund/recovery and security/load gates remain pending. Read the 17 October report before historical notes.**
+Current status: **The replacement hosted-checkout upgrade is implemented and verified on the separate public sandbox and Partner Demo. No-code event links, optional API selections/prefill, focused checkout/confirmation, safe organiser return, source reporting and temporary-prefill cleanup are implemented. Main production is unchanged; email is deferred. Production migration/configuration and the earlier physical-device, scheduled-delivery, refund/recovery and security/load gates remain pending. Disable/Enable and removal controls are additionally implemented locally and require the 18 October migration/deployment. Read the 18 and 17 October reports before historical notes.**
 
 Source brief: the user's “NAIJA TICKETS — PUBLIC API & DEVELOPER INTEGRATION PLATFORM” pasted requirements. The brief explicitly says: “STOP after Phase 0 and present the findings. Wait for approval before starting Phase 1.” Each later phase also has a report/test/approval gate.
+
+## Integration controls — 18 October 2026
+
+Disable/Enable and confirmed soft removal are implemented locally in the organiser dashboard. Removal revokes credentials, disables configured links/widgets/endpoints and hides the application while preserving purchases, group claims, financial history and admin audit visibility. Current manager permissions and administrator suspension remain enforced. Full regression suite **349/349**, including ten lifecycle checks, TypeScript/lint/Vercel build and local fictional UI interaction checks passed. Apply **202610180001_integration_lifecycle.sql** after the earlier pending migrations and redeploy before using the feature online. No remote database, environment, integration or deployment was changed. See `docs/integration-lifecycle.md` for endpoints, semantics and verification limits.
 
 ## Phase checklist
 

@@ -248,7 +248,11 @@ export function AdminIntegrations() {
                       : 'bg-slate-100 text-slate-800')
                 }
               >
-                {app.suspendedAt ? 'Suspended' : app.status}
+                {app.removedAt
+                  ? 'Removed'
+                  : app.suspendedAt
+                    ? 'Suspended'
+                    : app.status}
               </span>
               <p className="text-xs text-slate-600">
                 {app.requests24h} requests · {app.errors24h} errors
@@ -374,64 +378,71 @@ export function AdminIntegrations() {
               </p>
             </div>
           ))}
-          <form
-            onSubmit={(event) => void decide(event)}
-            className="mt-5 grid gap-3 border-t pt-4 sm:grid-cols-2"
-          >
-            <div className="sm:col-span-2">
-              <h3 className="font-bold">
-                {selected.suspendedAt
-                  ? 'Restore configuration access'
-                  : 'Suspend this application'}
-              </h3>
-              <p className="mt-1 text-xs leading-5 text-slate-600">
-                Suspension revokes keys and pauses widgets and outgoing
-                endpoints. Confirmed payments can still finish safely. Restoring
-                access leaves the application disabled and requires fresh
-                credentials and explicit owner setup.
-              </p>
-            </div>
-            <div>
-              <label htmlFor="integration-reason" className="auth-label">
-                Review reason
-              </label>
-              <input
-                id="integration-reason"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                className="auth-input w-full"
-                minLength={5}
-                maxLength={240}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="integration-password" className="auth-label">
-                Your current admin password
-              </label>
-              <input
-                id="integration-password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="auth-input w-full"
-                maxLength={1024}
-                required
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={busy}
-              className="min-h-11 bg-[#241b3f] px-4 text-sm font-bold text-white disabled:opacity-50 sm:col-span-2"
+          {selected.removedAt ? (
+            <p className="mt-5 border-t pt-4 text-sm text-slate-600">
+              Removed by the organiser. Access is revoked; sales and security
+              history are retained.
+            </p>
+          ) : (
+            <form
+              onSubmit={(event) => void decide(event)}
+              className="mt-5 grid gap-3 border-t pt-4 sm:grid-cols-2"
             >
-              {busy
-                ? 'Saving review…'
-                : selected.suspendedAt
-                  ? 'Restore configuration access'
-                  : 'Suspend application'}
-            </button>
-          </form>
+              <div className="sm:col-span-2">
+                <h3 className="font-bold">
+                  {selected.suspendedAt
+                    ? 'Restore configuration access'
+                    : 'Suspend this application'}
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  Suspension revokes keys and pauses widgets and outgoing
+                  endpoints. Confirmed payments can still finish safely.
+                  Restoring access leaves the application disabled and requires
+                  fresh credentials and explicit owner setup.
+                </p>
+              </div>
+              <div>
+                <label htmlFor="integration-reason" className="auth-label">
+                  Review reason
+                </label>
+                <input
+                  id="integration-reason"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  className="auth-input w-full"
+                  minLength={5}
+                  maxLength={240}
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="integration-password" className="auth-label">
+                  Your current admin password
+                </label>
+                <input
+                  id="integration-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="auth-input w-full"
+                  maxLength={1024}
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={busy}
+                className="min-h-11 bg-[#241b3f] px-4 text-sm font-bold text-white disabled:opacity-50 sm:col-span-2"
+              >
+                {busy
+                  ? 'Saving review…'
+                  : selected.suspendedAt
+                    ? 'Restore configuration access'
+                    : 'Suspend application'}
+              </button>
+            </form>
+          )}
         </section>
       )}
     </div>

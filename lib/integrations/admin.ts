@@ -57,6 +57,7 @@ export function projectAdminOverview(value: unknown): AdminIntegrationOverview {
       organiserId: text(a.organiserId),
       organiserName: text(a.organiserName),
       status: a.status,
+      removedAt: nullable(a.removedAt ?? null),
       suspendedAt: nullable(a.suspendedAt),
       suspensionReason: nullable(a.suspensionReason),
       createdAt: text(a.createdAt),

@@ -2,6 +2,7 @@ import { organiserIntegrationHandler } from '@/lib/integrations/store.server';
 import {
   saveIntegration,
   listIntegrations,
+  removeIntegration,
 } from '@/lib/integrations/management.server';
 import { integrationId } from '@/lib/integrations/validation';
 import { IntegrationError } from '@/lib/integrations/errors';
@@ -19,5 +20,11 @@ export async function GET(request: Request, context: Context) {
 export async function PATCH(request: Request, context: Context) {
   return organiserIntegrationHandler(async (req, userId) =>
     saveIntegration(req, userId, (await context.params).id),
+  )(request);
+}
+
+export async function DELETE(request: Request, context: Context) {
+  return organiserIntegrationHandler(async (_request, userId) =>
+    removeIntegration(userId, (await context.params).id),
   )(request);
 }

@@ -9,6 +9,7 @@ import {
   integrationId,
   parseIntegrationApplication,
   parseIntegrationKey,
+  parseIntegrationStatus,
   readIntegrationJson,
 } from './validation.ts';
 export const listIntegrations = (userId: string) =>
@@ -79,6 +80,32 @@ export function revokeIntegrationKey(
       p_user_id: userId,
       p_integration_id: integrationId(id),
       p_key_id: integrationId(keyId),
+    },
+  );
+}
+
+export async function setIntegrationStatus(
+  request: Request,
+  userId: string,
+  id: string,
+) {
+  const status = parseIntegrationStatus(await readIntegrationJson(request));
+  return integrationRpc<IntegrationApplication>(
+    'change_organiser_integration_lifecycle',
+    {
+      p_user_id: userId,
+      p_integration_id: integrationId(id),
+      p_action: status === 'active' ? 'enable' : 'disable',
+    },
+  );
+}
+export function removeIntegration(userId: string, id: string) {
+  return integrationRpc<{ id: string; removed: true }>(
+    'change_organiser_integration_lifecycle',
+    {
+      p_user_id: userId,
+      p_integration_id: integrationId(id),
+      p_action: 'remove',
     },
   );
 }

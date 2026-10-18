@@ -6,6 +6,9 @@ import {
   Copy,
   KeyRound,
   Plus,
+  Pause,
+  Play,
+  Trash2,
   RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
@@ -19,6 +22,16 @@ import type {
 } from '@/lib/integrations/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
 import { OrganiserWebhooks } from '@/components/organiser-webhooks';
 import { OrganiserWidget } from '@/components/organiser-widget';
 
@@ -51,11 +64,17 @@ export function OrganiserIntegrations() {
   ]);
   const [expiryDays, setExpiryDays] = useState(90);
   const [secret, setSecret] = useState('');
+  const [lifecycleTarget, setLifecycleTarget] = useState<{
+    id: string;
+    name: string;
+    action: 'enable' | 'disable' | 'remove';
+  } | null>(null);
   const selected = dashboard?.integrations.find((app) => app.id === selectedId);
   const selectApp = (
     app?: IntegrationApplication,
     fallbackOrganiser?: string,
   ) => {
+    setLifecycleTarget(null);
     setSelectedId(app?.id || '');
     setOrganiserId(
       app?.organiserId ||
@@ -194,6 +213,59 @@ export function OrganiserIntegrations() {
       setBusy(false);
     }
   }
+  async function changeLifecycle() {
+    if (!lifecycleTarget || busy) return;
+    const target = lifecycleTarget;
+    setBusy(true);
+    setError('');
+    setNotice('');
+    setSecret('');
+    try {
+      if (target.action === 'remove') {
+        await mutate<{ id: string; removed: true }>(
+          `/api/organiser/integrations/${target.id}`,
+          'DELETE',
+        );
+        setDashboard((current) =>
+          current
+            ? {
+                ...current,
+                integrations: current.integrations.filter(
+                  (app) => app.id !== target.id,
+                ),
+              }
+            : current,
+        );
+        selectApp();
+        setNotice(
+          'Integration removed. Existing orders, tickets and sales history are preserved.',
+        );
+      } else {
+        const app = await mutate<IntegrationApplication>(
+          `/api/organiser/integrations/${target.id}/status`,
+          'POST',
+          { status: target.action === 'enable' ? 'active' : 'disabled' },
+        );
+        replaceApp(app);
+        selectApp(app);
+        setNotice(
+          target.action === 'enable'
+            ? 'Integration enabled. Your saved connection settings are active again.'
+            : 'Integration disabled. New API requests, checkouts and outgoing notifications are paused. You can enable it again.',
+        );
+      }
+      setLifecycleTarget(null);
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : 'Unable to update this integration.',
+      );
+      setLifecycleTarget(null);
+    } finally {
+      setBusy(false);
+    }
+  }
   async function keyAction(
     action: 'create' | 'rotate' | 'revoke',
     keyId?: string,
@@ -261,6 +333,56 @@ export function OrganiserIntegrations() {
     );
   return (
     <div className="animate-rise max-w-5xl min-w-0">
+      <AlertDialog
+        open={Boolean(lifecycleTarget)}
+        onOpenChange={(open) => {
+          if (!open && !busy) setLifecycleTarget(null);
+        }}
+      >
+        <AlertDialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto bg-white text-[#241b3f] shadow-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {lifecycleTarget?.action === 'remove'
+                ? 'Remove integration?'
+                : lifecycleTarget?.action === 'enable'
+                  ? 'Enable integration?'
+                  : 'Disable integration?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="break-words">
+              {lifecycleTarget?.action === 'remove'
+                ? `Remove “${lifecycleTarget.name}” from your list and revoke its API keys. Its checkout links, widgets and outgoing notifications will stop. This cannot be enabled again; create a new integration to reconnect.`
+                : lifecycleTarget?.action === 'enable'
+                  ? `Enable “${lifecycleTarget.name}” with its saved keys and settings.`
+                  : `Pause “${lifecycleTarget?.name}”. API access, new checkouts and outgoing notifications will stop until you enable it again.`}
+            </AlertDialogDescription>
+            <p className="mt-2 text-sm text-slate-600">
+              Existing orders, issued tickets and sales history are preserved. A
+              payment already in progress can still complete safely.
+            </p>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={busy}
+              onClick={() => void changeLifecycle()}
+              className={
+                lifecycleTarget?.action === 'remove'
+                  ? 'bg-red-700 text-white hover:bg-red-800'
+                  : 'bg-[#241b3f] text-white'
+              }
+            >
+              {busy
+                ? 'Saving…'
+                : lifecycleTarget?.action === 'remove'
+                  ? 'Remove integration'
+                  : lifecycleTarget?.action === 'enable'
+                    ? 'Enable integration'
+                    : 'Disable integration'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <p className="eyebrow">Developer tools</p>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-black sm:text-3xl">
@@ -490,7 +612,8 @@ export function OrganiserIntegrations() {
                 <option value="disabled">Disabled</option>
               </select>
               <p className="mt-1 text-xs text-slate-500">
-                Disabling an integration immediately blocks its API keys.
+                Disabling pauses API access, new checkouts and outgoing
+                notifications. You can enable it again.
               </p>
             </div>
             <div className="flex items-end">
@@ -507,6 +630,67 @@ export function OrganiserIntegrations() {
               </Button>
             </div>
           </form>
+          {selected && (
+            <section
+              className="mt-5 flex flex-wrap items-center justify-between gap-4 border border-[#241b3f]/10 bg-white p-4 sm:p-6"
+              aria-labelledby="integration-access-heading"
+            >
+              <div className="min-w-0 flex-1 basis-56">
+                <h2 id="integration-access-heading" className="font-black">
+                  Manage integration
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  {selected.status === 'active'
+                    ? 'Active · Your website can connect.'
+                    : 'Disabled · New connections are paused.'}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Disable to pause it. Remove to disconnect it and revoke its
+                  keys. Existing purchases stay available.
+                </p>
+              </div>
+              <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() =>
+                    setLifecycleTarget({
+                      id: selected.id,
+                      name: selected.name,
+                      action:
+                        selected.status === 'active' ? 'disable' : 'enable',
+                    })
+                  }
+                >
+                  {selected.status === 'active' ? (
+                    <Pause className="h-4 w-4" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
+                  {selected.status === 'active'
+                    ? 'Disable integration'
+                    : 'Enable integration'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="text-red-700 hover:bg-red-50"
+                  disabled={busy}
+                  onClick={() =>
+                    setLifecycleTarget({
+                      id: selected.id,
+                      name: selected.name,
+                      action: 'remove',
+                    })
+                  }
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Remove integration
+                </Button>
+              </div>
+            </section>
+          )}
           {selected && (
             <OrganiserHostedCheckout
               key={'hosted-' + selected.id}

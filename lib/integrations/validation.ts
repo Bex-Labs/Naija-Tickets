@@ -15,6 +15,17 @@ export function integrationId(value: unknown) {
     ? value.toLowerCase()
     : invalid('Enter a valid integration or organiser identifier.');
 }
+export function parseIntegrationStatus(value: unknown): 'active' | 'disabled' {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    return invalid('Choose whether the integration is active or disabled.');
+  const input = value as Record<string, unknown>;
+  if (
+    Object.keys(input).length !== 1 ||
+    (input.status !== 'active' && input.status !== 'disabled')
+  )
+    return invalid('Choose whether the integration is active or disabled.');
+  return input.status as 'active' | 'disabled';
+}
 export function integrationEnvironment(value: unknown): IntegrationEnvironment {
   return value === 'test' || value === 'live'
     ? value

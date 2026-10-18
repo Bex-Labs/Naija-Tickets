@@ -4,6 +4,7 @@ export type AdminIntegrationRow = {
   organiserId: string;
   organiserName: string;
   status: 'active' | 'disabled';
+  removedAt?: string | null;
   suspendedAt: string | null;
   suspensionReason: string | null;
   createdAt: string;
