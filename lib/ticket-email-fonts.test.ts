@@ -1,7 +1,39 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
 import data from '../assets/ticket-fonts/noto-sans.json' with { type: 'json' };
 import { outlineTicketEmailText } from './ticket-email-fonts.ts';
+import { ticketFontParser } from './ticket-font-parser.ts';
+
+void test('font parsing works with the CommonJS entry used by Node', async () => {
+  const imported = await import('opentype.js');
+  const parse = ticketFontParser(imported);
+  const font = parse(
+    Uint8Array.from(Buffer.from(data.regular, 'base64')).buffer,
+  );
+  assert.notEqual(font.charToGlyphIndex('₦'), 0);
+});
+
+void test('font parsing works with the named ESM entry used in Vite production bundles', async () => {
+  const require = createRequire(import.meta.url);
+  const imported = await import(
+    pathToFileURL(require.resolve('opentype.js/dist/opentype.mjs')).href
+  );
+  assert.equal(imported.default, undefined);
+  const parse = ticketFontParser(imported);
+  const font = parse(Uint8Array.from(Buffer.from(data.bold, 'base64')).buffer);
+  for (const character of '₦ỌọÀáéNT-123')
+    assert.notEqual(font.charToGlyphIndex(character), 0);
+});
+
+void test('missing font parsers produce an actionable error', () => {
+  for (const imported of [undefined, null, {}, { default: {} }])
+    assert.throws(
+      () => ticketFontParser(imported),
+      /ticket font parser is unavailable/,
+    );
+});
 
 void test('bundled fonts include Nigerian currency, accented names and ticket codes', async () => {
   const { default: opentype } = await import('opentype.js');

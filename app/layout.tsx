@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Bricolage_Grotesque, Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
-import { SiteVisitorTracker } from '@/components/site-visitor-tracker';
+import { OptionalSiteFeatures } from '@/components/optional-site-features';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -52,7 +52,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${brandFont.variable} antialiased`}
       >
-        <SiteVisitorTracker />
+        <OptionalSiteFeatures />
         {children}
       </body>
     </html>

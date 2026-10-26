@@ -1,17 +1,26 @@
 import type { Font, PathCommand } from 'opentype.js';
 import fontData from '../assets/ticket-fonts/noto-sans.json' with { type: 'json' };
+import { ticketFontParser } from './ticket-font-parser.ts';
 
 let fonts: Promise<{ regular: Font; bold: Font }> | undefined;
 
 function loadFonts() {
-  return (fonts ??= import('opentype.js').then(({ default: opentype }) => ({
-    regular: opentype.parse(
-      Uint8Array.from(Buffer.from(fontData.regular, 'base64')).buffer,
-    ),
-    bold: opentype.parse(
-      Uint8Array.from(Buffer.from(fontData.bold, 'base64')).buffer,
-    ),
-  })));
+  return (fonts ??= import('opentype.js')
+    .then((module) => {
+      const parse = ticketFontParser(module);
+      return {
+        regular: parse(
+          Uint8Array.from(Buffer.from(fontData.regular, 'base64')).buffer,
+        ),
+        bold: parse(
+          Uint8Array.from(Buffer.from(fontData.bold, 'base64')).buffer,
+        ),
+      };
+    })
+    .catch((error: unknown) => {
+      fonts = undefined;
+      throw error;
+    }));
 }
 
 function attribute(attributes: string, name: string, fallback: string) {

@@ -17,6 +17,7 @@ import { accountHomeFromMetadata } from '@/lib/auth-destination';
 import { formatNaira } from '@/lib/events';
 import type { CheckoutReservation } from '@/lib/checkout-service';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { isPaymentEmail, PAYMENT_EMAIL_ERROR } from '@/lib/payment-email';
 
 export type CheckoutLine = {
   ticketTypeId?: string;
@@ -180,6 +181,13 @@ export function CheckoutFlow({
   const submit = async (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!event.currentTarget.reportValidity()) return;
+    if (
+      subtotalKobo + feeKobo > 0 &&
+      !isPaymentEmail(attendees[admissions[0]?.key]?.email)
+    ) {
+      setError(PAYMENT_EMAIL_ERROR);
+      return;
+    }
     setStatus('saving');
     setError('');
     try {
@@ -538,6 +546,15 @@ export function CheckoutFlow({
                   }
                   className="auth-input"
                 />
+                {index === 0 &&
+                  subtotalKobo + feeKobo > 0 &&
+                  attendees[admission.key]?.email &&
+                  !isPaymentEmail(attendees[admission.key].email) && (
+                    <p className="mt-2 text-xs leading-5 text-amber-800">
+                      Use your usual email address for payment. A sandbox login
+                      address ending in .test will be rejected.
+                    </p>
+                  )}
               </div>
               <div>
                 <label

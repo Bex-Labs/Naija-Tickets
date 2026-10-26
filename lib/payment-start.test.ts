@@ -3,6 +3,8 @@ import test from 'node:test';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { startCheckoutPayment } from './payment-start.ts';
 import { IntegrationError } from './integrations/errors.ts';
+import { PaystackRequestError } from './paystack.ts';
+import { isPaymentEmail } from './payment-email.ts';
 const id = '10000000-0000-4000-8000-000000000001',
   token = 'a'.repeat(64);
 function fixture(outcome = 'ready', authorization: string | null = null) {
@@ -11,6 +13,9 @@ function fixture(outcome = 'ready', authorization: string | null = null) {
   let initialized = 0;
   let delivered = 0;
   let received: unknown;
+  let lease: unknown = null;
+  let storedStatus = 'initialized';
+  let storedAuthorization: string | null = authorization;
   const prepared = {
     outcome,
     order_id: id,
@@ -20,11 +25,19 @@ function fixture(outcome = 'ready', authorization: string | null = null) {
     currency: 'NGN',
     expires_at: new Date(Date.now() + 600000).toISOString(),
     authorization_url: authorization,
-    purchaser_email: 'test@example.test',
+    purchaser_email: 'test@example.com',
   };
   const client = {
     rpc: (name: string, parameters: Record<string, unknown>) => {
       calls.push({ name, parameters });
+      if (
+        name === 'claim_checkout_payment_initialization' &&
+        outcome === 'ready' &&
+        !authorization
+      )
+        lease = parameters.p_lease_id;
+      if (name === 'finish_checkout_payment_initialization' && saved)
+        lease = null;
       return {
         abortSignal: async () => ({
           data:
@@ -41,6 +54,38 @@ function fixture(outcome = 'ready', authorization: string | null = null) {
       };
     },
     from: (table: string) => {
+      if (table === 'payments') {
+        const filters: Record<string, unknown> = {};
+        let statuses: string[] = [];
+        const update = {
+          update: () => update,
+          eq: (key: string, value: unknown) => {
+            filters[key] = value;
+            return update;
+          },
+          in: (_key: string, value: string[]) => {
+            statuses = value;
+            return update;
+          },
+          is: (key: string, value: unknown) => {
+            filters[key] = value;
+            return update;
+          },
+          abortSignal: async () => {
+            if (
+              filters.order_id === id &&
+              filters.provider === 'paystack' &&
+              filters.provider_reference === prepared.payment_reference &&
+              filters.initialize_lease_id === lease &&
+              filters.authorization_url === storedAuthorization &&
+              statuses.includes(storedStatus)
+            )
+              lease = null;
+            return { error: null };
+          },
+        };
+        return update;
+      }
       const builder = {
         select: () => builder,
         eq: () => builder,
@@ -90,6 +135,16 @@ function fixture(outcome = 'ready', authorization: string | null = null) {
     getInitialized: () => initialized,
     getDelivered: () => delivered,
     getReceived: () => received,
+    hasLease: () => lease !== null,
+    replaceLease: () => {
+      lease = crypto.randomUUID();
+    },
+    markVerified: () => {
+      storedStatus = 'verified';
+    },
+    saveCheckoutUrl: () => {
+      storedAuthorization = 'https://checkout.paystack.com/already-saved';
+    },
     setSaved: (value: boolean) => {
       saved = value;
     },
@@ -108,7 +163,7 @@ void test('payment service uses authoritative amount, callback and original sett
   assert.equal(result.status, 200);
   assert.equal(f.getInitialized(), 1);
   assert.deepEqual(f.getReceived(), {
-    email: 'test@example.test',
+    email: 'test@example.com',
     amountKobo: 105000,
     currency: 'NGN',
     reference: 'NT-TEST12345678',
@@ -208,6 +263,7 @@ void test('uncertain initialization failures retain the attempt rather than mark
     },
   );
   assert.equal(result.status, 502);
+  assert.equal(f.hasLease(), true);
   assert.ok(!JSON.stringify(result).includes('Private'));
   assert.deepEqual(
     f.calls.map((c) => c.name),
@@ -228,4 +284,83 @@ void test('uncertain initialization failures retain the attempt rather than mark
     ).status,
     502,
   );
+  assert.equal(stale.hasLease(), true);
+});
+
+void test('paid checkout rejects reserved test email domains before requesting a provider session and can retry without a stale lease', async () => {
+  for (const email of [
+    'person@fixture.test',
+    'person@fixture.invalid',
+    'person@fixture.example',
+    'person@fixture.localhost',
+  ]) {
+    const f = fixture();
+    f.prepared.purchaser_email = email;
+    const input = {
+      orderId: id,
+      checkoutToken: token,
+      requestUrl: 'https://tickets.example',
+    };
+    const result = await startCheckoutPayment(input, f.deps);
+    assert.equal(result.status, 422);
+    assert.equal(result.body.code, 'PAYMENT_EMAIL_INVALID');
+    assert.equal(f.getInitialized(), 0);
+    assert.equal(f.hasLease(), false);
+    f.prepared.purchaser_email = 'person@example.com';
+    assert.equal((await startCheckoutPayment(input, f.deps)).status, 200);
+    assert.equal(f.getInitialized(), 1);
+    assert.equal(f.hasLease(), false);
+  }
+  assert.equal(isPaymentEmail(' person+ticket@gmail.com '), true);
+  assert.equal(isPaymentEmail('PERSON@EXAMPLE.TEST'), false);
+  assert.equal(isPaymentEmail('not an email'), false);
+});
+
+void test('definite email rejection unlocks only the current unpaid attempt; uncertain provider errors keep their lease', async () => {
+  for (const [message, code, released] of [
+    ['"email" must be a valid email', 'PAYMENT_EMAIL_INVALID', true],
+    ['Invalid Email Address Passed', 'PAYMENT_EMAIL_INVALID', true],
+    ['Duplicate Transaction Reference', 'PAYMENT_PROVIDER_REJECTED', false],
+    ['An unknown provider error', 'PAYMENT_PROVIDER_REJECTED', false],
+  ] as const) {
+    const f = fixture();
+    const result = await startCheckoutPayment(
+      {
+        orderId: id,
+        checkoutToken: token,
+        requestUrl: 'https://tickets.example',
+      },
+      {
+        ...f.deps,
+        initialize: async () => {
+          throw new PaystackRequestError(message, 400);
+        },
+      },
+    );
+    assert.equal(result.body.code, code);
+    assert.equal(f.hasLease(), !released);
+  }
+});
+
+void test('rejected initialization cannot clear a newer lease, a verified payment, or a checkout URL saved by another worker', async () => {
+  for (const protect of ['newerLease', 'verified', 'savedUrl']) {
+    const f = fixture();
+    await startCheckoutPayment(
+      {
+        orderId: id,
+        checkoutToken: token,
+        requestUrl: 'https://tickets.example',
+      },
+      {
+        ...f.deps,
+        initialize: async () => {
+          if (protect === 'newerLease') f.replaceLease();
+          else if (protect === 'verified') f.markVerified();
+          else f.saveCheckoutUrl();
+          throw new PaystackRequestError('"email" must be a valid email', 400);
+        },
+      },
+    );
+    assert.equal(f.hasLease(), true);
+  }
 });

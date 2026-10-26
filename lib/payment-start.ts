@@ -3,6 +3,7 @@ import {
   integrationDatabaseError,
 } from './integrations/errors.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isPaymentEmail, PAYMENT_EMAIL_ERROR } from './payment-email.ts';
 import {
   PaystackRequestError,
   sha256Hex,
@@ -80,6 +81,18 @@ function paymentStartFailure(error: unknown) {
     };
   }
   if (error instanceof PaystackRequestError) {
+    if (
+      error.status === 400 &&
+      /^(?:"email" must be a valid email|Invalid Email Address Passed|Email is not allowed to be empty)\.?$/i.test(
+        error.message,
+      )
+    ) {
+      return {
+        status: 422,
+        code: 'PAYMENT_EMAIL_INVALID',
+        error: `${PAYMENT_EMAIL_ERROR} Start a new checkout to correct the buyer email.`,
+      };
+    }
     if (error.status === 401 || error.status === 403) {
       return {
         status: 503,
@@ -108,6 +121,8 @@ export async function startCheckoutPayment(
 ): Promise<PaymentStartResponse> {
   const admin = dependencies.client;
   const leaseId = crypto.randomUUID();
+  let claimedReference: string | null = null;
+  let providerRequested = false;
   try {
     const { data, error } = await admin
       .rpc('claim_checkout_payment_initialization', {
@@ -186,6 +201,8 @@ export async function startCheckoutPayment(
         { status: 409 },
       );
     }
+    if (!prepared.authorization_url)
+      claimedReference = prepared.payment_reference;
     dependencies.requirePaymentMode?.(Number(prepared.amount_kobo));
     if (prepared.authorization_url) {
       return paymentResponse({
@@ -205,6 +222,12 @@ export async function startCheckoutPayment(
     ) {
       throw new Error('The stored order total is invalid.');
     }
+    if (!isPaymentEmail(prepared.purchaser_email))
+      throw new IntegrationError(
+        422,
+        'PAYMENT_EMAIL_INVALID',
+        `${PAYMENT_EMAIL_ERROR} Start a new checkout to correct the buyer email.`,
+      );
 
     const { data: settlementOrder, error: settlementOrderError } = await admin
       .from('orders')
@@ -237,6 +260,7 @@ export async function startCheckoutPayment(
       throw new Error('The stored service fee is invalid.');
     }
     const callbackUrl = `${dependencies.origin(input.requestUrl)}/payment/callback`;
+    providerRequested = true;
     const initialization = await dependencies.initialize({
       email: prepared.purchaser_email,
       amountKobo,
@@ -276,13 +300,43 @@ export async function startCheckoutPayment(
       reference: prepared.payment_reference,
     });
   } catch (error) {
+    const failure = paymentStartFailure(error);
+    if (
+      claimedReference &&
+      (!providerRequested ||
+        [
+          'PAYMENT_EMAIL_INVALID',
+          'PAYMENT_PROVIDER_AUTH',
+          'PAYMENT_KEY_MISSING',
+        ].includes(failure.code))
+    ) {
+      // Release only our own lease after a definite non-start. An unknown
+      // provider outcome or a lost save response keeps its fencing protection.
+      try {
+        const { error: releaseError } = await admin
+          .from('payments')
+          .update({
+            initialize_lease_id: null,
+            initialize_lease_expires_at: null,
+          })
+          .eq('order_id', input.orderId)
+          .eq('provider', 'paystack')
+          .eq('provider_reference', claimedReference)
+          .eq('initialize_lease_id', leaseId)
+          .in('status', ['initialized', 'pending'])
+          .is('authorization_url', null)
+          .abortSignal(AbortSignal.timeout(8000));
+        if (releaseError) throw releaseError;
+      } catch {
+        dependencies.log?.({ code: 'PAYMENT_LEASE_RELEASE_FAILED' });
+      }
+    }
     dependencies.log?.({
       code:
         error instanceof PaystackRequestError
           ? String(error.status)
           : 'PAYMENT_START_FAILED',
     });
-    const failure = paymentStartFailure(error);
     return paymentResponse(
       { error: failure.error, code: failure.code },
       { status: failure.status },
