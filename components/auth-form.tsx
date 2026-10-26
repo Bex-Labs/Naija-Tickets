@@ -29,7 +29,15 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('confirmed') === '1') {
+    if (mode === 'login' && params.get('reason') === 'inactivity') {
+      window.setTimeout(
+        () =>
+          setNotice(
+            'You were signed out after 15 minutes of inactivity. Log in to continue.',
+          ),
+        0,
+      );
+    } else if (params.get('confirmed') === '1') {
       window.setTimeout(
         () => setNotice('Email confirmed. Log in to continue.'),
         0,
@@ -122,7 +130,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
       }
     };
     void finishGoogleLogin();
-  }, []);
+  }, [mode]);
 
   const continueWithGoogle = async () => {
     setError('');
