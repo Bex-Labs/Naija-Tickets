@@ -1,10 +1,30 @@
 # Naija Tickets integrations progress
 
-Last updated: 18 October 2026 (Africa/Lagos).
+Last updated: 27 October 2026 (Africa/Lagos).
 
 Current status: **The replacement hosted-checkout upgrade is implemented and verified on the separate public sandbox and Partner Demo. No-code event links, optional API selections/prefill, focused checkout/confirmation, safe organiser return, source reporting and temporary-prefill cleanup are implemented. Main production is unchanged; email is deferred. Production migration/configuration and the earlier physical-device, scheduled-delivery, refund/recovery and security/load gates remain pending. Disable/Enable and removal controls are additionally implemented locally and require the 18 October migration/deployment. Read the 18 and 17 October reports before historical notes.**
 
 Source brief: the user's “NAIJA TICKETS — PUBLIC API & DEVELOPER INTEGRATION PLATFORM” pasted requirements. The brief explicitly says: “STOP after Phase 0 and present the findings. Wait for approval before starting Phase 1.” Each later phase also has a report/test/approval gate.
+
+## No-code setup and event permission clarity — 27 October 2026
+
+Local-only usability changes reuse the existing hosted checkout link and permission system. The organiser page now leads with three plain-language steps, offers checkout-link preview/copy and website-builder instructions, and collapses API credentials, widgets, webhooks and optional HTML under advanced controls. `/developers/no-code` provides a complete guide covering separate Test/Live configuration, event assignment, button setup, verified checkout, return behaviour and disabling links. No API secret or partner backend is required for a plain button; a custom verified confirmation on the partner site still needs server-side integration. Email delivery retains its existing configuration requirements.
+
+Event assignments remain essential. The page identifies saved permissions, warns about unsaved edits, and blocks creating/copying hosted links or generating keys until connection changes are saved. Public marketplace event pages and the API connection/introspection check are separate from permission to read/sell an event. Existing keys use the current saved application grants; keys do not need replacement when event assignments change.
+
+Verification: **367/367 tests passed**, including new real-SQL tests that save a reduced/empty event grant list, reuse the same valid key, reject removed event/detail/ticket/availability access, restore access after reassignment, and block existing no-code links/fresh sessions after saved grant removal. TypeScript, changed-file lint and Vercel production build passed. Fictional browser fixture checks confirmed saved/unsaved notices, disabled actions, no-event selection after save, restored link controls, copy success feedback, hidden advanced tools and a 390px viewport without horizontal overflow. Screenshots: `outputs/no-code-20261027/desktop.png` and `mobile.png` (ignored local artifacts).
+
+A read-only online check of the Partner Demo's configured Test key against `https://naija-tickets-sandbox.vercel.app` returned only **Lagos After Hours — Sandbox**, with a matching saved grant. There was no unassigned published event for that organiser to probe remotely. Denial for unassigned events was proved with fictional database tests, not by changing any remote grants. The local sandbox was not running during the initial check. The reported bypass was not reproduced; an unsaved checkbox, a different application/key/deployment, an already-rendered page or a direct public event page must not be mistaken for a successful restricted API request.
+
+The logout notice now reads **You were signed out due to inactivity. Log in to continue.** The owner requested Google sign-in be deferred; its existing implementation and provider settings are unchanged. No deployment, migration, environment, credential, purchase or remote integration setting was changed. Main production still requires the separately approved integration rollout; these source/UI changes are local only.
+
+## Local sandbox checkout configuration follow-up — 27 October 2026
+
+The repeated `SANDBOX_NOT_CONFIGURED` report was traced to the main local app at `http://localhost:3000`: it uses the main Supabase project, defaults to live business-data mode and has hosted links/checkout disabled with no signing secret. Its Paystack Test key does not make that database a sandbox. The separate sandbox environment already has its own project binding, signing configuration, hosted-link/checkout flags and Paystack Test key; its server was stopped. Started the existing sandbox at `http://localhost:3002` and Partner Demo at `http://localhost:3001` without changing their source, credentials, databases or environments.
+
+The first Partner Demo connection check timed out during cold sandbox startup. A subsequent staged read-only check passed Test authentication, hosted-checkout capability, one assigned event and ticket-type/availability retrieval. This is configuration/read acceptance only: no checkout, payment, ticket or remote setting was created or changed.
+
+The main local hosted-link UI now waits for its availability check, disables creation when unavailable or when loading fails, hides unusable copy controls and explains that Test links belong in the separate sandbox workspace. A fictional browser fixture confirmed the disabled creation button, hidden copy action and actionable explanation (`outputs/no-code-20261027/unavailable.png`). Focused checkout/link tests **19/19**, TypeScript and changed-file lint passed. The earlier complete **367/367** suite and production build cover the no-code upgrade; this follow-up changes the client availability guard only. No production deployment or migration was performed.
 
 ## Integration controls — 18 October 2026
 

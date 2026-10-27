@@ -236,6 +236,37 @@ void test('Phase 2 reads reuse the real reservation/pricing engine and enforce t
       },
     );
     await scenario(
+      'saving event selections changes existing key access; a working key with no grants cannot read events',
+      async () => {
+        const save = async (ids: string[]) => {
+          const result = await db.query<{ value: { eventIds: string[] } }>(
+            "select public.save_organiser_integration($1,$2,$3,'Partner','active','[]'::jsonb,$4::uuid[]) value",
+            [owner, app.id, org, ids],
+          );
+          assert.deepEqual(
+            result.rows[0].value.eventIds.sort(),
+            [...ids].sort(),
+          );
+        };
+        await save([second]);
+        assert.equal((await request('detail', event)).response.status, 404);
+        assert.equal((await request('tickets', event)).response.status, 404);
+        assert.equal(
+          (await request('availability', event)).response.status,
+          404,
+        );
+        assert.deepEqual(
+          (await request()).body.data.map((e: { id: string }) => e.id),
+          [second],
+        );
+        await save([]);
+        assert.ok(await deps.authenticate(k.id, k.digest, 'live'));
+        assert.deepEqual((await request()).body.data, []);
+        await save([event]);
+        assert.equal((await request('detail', event)).response.status, 200);
+      },
+    );
+    await scenario(
       'event and ticket keyset pages preserve timestamp microseconds, filters and stable ID tie breaks',
       async () => {
         const first = await request('list', null, '?limit=1');

@@ -70,6 +70,34 @@ export function OrganiserIntegrations() {
     action: 'enable' | 'disable' | 'remove';
   } | null>(null);
   const selected = dashboard?.integrations.find((app) => app.id === selectedId);
+  const originsText = (text: string) =>
+    text
+      .split(/\r?\n/)
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .sort()
+      .join('\n');
+  const unsavedChanges =
+    !!selected &&
+    (selected.name !== name ||
+      selected.status !== status ||
+      selected.organiserId !== organiserId ||
+      [...selected.eventIds].sort().join(',') !==
+        [...eventIds].sort().join(',') ||
+      originsText(testOrigins) !==
+        originsText(
+          selected.domains
+            .filter((d) => d.environment === 'test')
+            .map((d) => d.origin)
+            .join('\n'),
+        ) ||
+      originsText(liveOrigins) !==
+        originsText(
+          selected.domains
+            .filter((d) => d.environment === 'live')
+            .map((d) => d.origin)
+            .join('\n'),
+        ));
   const selectApp = (
     app?: IntegrationApplication,
     fallbackOrganiser?: string,
@@ -201,7 +229,7 @@ export function OrganiserIntegrations() {
       setNotice(
         selectedId
           ? 'Integration updated.'
-          : 'Integration registered. You can now create an API key.',
+          : 'Website connection saved. Create a checkout link below; no API key is needed.',
       );
     } catch (cause) {
       setError(
@@ -408,6 +436,23 @@ export function OrganiserIntegrations() {
         programming or API key needed. Developers can also connect a backend
         using the Hosted Checkout API.
       </p>
+      <section className="mt-4 rounded-xl border border-emerald-200 bg-white p-4 sm:p-5">
+        <h2 className="font-black">Sell tickets without coding</h2>
+        <ol className="mt-3 grid list-inside list-decimal gap-3 text-sm leading-6 text-slate-600 sm:grid-cols-3">
+          <li>
+            Name your website connection, add its website address and select
+            your events.
+          </li>
+          <li>Save it, then create a checkout link for an event below.</li>
+          <li>Copy the link into your website builder’s Buy Tickets button.</li>
+        </ol>
+        <a
+          href="/developers/no-code"
+          className="mt-2 inline-flex min-h-11 items-center text-sm font-bold text-emerald-800 underline"
+        >
+          Follow the no-code setup guide →
+        </a>
+      </section>
       <div className="mt-4 flex items-start gap-3 border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
         <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
         <p>
@@ -553,10 +598,21 @@ export function OrganiserIntegrations() {
               <legend className="auth-label">
                 Events this application may access
               </legend>
-              <p className="mb-2 text-xs text-slate-500">
-                No events are assigned by default. Assignment does not publish a
-                draft event.
+              <p className="mb-2 text-xs leading-5 text-slate-500">
+                Choose which events this website can access through its API
+                keys, checkout links and widgets. No selection means no event
+                access. Save integration to apply changes; a draft must still be
+                published separately.
               </p>
+              {selected && (
+                <output
+                  className={`mb-2 block text-xs font-bold ${unsavedChanges ? 'text-amber-800' : 'text-emerald-800'}`}
+                >
+                  {unsavedChanges
+                    ? 'Unsaved changes. The website still uses the last saved permissions.'
+                    : `${selected.eventIds.length} event${selected.eventIds.length === 1 ? '' : 's'} allowed in the saved connection.`}
+                </output>
+              )}
               <div className="max-h-44 space-y-2 overflow-y-auto border border-[#241b3f]/10 p-3">
                 {dashboard.events
                   .filter((event) => event.organiserId === organiserId)
@@ -594,6 +650,11 @@ export function OrganiserIntegrations() {
                   </p>
                 )}
               </div>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                Public event pages remain visible on Naija Tickets. Connecting
+                an API key alone only verifies the connection; it does not grant
+                access to every event.
+              </p>
             </fieldset>
             <div>
               <label htmlFor="integration-status" className="auth-label">
@@ -696,263 +757,284 @@ export function OrganiserIntegrations() {
               key={'hosted-' + selected.id}
               application={selected}
               events={dashboard.events}
+              settingsPending={unsavedChanges}
             />
           )}
-          {selected && (
-            <section
-              className="mt-6 border border-[#241b3f]/10 bg-white p-4 sm:p-6"
-              aria-labelledby="integration-keys-heading"
-            >
-              <div className="flex items-center gap-2">
-                <KeyRound className="h-5 w-5 text-emerald-700" />
-                <h2
-                  id="integration-keys-heading"
-                  className="text-xl font-black"
-                >
-                  API credentials
-                </h2>
-              </div>
-              <p className="mt-2 text-sm text-slate-600">
-                Keep secret keys on your server. Never place them in an embed
-                snippet or browser code. Rotation revokes the previous key
-                immediately.
-              </p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div>
-                  <label htmlFor="integration-key-mode" className="auth-label">
-                    Mode
-                  </label>
-                  <select
-                    id="integration-key-mode"
-                    value={environment}
-                    onChange={(event) =>
-                      setEnvironment(
-                        event.target.value as IntegrationEnvironment,
-                      )
-                    }
-                    disabled={busy}
-                    className="auth-input w-full bg-white"
+          <details className="mt-6 rounded-xl border border-[#241b3f]/10 bg-white p-4 sm:p-6">
+            <summary className="cursor-pointer font-black">
+              Advanced connections · API keys, widgets and webhooks
+            </summary>
+            <p className="mt-2 text-sm text-slate-600">
+              These tools are for developers. A Buy Tickets link above works
+              without them.
+            </p>
+            {selected && (
+              <section
+                className="mt-6 border border-[#241b3f]/10 bg-white p-4 sm:p-6"
+                aria-labelledby="integration-keys-heading"
+              >
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-5 w-5 text-emerald-700" />
+                  <h2
+                    id="integration-keys-heading"
+                    className="text-xl font-black"
                   >
-                    <option value="test">Test</option>
-                    <option value="live">Live</option>
-                  </select>
+                    API credentials
+                  </h2>
                 </div>
-                <div>
-                  <label
-                    htmlFor="integration-key-expiry"
-                    className="auth-label"
-                  >
-                    Expires after
-                  </label>
-                  <select
-                    id="integration-key-expiry"
-                    value={expiryDays}
-                    onChange={(event) =>
-                      setExpiryDays(Number(event.target.value))
-                    }
-                    disabled={busy}
-                    className="auth-input w-full bg-white"
-                  >
-                    {[30, 90, 365].map((days) => (
-                      <option key={days} value={days}>
-                        {days} days
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <Button
-                    disabled={busy || selected.status !== 'active'}
-                    onClick={() => void keyAction('create')}
-                    className="w-full bg-[#241b3f] text-white"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Generate key
-                  </Button>
-                </div>
-              </div>
-              <fieldset className="mt-4 grid gap-2 sm:grid-cols-2">
-                <legend className="mb-2 text-sm font-semibold">
-                  Key permissions
-                </legend>
-                {INTEGRATION_SCOPES.map((scope) => (
-                  <label
-                    key={scope}
-                    className="flex min-h-10 items-center gap-3 text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={readScopes.includes(scope)}
-                      disabled={busy}
+                <p className="mt-2 text-sm text-slate-600">
+                  For developers only. Skip this section when using a checkout
+                  link. Keep secret keys on your server. Never place them in an
+                  embed snippet or browser code. Rotation revokes the previous
+                  key immediately.
+                </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <label
+                      htmlFor="integration-key-mode"
+                      className="auth-label"
+                    >
+                      Mode
+                    </label>
+                    <select
+                      id="integration-key-mode"
+                      value={environment}
                       onChange={(event) =>
-                        setReadScopes((current) =>
-                          event.target.checked
-                            ? [...current, scope]
-                            : current.filter((value) => value !== scope),
+                        setEnvironment(
+                          event.target.value as IntegrationEnvironment,
                         )
                       }
-                      className="h-4 w-4 shrink-0 accent-emerald-600"
-                    />
-                    <span>
-                      {
-                        {
-                          'integration:read': 'Integration details',
-                          'events:read': 'Event information',
-                          'tickets:read': 'Ticket types and prices',
-                          'availability:read': 'Available ticket quantities',
-                          'checkout:write': 'Create hosted checkouts',
-                          'orders:read':
-                            'Your application’s orders and checkout results',
-                          'tickets:status':
-                            'Purchased ticket status (no QR codes)',
-                          'attendees:read': 'Registered attendee names',
-                          'attendees:contact':
-                            'Attendee email and phone (also select attendee names)',
-                          'sales:read': 'Your application’s sales totals',
-                          'groups:read':
-                            'Group registration counts (no invite links)',
-                          'refunds:read': 'Recorded refund status (read only)',
-                          'entry:verify':
-                            'Verify your application’s tickets as the key creator',
-                          'entry:check-in':
-                            'Check in tickets as the key creator (also select verification)',
-                        }[scope]
+                      disabled={busy}
+                      className="auth-input w-full bg-white"
+                    >
+                      <option value="test">Test</option>
+                      <option value="live">Live</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="integration-key-expiry"
+                      className="auth-label"
+                    >
+                      Expires after
+                    </label>
+                    <select
+                      id="integration-key-expiry"
+                      value={expiryDays}
+                      onChange={(event) =>
+                        setExpiryDays(Number(event.target.value))
                       }
-                      <code className="block text-xs text-slate-500">
-                        {scope}
-                      </code>
-                    </span>
-                  </label>
-                ))}
-              </fieldset>
-              <p className="mt-2 text-xs leading-5 text-slate-500">
-                Existing keys keep their permissions. Generate a new key to add
-                access; rotating preserves its current permissions.
-              </p>
-              {secret && (
-                <div className="mt-4 border border-amber-300 bg-amber-50 p-4">
-                  <p className="text-sm font-bold text-amber-950">
-                    Your secret key — shown once
-                  </p>
-                  <code className="mt-2 block select-all break-all text-xs leading-6 text-amber-950">
-                    {secret}
-                  </code>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => void copySecret()}
+                      disabled={busy}
+                      className="auth-input w-full bg-white"
                     >
-                      <Copy className="h-4 w-4" />
-                      Copy secret
-                    </Button>
+                      {[30, 90, 365].map((days) => (
+                        <option key={days} value={days}>
+                          {days} days
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-end">
                     <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setSecret('')}
+                      disabled={
+                        busy || unsavedChanges || selected.status !== 'active'
+                      }
+                      onClick={() => void keyAction('create')}
+                      className="w-full bg-[#241b3f] text-white"
                     >
-                      I have saved it
+                      <Plus className="h-4 w-4" />
+                      Generate key
                     </Button>
                   </div>
                 </div>
-              )}
-              <div className="mt-5 divide-y divide-[#241b3f]/10">
-                {selected.keys.map((key) => {
-                  const expired = Date.parse(key.expiresAt) <= clock;
-                  return (
-                    <div
-                      key={key.id}
-                      className="flex flex-wrap items-center justify-between gap-3 py-4"
+                <fieldset className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <legend className="mb-2 text-sm font-semibold">
+                    Key permissions
+                  </legend>
+                  {INTEGRATION_SCOPES.map((scope) => (
+                    <label
+                      key={scope}
+                      className="flex min-h-10 items-center gap-3 text-sm"
                     >
-                      <div className="min-w-0">
-                        <p className="break-all font-mono text-xs">
-                          {key.display}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-600">
-                          {key.environment === 'test' ? 'Test' : 'Live'} ·{' '}
-                          {key.revokedAt
-                            ? 'Revoked'
-                            : expired
-                              ? 'Expired'
-                              : 'Active'}{' '}
-                          · Created {date(key.createdAt)} · Expires{' '}
-                          {date(key.expiresAt)}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {key.scopes.length
-                            ? key.scopes.join(', ')
-                            : 'No permissions'}{' '}
-                          ·{' '}
-                          {key.lastUsedAt
-                            ? `Last used ${date(key.lastUsedAt)}`
-                            : 'Not used yet'}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        {!key.revokedAt && (
-                          <>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              disabled={busy || selected.status !== 'active'}
-                              onClick={() => void keyAction('rotate', key.id)}
-                            >
-                              <RefreshCw className="h-3.5 w-3.5" />
-                              Rotate
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              disabled={busy}
-                              onClick={() => void keyAction('revoke', key.id)}
-                              className="text-red-700"
-                            >
-                              Revoke
-                            </Button>
-                          </>
-                        )}
-                      </div>
+                      <input
+                        type="checkbox"
+                        checked={readScopes.includes(scope)}
+                        disabled={busy}
+                        onChange={(event) =>
+                          setReadScopes((current) =>
+                            event.target.checked
+                              ? [...current, scope]
+                              : current.filter((value) => value !== scope),
+                          )
+                        }
+                        className="h-4 w-4 shrink-0 accent-emerald-600"
+                      />
+                      <span>
+                        {
+                          {
+                            'integration:read': 'Integration details',
+                            'events:read': 'Event information',
+                            'tickets:read': 'Ticket types and prices',
+                            'availability:read': 'Available ticket quantities',
+                            'checkout:write': 'Create hosted checkouts',
+                            'orders:read':
+                              'Your application’s orders and checkout results',
+                            'tickets:status':
+                              'Purchased ticket status (no QR codes)',
+                            'attendees:read': 'Registered attendee names',
+                            'attendees:contact':
+                              'Attendee email and phone (also select attendee names)',
+                            'sales:read': 'Your application’s sales totals',
+                            'groups:read':
+                              'Group registration counts (no invite links)',
+                            'refunds:read':
+                              'Recorded refund status (read only)',
+                            'entry:verify':
+                              'Verify your application’s tickets as the key creator',
+                            'entry:check-in':
+                              'Check in tickets as the key creator (also select verification)',
+                          }[scope]
+                        }
+                        <code className="block text-xs text-slate-500">
+                          {scope}
+                        </code>
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                  Existing keys keep their permissions. Generate a new key to
+                  add access; rotating preserves its current permissions.
+                </p>
+                {secret && (
+                  <div className="mt-4 border border-amber-300 bg-amber-50 p-4">
+                    <p className="text-sm font-bold text-amber-950">
+                      Your secret key — shown once
+                    </p>
+                    <code className="mt-2 block select-all break-all text-xs leading-6 text-amber-950">
+                      {secret}
+                    </code>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void copySecret()}
+                      >
+                        <Copy className="h-4 w-4" />
+                        Copy secret
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setSecret('')}
+                      >
+                        I have saved it
+                      </Button>
                     </div>
-                  );
-                })}
-                {!selected.keys.length && (
-                  <p className="py-5 text-sm text-slate-500">
-                    No API keys yet.
-                  </p>
+                  </div>
                 )}
-              </div>
-              <p className="mt-3 break-all text-xs text-slate-500">
-                Public widget identifier: <code>{selected.widgetId}</code>. Use
-                it in the embed snippet below; it cannot authenticate private
-                API requests.
+                <div className="mt-5 divide-y divide-[#241b3f]/10">
+                  {selected.keys.map((key) => {
+                    const expired = Date.parse(key.expiresAt) <= clock;
+                    return (
+                      <div
+                        key={key.id}
+                        className="flex flex-wrap items-center justify-between gap-3 py-4"
+                      >
+                        <div className="min-w-0">
+                          <p className="break-all font-mono text-xs">
+                            {key.display}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-600">
+                            {key.environment === 'test' ? 'Test' : 'Live'} ·{' '}
+                            {key.revokedAt
+                              ? 'Revoked'
+                              : expired
+                                ? 'Expired'
+                                : 'Active'}{' '}
+                            · Created {date(key.createdAt)} · Expires{' '}
+                            {date(key.expiresAt)}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {key.scopes.length
+                              ? key.scopes.join(', ')
+                              : 'No permissions'}{' '}
+                            ·{' '}
+                            {key.lastUsedAt
+                              ? `Last used ${date(key.lastUsedAt)}`
+                              : 'Not used yet'}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          {!key.revokedAt && (
+                            <>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={busy || selected.status !== 'active'}
+                                onClick={() => void keyAction('rotate', key.id)}
+                              >
+                                <RefreshCw className="h-3.5 w-3.5" />
+                                Rotate
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={busy}
+                                onClick={() => void keyAction('revoke', key.id)}
+                                className="text-red-700"
+                              >
+                                Revoke
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {!selected.keys.length && (
+                    <p className="py-5 text-sm text-slate-500">
+                      No API keys yet.
+                    </p>
+                  )}
+                </div>
+                <p className="mt-3 break-all text-xs text-slate-500">
+                  Public widget identifier: <code>{selected.widgetId}</code>.
+                  Use it in the embed snippet below; it cannot authenticate
+                  private API requests.
+                </p>
+              </section>
+            )}
+            {selected && (
+              <OrganiserWidget
+                key={'widget-' + selected.id}
+                application={selected}
+                events={dashboard.events}
+              />
+            )}
+            {selected && (
+              <OrganiserWebhooks
+                key={selected.id}
+                applicationId={selected.id}
+              />
+            )}
+            <section className="mt-6 border border-[#241b3f]/10 bg-white p-4 sm:p-6">
+              <h2 className="flex items-center gap-2 text-lg font-black">
+                <Code2 className="h-5 w-5 text-emerald-700" />
+                Check your connection
+              </h2>
+              <p className="mt-2 text-sm text-slate-600">
+                From your server, send a GET request to{' '}
+                <code>/api/v1/integration</code> with{' '}
+                <code>Authorization: Bearer YOUR_SECRET_KEY</code>. The response
+                confirms the application, mode and granted permissions. This
+                endpoint does not return events, customer information or
+                tickets.
               </p>
             </section>
-          )}
-          {selected && (
-            <OrganiserWidget
-              key={'widget-' + selected.id}
-              application={selected}
-              events={dashboard.events}
-            />
-          )}
-          {selected && (
-            <OrganiserWebhooks key={selected.id} applicationId={selected.id} />
-          )}
-          <section className="mt-6 border border-[#241b3f]/10 bg-white p-4 sm:p-6">
-            <h2 className="flex items-center gap-2 text-lg font-black">
-              <Code2 className="h-5 w-5 text-emerald-700" />
-              Check your connection
-            </h2>
-            <p className="mt-2 text-sm text-slate-600">
-              From your server, send a GET request to{' '}
-              <code>/api/v1/integration</code> with{' '}
-              <code>Authorization: Bearer YOUR_SECRET_KEY</code>. The response
-              confirms the application, mode and granted permissions. This
-              endpoint does not return events, customer information or tickets.
-            </p>
-          </section>
+          </details>
         </>
       )}
     </div>

@@ -19,9 +19,11 @@ type Link = {
 export function OrganiserHostedCheckout({
   application,
   events,
+  settingsPending = false,
 }: {
   application: IntegrationApplication;
   events: IntegrationDashboard['events'];
+  settingsPending?: boolean;
 }) {
   const available = events.filter(
     (e) => e.status === 'published' && application.eventIds.includes(e.id),
@@ -31,7 +33,7 @@ export function OrganiserHostedCheckout({
     [returnUrl, setReturnUrl] = useState<string | null>(null),
     [links, setLinks] = useState<Link[]>([]),
     [origin, setOrigin] = useState(''),
-    [platformAvailable, setPlatformAvailable] = useState(false),
+    [platformAvailable, setPlatformAvailable] = useState<boolean | null>(null),
     [report, setReport] = useState<HostedReport | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
@@ -62,6 +64,7 @@ export function OrganiserHostedCheckout({
       try {
         await load();
       } catch (cause) {
+        setPlatformAvailable(false);
         setError(
           cause instanceof Error
             ? cause.message
@@ -79,6 +82,7 @@ export function OrganiserHostedCheckout({
     registered = application.domains.filter((d) => d.environment === mode);
   async function save(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (settingsPending || platformAvailable !== true) return;
     setBusy(true);
     setError('');
     setNotice('');
@@ -152,20 +156,33 @@ export function OrganiserHostedCheckout({
   return (
     <section className="mt-6 min-w-0 rounded-xl border border-emerald-700/20 bg-white p-4 sm:p-6">
       <p className="text-xs font-black uppercase tracking-widest text-emerald-700">
-        Recommended integration
+        No coding needed
       </p>
-      <h2 className="mt-2 text-2xl font-black">Hosted Checkout</h2>
+      <h2 className="mt-2 text-2xl font-black">Create a Buy Tickets link</h2>
       <p className="mt-3 text-sm leading-6 text-slate-600">
         <strong>Hosted Checkout Link:</strong> no programming or API key
         required. Add a Buy Tickets button to your website. Customers choose
         tickets and pay on a focused Naija Tickets page, then return to your
         approved website.
       </p>
-      {origin && !platformAvailable && (
+      <p className="mt-2 text-sm leading-6 text-slate-600">
+        You do not need API keys, a server or a webhook. Naija Tickets handles
+        ticket selection, payment verification and ticket delivery. Your website
+        builder only needs to support a button with a website link.
+      </p>
+      {settingsPending && (
+        <output className="mt-4 block rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+          Save your connection changes above before creating or copying a link.
+          The existing website still uses the last saved event permissions.
+        </output>
+      )}
+      {platformAvailable === false && (
         <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-          Hosted links are not active on this website yet. You can prepare a
-          link, but ask the platform administrator to activate hosted checkout
-          before sharing it with customers.
+          Checkout links are unavailable on this app. Test links must be created
+          in the separate sandbox organiser workspace, using a sandbox account
+          and event. Main-site accounts and events are separate, even when
+          Paystack uses Test payments. For Live links, the platform
+          administrator must activate hosted checkout on the main app.
         </p>
       )}
       <form
@@ -181,7 +198,7 @@ export function OrganiserHostedCheckout({
               setEvent(e.target.value);
               setReturnUrl(null);
             }}
-            disabled={busy}
+            disabled={busy || settingsPending}
           >
             {!available.length && (
               <option value="">Assign a published event first</option>
@@ -202,7 +219,7 @@ export function OrganiserHostedCheckout({
               setMode(e.target.value as 'test' | 'live');
               setReturnUrl(null);
             }}
-            disabled={busy}
+            disabled={busy || settingsPending}
           >
             <option value="test">Test</option>
             <option value="live">Live</option>
@@ -214,6 +231,7 @@ export function OrganiserHostedCheckout({
             className="auth-input mt-2 w-full"
             type="url"
             required
+            disabled={busy || settingsPending}
             value={
               returnUrl ??
               selected?.returnUrl ??
@@ -229,14 +247,23 @@ export function OrganiserHostedCheckout({
           </span>
         </label>
         <button
-          disabled={busy || !activeEvent || !registered.length}
+          disabled={
+            busy ||
+            settingsPending ||
+            platformAvailable !== true ||
+            !activeEvent ||
+            !registered.length ||
+            application.status !== 'active'
+          }
           className="min-h-11 rounded-lg bg-emerald-600 px-4 font-bold text-white disabled:opacity-50"
         >
-          {busy
-            ? 'Saving…'
-            : selected
-              ? 'Update / enable checkout link'
-              : 'Create checkout link'}
+          {platformAvailable === null
+            ? 'Checking checkout availability…'
+            : busy
+              ? 'Saving…'
+              : selected
+                ? 'Update / enable checkout link'
+                : 'Create checkout link'}
         </button>
         {selected && (
           <button
@@ -259,7 +286,13 @@ export function OrganiserHostedCheckout({
           {notice}
         </output>
       )}
-      {selected && (
+      {!registered.length && (
+        <p className="mt-3 text-sm text-slate-600">
+          Add your website address under {mode === 'test' ? 'Test' : 'Live'}{' '}
+          website origins above, then save the connection first.
+        </p>
+      )}
+      {selected && !settingsPending && platformAvailable === true && (
         <div className="mt-5 space-y-3">
           <p className="text-sm font-bold">
             Link {selected.enabled ? 'enabled' : 'disabled'}
@@ -273,24 +306,58 @@ export function OrganiserHostedCheckout({
             />
           </label>
           <button
+            type="button"
             className="min-h-11 text-sm font-bold text-emerald-800 underline"
             onClick={() => void copy(url)}
           >
             Copy checkout link
           </button>
-          <pre className="overflow-x-auto rounded-lg bg-slate-50 p-3 text-xs">
-            {snippet}
-          </pre>
-          <button
-            className="min-h-11 text-sm font-bold text-emerald-800 underline"
-            onClick={() => void copy(snippet)}
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-4 inline-flex min-h-11 items-center text-sm font-bold text-emerald-800 underline"
           >
-            Copy HTML button
-          </button>
+            Preview checkout
+          </a>
+          <ol className="list-inside list-decimal space-y-1 rounded-lg bg-emerald-50 p-4 text-sm leading-6 text-emerald-950">
+            <li>Open your website builder and add a button.</li>
+            <li>Name it Buy Tickets and choose Website address or Link.</li>
+            <li>
+              Paste the copied checkout link, save and publish your website.
+            </li>
+            <li>
+              Click your button and complete a{' '}
+              {mode === 'test' ? 'test purchase' : 'purchase'} to check the
+              experience.
+            </li>
+          </ol>
+          <p className="text-xs leading-5 text-slate-500">
+            Buyers receive their purchase result and ticket access on the secure
+            checkout. A success message on your own website requires a developer
+            to verify the payment; returning to your website alone is not proof
+            of payment.
+          </p>
+          <details className="rounded-lg border p-3">
+            <summary className="cursor-pointer text-sm font-bold">
+              Optional HTML button · for a custom-code block
+            </summary>
+            <pre className="mt-3 overflow-x-auto rounded-lg bg-slate-50 p-3 text-xs">
+              {snippet}
+            </pre>
+            <button
+              className="min-h-11 text-sm font-bold text-emerald-800 underline"
+              onClick={() => void copy(snippet)}
+            >
+              Copy HTML button
+            </button>
+          </details>
         </div>
       )}
-      <div className="mt-6 border-t pt-5">
-        <h3 className="font-black">Hosted Checkout API · for developers</h3>
+      <details className="mt-6 border-t pt-5">
+        <summary className="cursor-pointer font-black">
+          Hosted Checkout API · for developers
+        </summary>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           Create sessions from your server using a key with checkout:write. Send
           the event ID; ticket selections and buyer prefill are optional.
@@ -303,7 +370,7 @@ export function OrganiserHostedCheckout({
         >
           Read integration instructions →
         </a>
-      </div>
+      </details>
       {report && <IntegrationSalesReport report={report} />}
     </section>
   );

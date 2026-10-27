@@ -9,9 +9,9 @@ import {
 const methods = [
   {
     icon: ExternalLink,
-    title: 'Hosted checkout',
-    text: 'Your server creates a checkout. Your buyer pays on Naija Tickets and returns to your website.',
-    href: '/developers/checkout',
+    title: 'Buy Tickets link · no coding',
+    text: 'Copy a checkout link into your website’s button. No API key or backend needed. Naija Tickets handles payment and tickets.',
+    href: '/developers/no-code',
   },
   {
     icon: Ticket,

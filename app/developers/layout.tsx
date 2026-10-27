@@ -9,6 +9,7 @@ export const metadata: Metadata = {
     'Integrate event discovery, hosted checkout, public ticket widgets and signed notifications with Naija Tickets.',
 };
 const links = [
+  ['No-code setup', '/developers/no-code'],
   ['Overview', '/developers'],
   ['Get started', '/developers/getting-started'],
   ['API reference', '/developers/reference'],

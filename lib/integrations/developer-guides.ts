@@ -4,6 +4,57 @@ export type DeveloperGuide = {
   sections: { heading: string; body: string[]; code?: string }[];
 };
 export const developerGuides: Record<string, DeveloperGuide> = {
+  'no-code': {
+    title: 'Add a Buy Tickets button without coding',
+    intro:
+      'Create a checkout link, copy it and paste it into a button on your website. You do not need an API key or your own payment backend.',
+    sections: [
+      {
+        heading: '1. Choose where to test',
+        body: [
+          'Use your organiser account on the separate Naija Tickets sandbox for Test purchases. The main website and sandbox have separate accounts, events and connections. Test mode never permits access to live business data.',
+          'Create and publish your event, with its ticket types, on the same platform where you create the checkout link. For real purchases later, the main platform must have Live payments and hosted checkout configured by its administrator.',
+        ],
+      },
+      {
+        heading: '2. Save your website connection',
+        body: [
+          'Open Developers & Integrations in your organiser workspace and choose New application. Application simply means the website you are connecting: give it a recognisable name.',
+          'Add your website address under Test website origins when testing, or Live website origins for real sales. Use only the scheme and hostname, for example https://my-website.example; no page path. Local testing can use http://localhost:3001. A deployed website can still use Test mode.',
+          'Under Events this application may access, tick the events this website should sell and press Register application or Save integration. Changes are only applied when saved. Unticked events stay unavailable through this connection; their public Naija Tickets pages are independent.',
+        ],
+      },
+      {
+        heading: '3. Create your checkout link',
+        body: [
+          'In Create a Buy Tickets link, choose a saved, published event and Test or Live. Enter the page on your registered website where buyers should return, such as https://my-website.example/thank-you. Press Create checkout link, then Copy checkout link.',
+          'If hosted links are not active or the sandbox is not configured, ask the platform administrator to enable them before sharing a link. Creating a connection does not activate missing platform services.',
+        ],
+      },
+      {
+        heading: '4. Add it to your website',
+        body: [
+          'Open the editor for your website, add a button and label it Buy Tickets. In the button settings choose Website address or Link and paste the checkout link. Save and publish your website. The same link can also be shared by email, WhatsApp or social media.',
+          'Skip API credentials, webhooks and the HTML snippet for this method. If your builder only accepts a custom HTML block, the optional HTML button is available below the checkout link.',
+        ],
+      },
+      {
+        heading: '5. Check the complete purchase',
+        body: [
+          'Click the published button. Customers select tickets, provide their details and pay on the focused Naija Tickets checkout. Naija Tickets verifies payment before showing tickets. Buyers can then return to your approved website.',
+          'In the sandbox, use Paystack Test payment details and confirm the booking in your organiser dashboard. Repeat with an ordinary ticket and a group ticket if you sell both. Test cancellations and sold-out tickets too.',
+          'Your website does not need a backend for this button. Ticket records, inventory, verification and group claims remain on Naija Tickets. Ticket emails depend on email service configuration. A personalised payment confirmation on your own website needs a developer to verify the result through the API; a return URL alone does not prove payment.',
+        ],
+      },
+      {
+        heading: '6. Change or stop selling',
+        body: [
+          'Disable the checkout link to block new and unpaid checkouts from that link. To remove an event from the whole connection, untick it and save the integration. Existing paid tickets and purchase history remain available under the normal ticket rules.',
+          'Keep this event list: it is the permission boundary for this website’s API keys, hosted links and widgets. One API key does not grant access to all your events. A successful connection check only identifies the application and its permissions.',
+        ],
+      },
+    ],
+  },
   'getting-started': {
     title: 'From your website to a verified ticket',
     intro:
@@ -13,7 +64,7 @@ export const developerGuides: Record<string, DeveloperGuide> = {
         heading: '1. Use the separate sandbox',
         body: [
           'A Test key is not a separate database. The sandbox must have its own website, Supabase project, Paystack test key and matching resource binding. Ask your platform operator for its HTTPS origin. Never substitute the main Naija Tickets hostname.',
-          'Public deployment and real online purchase acceptance are still pending in this project. Endpoint documentation describes the implemented contract; it does not mean every deployment has enabled it.',
+          'Feature availability depends on the chosen deployment. Endpoint documentation describes the implemented contract; it does not mean every deployment has enabled it. For a Buy Tickets button without programming or secret keys, use the no-code guide.',
         ],
       },
       {

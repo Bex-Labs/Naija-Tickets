@@ -427,6 +427,39 @@ void test('hosted links reuse scoped sessions and protect organiser, event, sele
       },
     );
     await t.test(
+      'saved event removal blocks an existing no-code link and fresh sessions even while its key remains valid',
+      async () => {
+        await configure();
+        await scalar(
+          "select public.save_organiser_integration($1,$2,$3,'Partner','active',$4::jsonb,'{}'::uuid[]) v",
+          [
+            ids.owner,
+            app.id,
+            (
+              await scalar<{ organiserId: string }>(
+                'select public.integration_public_metadata($1) v',
+                [app.id],
+              )
+            ).organiserId,
+            JSON.stringify([
+              { environment: 'live', origin: 'https://partner.example' },
+            ]),
+          ],
+        );
+        assert.ok(
+          await scalar(
+            'select public.authenticate_integration_key($1,$2,$3) v',
+            [key.id, key.digest, 'live'],
+          ),
+        );
+        await assert.rejects(
+          scalar('select public.read_hosted_link($1) v', [link.publicId]),
+        );
+        await assert.rejects(create());
+        await assert.rejects(configure());
+      },
+    );
+    await t.test(
       'public browser database roles have no link, mint, selection or report authority',
       async () => {
         for (const role of ['anon', 'authenticated']) {

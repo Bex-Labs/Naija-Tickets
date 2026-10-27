@@ -33,7 +33,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
       window.setTimeout(
         () =>
           setNotice(
-            'You were signed out after 15 minutes of inactivity. Log in to continue.',
+            'You were signed out due to inactivity. Log in to continue.',
           ),
         0,
       );
