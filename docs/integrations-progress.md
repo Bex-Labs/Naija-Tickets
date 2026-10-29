@@ -1,10 +1,22 @@
 # Naija Tickets integrations progress
 
-Last updated: 27 October 2026 (Africa/Lagos).
+Last updated: 29 October 2026 (Africa/Lagos).
 
 Current status: **The replacement hosted-checkout upgrade is implemented and verified on the separate public sandbox and Partner Demo. No-code event links, optional API selections/prefill, focused checkout/confirmation, safe organiser return, source reporting and temporary-prefill cleanup are implemented. Main production is unchanged; email is deferred. Production migration/configuration and the earlier physical-device, scheduled-delivery, refund/recovery and security/load gates remain pending. Disable/Enable and removal controls are additionally implemented locally and require the 18 October migration/deployment. Read the 18 and 17 October reports before historical notes.**
 
 Source brief: the user's “NAIJA TICKETS — PUBLIC API & DEVELOPER INTEGRATION PLATFORM” pasted requirements. The brief explicitly says: “STOP after Phase 0 and present the findings. Wait for approval before starting Phase 1.” Each later phase also has a report/test/approval gate.
+
+## Embedded checkout and externally managed events — 29 October 2026
+
+Implemented locally as an additive extension of the existing integrations platform. A developer may now create or update a private Naija Tickets backing event from their own server with `PUT /api/v1/external-events/{externalId}` and the new explicit `external_events:write` key permission. The external ID and each ticket ID are stable upsert keys. The backing record reuses the current event, ticket type, capacity, reservation, Paystack, order, ticket, QR and entry mechanisms; it is not a separate ticketing ledger. It is automatically granted only to the application that created it and is excluded from the public Naija Tickets catalogue and anonymous ticket reads.
+
+Ticket quantities remain admission-aware: an external Group-of-5 quantity of 10 stores 50 admissions. The server rejects duplicate external ticket IDs, invalid dates/limits, a capacity reduction below current sold/reserved admissions, and price/admission changes after orders exist. The API rejects browser `Origin` requests and uses the existing key authentication, mode binding, rate limits, safe usage logging and resource-mode verification. No secret, price authority or payment status is trusted from the customer browser.
+
+The existing embedded ticket selector now opens secure payment in a small Naija Tickets popup rather than navigating the customer away. After verified payment, the popup sends only its session ID, `paid` status and environment back through the isolated iframe, closes, and lets the external page receive `naijaTicketsCheckoutComplete`. The host must send that session ID to its own server and use `orders:read` for authoritative confirmation. The message deliberately contains no QR, private checkout URL, attendee contact data or payment capability. If a popup is blocked, the normal hosted confirmation remains available instead of falsely claiming success.
+
+The organiser integration UI now calls this **Embedded ticket checkout**. The developer portal has a new **External events** guide, the widget guide documents the popup completion event, and the combined public OpenAPI contract now includes the endpoint and schema. The migration is `202610290001_external_embed_events.sql`; it must be applied after the existing integration migrations before this code is deployed. No database, Vercel project, sandbox, key, event or payment was changed remotely.
+
+Verification: full local regression **370/370** passed; focused route, real-SQL backing-event/privacy/capacity and widget tests passed; lint and production build passed. The production build emits only the existing framework warnings about deprecated middleware and ineffective dynamic imports. No browser popup payment, physical-device test, remote migration or deployment was performed in this change, so those remain rollout gates.
 
 ## No-code setup and event permission clarity — 27 October 2026
 

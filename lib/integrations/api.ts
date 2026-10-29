@@ -15,6 +15,7 @@ export type IntegrationRoute =
   | 'events.availability'
   | 'checkout.create'
   | 'checkout.status'
+  | 'external_events.upsert'
   | 'advanced.orders'
   | 'advanced.order'
   | 'advanced.tickets'
@@ -101,7 +102,7 @@ export function integrationApiHandler(
     proof: IntegrationAuthProof,
   ) => unknown,
   paginated = false,
-  method: 'GET' | 'POST' = 'GET',
+  method: 'GET' | 'POST' | 'PUT' = 'GET',
 ) {
   return async (request: Request) => {
     const requestId = crypto.randomUUID();

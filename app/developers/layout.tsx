@@ -14,6 +14,7 @@ const links = [
   ['Get started', '/developers/getting-started'],
   ['API reference', '/developers/reference'],
   ['Checkout', '/developers/checkout'],
+  ['External events', '/developers/external-events'],
   ['Widget', '/developers/widget'],
   ['Webhooks', '/developers/webhooks'],
   ['Sandbox', '/developers/sandbox'],

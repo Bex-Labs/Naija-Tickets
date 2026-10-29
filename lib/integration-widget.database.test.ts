@@ -117,7 +117,7 @@ void test('widgets reuse the hosted checkout and inventory engine with a separat
         );
         assert.equal(response.headers.get('X-Frame-Options'), null);
         const html = await response.text();
-        assert.match(html, /target="_top"/);
+        assert.match(html, /target="naija_ticket_checkout"/);
         assert.match(html, /Select tickets/);
         for (const secret of [
           key.credential,

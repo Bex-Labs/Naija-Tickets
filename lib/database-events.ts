@@ -19,6 +19,7 @@ export type DatabaseEventRow = {
   sales_start_at?: string | null;
   sales_end_at?: string | null;
   status: OrganiserEvent['status'];
+  external_managed?: boolean;
   featured?: boolean;
   image_path?: string | null;
   rejection_reason?: string | null;

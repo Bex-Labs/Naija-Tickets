@@ -77,7 +77,7 @@ export const developerGuides: Record<string, DeveloperGuide> = {
       {
         heading: '3. Create a server key',
         body: [
-          'Select integration:read, events:read, tickets:read, availability:read, checkout:write and orders:read for an initial hosted checkout. Add other permissions only when needed. The secret appears once; keep it in your server environment. Rotation preserves scopes; existing keys never acquire new permissions automatically.',
+          'Select integration:read, events:read, tickets:read, availability:read, checkout:write and orders:read for an initial hosted checkout. Add external_events:write only when your website will create and update its own event records through the API. The secret appears once; keep it in your server environment. Rotation preserves scopes; existing keys never acquire new permissions automatically.',
         ],
         code: 'NT_API_BASE=https://YOUR_SANDBOX_HOST\nNT_API_KEY=YOUR_SERVER_TEST_KEY\n# Store in an ignored server environment file; never NEXT_PUBLIC_*.',
       },
@@ -165,10 +165,46 @@ export const developerGuides: Record<string, DeveloperGuide> = {
       },
     ],
   },
+  'external-events': {
+    title: 'Sell tickets for an event managed on your own website',
+    intro:
+      'Your developer can create a private Naija Tickets backing event from your website’s server. It uses the normal inventory, payment, QR and entry system but never appears in the Naija Tickets public event catalogue.',
+    sections: [
+      {
+        heading: '1. Create a connection and a narrowly scoped key',
+        body: [
+          'In Developers & Integrations, register your website’s exact origin and create a server key with external_events:write. Add checkout:write and orders:read if the same server will start and verify purchases. Assigning ordinary Naija Tickets events remains useful for events that were created inside Naija Tickets; external events are automatically assigned to the application that creates them.',
+          'This is a developer integration, not a browser feature. Do not put the secret key, event-creation request or price rules in JavaScript sent to customers.',
+        ],
+      },
+      {
+        heading: '2. Create or update the external event from your server',
+        body: [
+          'Use a stable external ID from your own system, such as event_2026_lagos. Repeating the same request updates that one private backing event rather than creating a duplicate. Tickets need their own stable external IDs. Prices are in NGN kobo: ₦45,000 is 4500000.',
+        ],
+        code: 'await fetch(`${process.env.NT_API_BASE}/api/v1/external-events/event_2026_lagos`, {\n  method: "PUT",\n  headers: {\n    Authorization: `Bearer ${process.env.NT_API_KEY}`,\n    "Content-Type": "application/json",\n  },\n  body: JSON.stringify({\n    title: "Lagos Design Night",\n    description: "An evening of talks and music.",\n    venue_name: "Freedom Park",\n    address: "1 Hospital Road",\n    city: "Lagos", state: "Lagos", timezone: "Africa/Lagos",\n    starts_at: "2026-12-12T18:00:00+01:00",\n    ends_at: "2026-12-12T23:00:00+01:00",\n    tickets: [{\n      external_id: "general", name: "General admission",\n      price_kobo: 4500000, quantity: 100, admissions_per_ticket: 1,\n    }],\n  }),\n});',
+      },
+      {
+        heading: '3. Embed selection and complete payment',
+        body: [
+          'The successful response contains id: this is the backing event UUID for the public widget snippet or checkout-session API. Enable Embedded ticket checkout in the organiser connection, select the event and copy its snippet to your external page. The customer chooses tickets in the embedded frame; payment opens in a secure Naija Tickets popup so the external website never handles card details.',
+          'On verified payment, the popup closes and the loader dispatches naijaTicketsCheckoutComplete on the host page. The event contains only sessionId, status and environment. Send the session ID to your server and use orders:read before displaying a final order confirmation. This avoids trusting a browser message as payment proof.',
+        ],
+        code: 'window.addEventListener("naijaTicketsCheckoutComplete", async (event) => {\n  const { sessionId, status } = event.detail;\n  if (status !== "paid") return;\n  // Call YOUR server. It verifies this session with Naija Tickets using orders:read.\n  await fetch(`/api/tickets/confirm?session=${encodeURIComponent(sessionId)}`);\n});',
+      },
+      {
+        heading: '4. Keep updates safe',
+        body: [
+          'Changing a ticket price or people-admitted count is refused after an order exists. Reducing capacity below sold or currently reserved admissions is also refused. Remove a ticket from a later update to stop new sales; existing orders and tickets remain intact.',
+          'Naija Tickets verifies availability, fees, payment and ticket issuance on its server. Use signed webhooks or an orders:read status check for your own database, never a client-side price or success screen.',
+        ],
+      },
+    ],
+  },
   widget: {
     title: 'Embed ticket selection',
     intro:
-      'Copy a public snippet from the organiser dashboard. The isolated iframe selects tickets and opens the existing hosted checkout at the top level.',
+      'Copy a public snippet from the organiser dashboard. The isolated iframe selects tickets and opens secure checkout in a small Naija Tickets popup over the same external website.',
     sections: [
       {
         heading: 'Generate your snippet',
@@ -180,8 +216,8 @@ export const developerGuides: Record<string, DeveloperGuide> = {
       {
         heading: 'Keep the purchase secure',
         body: [
-          'The frame exposes public event/ticket information only, uses exact registered ancestors and isolates host CSS. Buyer details and payments stay on the trusted top-level checkout. Resizing is the only parent message; no private checkout link, attendee or QR data is sent to the parent.',
-          'The default return URL uses your page origin/path and drops queries/fragments. Optional data-return-url must be a same-origin simple URL. If you add containers dynamically, call window.__naijaWidgetV1.mount(). Use one Naija deployment origin per page.',
+          'The frame exposes public event/ticket information only, uses exact registered ancestors and isolates host CSS. Buyer details and payments stay in the trusted Naija Tickets popup. After a verified payment, the popup closes and the host receives a naijaTicketsCheckoutComplete browser event containing only a session ID, paid status and environment. No private checkout link, attendee or QR data is sent to the parent.',
+          'The default return URL uses your page origin/path and drops queries/fragments. Optional data-return-url must be a same-origin simple URL. If you add containers dynamically, call window.__naijaWidgetV1.mount(). Use orders:read on your server to verify the browser event before showing your final confirmation. Use one Naija deployment origin per page.',
         ],
       },
       {

@@ -15,9 +15,15 @@ const methods = [
   },
   {
     icon: Ticket,
-    title: 'Ticket widget',
-    text: 'Embed a public ticket chooser with a small snippet. Keep payment on the trusted checkout.',
+    title: 'Embedded checkout',
+    text: 'Embed ticket selection with a small snippet. Payment opens in a secure popup and returns to your page.',
     href: '/developers/widget',
+  },
+  {
+    icon: Code2,
+    title: 'External events',
+    text: 'Create private backing events from your own server and use the same ticketing engine.',
+    href: '/developers/external-events',
   },
   {
     icon: Code2,
@@ -77,7 +83,7 @@ export default function DevelopersPage() {
           </p>
         </aside>
       </section>
-      <section className="mt-10 grid gap-3 md:grid-cols-3">
+      <section className="mt-10 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {methods.map(({ icon: Icon, title, text, href }) => (
           <article
             key={href}

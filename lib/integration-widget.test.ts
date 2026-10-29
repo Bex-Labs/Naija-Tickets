@@ -225,7 +225,7 @@ void test('standalone frame escapes event/ticket HTML, keeps private routes fram
   );
   const html = await response.text();
   assert.ok(!html.includes(signing.keys.v1));
-  assert.match(html, /target="_top"/);
+  assert.match(html, /target="naija_ticket_checkout"/);
   const injected = projectWidgetSnapshot(
     {
       ...raw,

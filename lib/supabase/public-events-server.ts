@@ -15,15 +15,33 @@ function publicClient() {
   });
 }
 
+function missingExternalEventColumn(error: unknown) {
+  return (
+    !!error &&
+    typeof error === 'object' &&
+    JSON.stringify(error).includes('external_managed')
+  );
+}
+
 export async function getPublishedEvents() {
   const client = publicClient();
   if (!client) return [];
-  const { data, error } = await client
+  let { data, error } = await client
     .from('events')
     .select(publicEventSelect)
     .eq('status', 'published')
+    .eq('external_managed', false)
     .gt('ends_at', new Date().toISOString())
     .order('published_at', { ascending: false });
+  // Keep normal organiser/public pages usable until the additive external-event
+  // migration is applied. Older databases cannot contain external records.
+  if (missingExternalEventColumn(error))
+    ({ data, error } = await client
+      .from('events')
+      .select(publicEventSelect)
+      .eq('status', 'published')
+      .gt('ends_at', new Date().toISOString())
+      .order('published_at', { ascending: false }));
   if (error) return [];
   return ((data || []) as unknown as DatabaseEventRow[])
     .filter((event) => !isRetiredSeedEvent(event))
@@ -33,13 +51,22 @@ export async function getPublishedEvents() {
 export async function getPublishedEventBySlug(slug: string) {
   const client = publicClient();
   if (!client) return null;
-  const { data, error } = await client
+  let { data, error } = await client
     .from('events')
     .select(publicEventSelect)
     .eq('slug', slug)
     .eq('status', 'published')
+    .eq('external_managed', false)
     .gt('ends_at', new Date().toISOString())
     .maybeSingle();
+  if (missingExternalEventColumn(error))
+    ({ data, error } = await client
+      .from('events')
+      .select(publicEventSelect)
+      .eq('slug', slug)
+      .eq('status', 'published')
+      .gt('ends_at', new Date().toISOString())
+      .maybeSingle());
 
   if (error || !data) return null;
   const event = data as unknown as DatabaseEventRow;

@@ -16,6 +16,7 @@ import {
 } from '@/lib/integrations/checkout-sessions.server';
 import { projectIntegrationTicket } from '@/lib/integrations/events';
 import { IntegrationError } from '@/lib/integrations/errors';
+import { HostedPopupCompletion } from '@/components/hosted-popup-completion';
 export const metadata: Metadata = {
   title: 'Secure checkout | Naija Tickets',
   description: 'Complete your event booking securely.',
@@ -191,23 +192,32 @@ export default async function HostedCheckoutPage({
                     ? 'Your booking is confirmed.'
                     : `This booking is ${view.session.status.replaceAll('_', ' ')}.`}
                 </h2>
-                <p className="mt-4 text-sm leading-6 text-slate-600">
-                  {paid
-                    ? 'Your tickets and group invitations are below. Keep each ticket and private link secure.'
-                    : 'Check your order or contact support for details. Refunded admissions cannot be used for entry.'}
-                </p>
-                <div className="mt-6 flex flex-wrap gap-3">
-                  {paid && <PrintTicketsButton />}
-                  {returnUrl && (
-                    <a
-                      href={returnUrl}
-                      rel="noreferrer"
-                      className="inline-flex min-h-12 items-center rounded-lg bg-emerald-600 px-5 font-bold text-white"
-                    >
-                      Return to organiser →
-                    </a>
-                  )}
-                </div>
+                {paid && view.session.source === 'legacy_widget' ? (
+                  <HostedPopupCompletion
+                    sessionId={sessionId}
+                    environment={view.session.environment}
+                  />
+                ) : (
+                  <p className="mt-4 text-sm leading-6 text-slate-600">
+                    {paid
+                      ? 'Your tickets and group invitations are below. Keep each ticket and private link secure.'
+                      : 'Check your order or contact support for details. Refunded admissions cannot be used for entry.'}
+                  </p>
+                )}
+                {!paid || view.session.source !== 'legacy_widget' ? (
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    {paid && <PrintTicketsButton />}
+                    {returnUrl && (
+                      <a
+                        href={returnUrl}
+                        rel="noreferrer"
+                        className="inline-flex min-h-12 items-center rounded-lg bg-emerald-600 px-5 font-bold text-white"
+                      >
+                        Return to organiser →
+                      </a>
+                    )}
+                  </div>
+                ) : null}
                 {paid && tickets?.state !== 'success' && (
                   <p className="mt-5 text-sm text-slate-600">
                     Your paid tickets are being prepared. Refresh this page in a

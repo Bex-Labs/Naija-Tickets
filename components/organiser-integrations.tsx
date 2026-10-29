@@ -36,6 +36,14 @@ import { OrganiserWebhooks } from '@/components/organiser-webhooks';
 import { OrganiserWidget } from '@/components/organiser-widget';
 
 type Result<T> = { data?: T; error?: { message?: string } };
+const RECOMMENDED_CHECKOUT_SCOPES: IntegrationScope[] = [
+  'integration:read',
+  'events:read',
+  'tickets:read',
+  'availability:read',
+  'checkout:write',
+  'orders:read',
+];
 const date = (value: string) =>
   new Date(value).toLocaleDateString('en-NG', {
     day: 'numeric',
@@ -59,11 +67,12 @@ export function OrganiserIntegrations() {
   const [eventIds, setEventIds] = useState<string[]>([]);
   const [environment, setEnvironment] =
     useState<IntegrationEnvironment>('test');
-  const [readScopes, setReadScopes] = useState<IntegrationScope[]>([
-    'integration:read',
-  ]);
+  const [readScopes, setReadScopes] = useState<IntegrationScope[]>(
+    RECOMMENDED_CHECKOUT_SCOPES,
+  );
   const [expiryDays, setExpiryDays] = useState(90);
   const [secret, setSecret] = useState('');
+  const [setupPath, setSetupPath] = useState<'link' | 'api'>('link');
   const [lifecycleTarget, setLifecycleTarget] = useState<{
     id: string;
     name: string;
@@ -432,37 +441,45 @@ export function OrganiserIntegrations() {
         </Button>
       </div>
       <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-        Sell tickets from your own website with a Hosted Checkout Link — no
-        programming or API key needed. Developers can also connect a backend
-        using the Hosted Checkout API.
+        Connect your website in three steps: add its address, choose the events
+        it may use, then pick a simple checkout link or the developer API.
       </p>
-      <section className="mt-4 rounded-xl border border-emerald-200 bg-white p-4 sm:p-5">
-        <h2 className="font-black">Sell tickets without coding</h2>
-        <ol className="mt-3 grid list-inside list-decimal gap-3 text-sm leading-6 text-slate-600 sm:grid-cols-3">
-          <li>
-            Name your website connection, add its website address and select
-            your events.
-          </li>
-          <li>Save it, then create a checkout link for an event below.</li>
-          <li>Copy the link into your website builder’s Buy Tickets button.</li>
-        </ol>
-        <a
-          href="/developers/no-code"
-          className="mt-2 inline-flex min-h-11 items-center text-sm font-bold text-emerald-800 underline"
+      <section
+        className="mt-5 grid gap-3 sm:grid-cols-2"
+        aria-label="Choose how to connect"
+      >
+        <button
+          type="button"
+          onClick={() => setSetupPath('link')}
+          className={`rounded-xl border p-4 text-left transition-colors ${setupPath === 'link' ? 'border-emerald-600 bg-emerald-50 ring-1 ring-emerald-600' : 'border-[#241b3f]/15 bg-white hover:border-emerald-400'}`}
         >
-          Follow the no-code setup guide →
-        </a>
+          <p className="text-sm font-black text-emerald-800">
+            RECOMMENDED · NO CODE
+          </p>
+          <h2 className="mt-1 text-lg font-black">Add a Buy Tickets link</h2>
+          <p className="mt-2 text-sm leading-5 text-slate-600">
+            Best for Wix, WordPress and simple websites. Naija Tickets handles
+            ticket selection, payment and delivery.
+          </p>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSetupPath('api')}
+          className={`rounded-xl border p-4 text-left transition-colors ${setupPath === 'api' ? 'border-[#241b3f] bg-[#241b3f]/5 ring-1 ring-[#241b3f]' : 'border-[#241b3f]/15 bg-white hover:border-[#241b3f]/40'}`}
+        >
+          <p className="text-sm font-black text-[#241b3f]">FOR DEVELOPERS</p>
+          <h2 className="mt-1 text-lg font-black">Connect with the API</h2>
+          <p className="mt-2 text-sm leading-5 text-slate-600">
+            Best when your developer needs custom event pages, ticket choices or
+            a verified success page.
+          </p>
+        </button>
       </section>
-      <div className="mt-4 flex items-start gap-3 border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">
-        <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
-        <p>
-          Live API keys can read assigned, published events, ticket types and
-          availability with the permissions you select. Test event reads are
-          unavailable until an isolated sandbox is configured. Hosted checkout
-          requires separate server configuration. Ticket widgets require an
-          explicit application opt-in and a configured deployment.
-        </p>
-      </div>
+      <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-slate-600">
+        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+        Start with Test mode and a sandbox. Live events and payments stay
+        separate until you are ready to launch.
+      </p>
       {error && (
         <p role="alert" className="mt-4 break-words text-sm text-red-700">
           {error}
@@ -485,7 +502,7 @@ export function OrganiserIntegrations() {
           <div className="mt-6 flex flex-wrap items-end gap-3">
             <div className="min-w-0 flex-1">
               <label htmlFor="integration-select" className="auth-label">
-                Applications
+                1. Choose a website connection
               </label>
               <select
                 id="integration-select"
@@ -500,7 +517,7 @@ export function OrganiserIntegrations() {
                   )
                 }
               >
-                <option value="">Register a new application</option>
+                <option value="">Create a new website connection</option>
                 {dashboard.integrations.map((app) => (
                   <option key={app.id} value={app.id}>
                     {app.name} · {app.status}
@@ -515,13 +532,20 @@ export function OrganiserIntegrations() {
               onClick={() => selectApp()}
             >
               <Plus className="h-4 w-4" />
-              New application
+              New connection
             </Button>
           </div>
           <form
             onSubmit={(event) => void save(event)}
-            className="mt-5 grid gap-4 border border-[#241b3f]/10 bg-white p-4 sm:grid-cols-2 sm:p-6"
+            className="mt-5 grid gap-4 rounded-xl border border-[#241b3f]/10 bg-white p-4 sm:grid-cols-2 sm:p-6"
           >
+            <div className="sm:col-span-2">
+              <h2 className="font-black">2. Set up this website</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Add the address where your Buy Tickets button or integration
+                will run, then select the events it may use.
+              </p>
+            </div>
             <div>
               <label htmlFor="integration-organiser" className="auth-label">
                 Organiser account
@@ -546,7 +570,7 @@ export function OrganiserIntegrations() {
             </div>
             <div>
               <label htmlFor="integration-name" className="auth-label">
-                Application name
+                Website or app name
               </label>
               <Input
                 id="integration-name"
@@ -562,7 +586,7 @@ export function OrganiserIntegrations() {
             </div>
             <div>
               <label htmlFor="integration-test-origins" className="auth-label">
-                Test website origins
+                Test website address
               </label>
               <textarea
                 id="integration-test-origins"
@@ -574,12 +598,25 @@ export function OrganiserIntegrations() {
                 placeholder="http://localhost:3001"
               />
               <p className="mt-1 text-xs text-slate-500">
-                One origin per line. Localhost HTTP is allowed for testing.
+                One address per line. Localhost is allowed while testing.
               </p>
             </div>
-            <div>
-              <label htmlFor="integration-live-origins" className="auth-label">
-                Live website origins
+            <details
+              className="rounded-lg border border-[#241b3f]/10 p-3 sm:col-span-2"
+              open={Boolean(liveOrigins)}
+            >
+              <summary className="cursor-pointer text-sm font-bold">
+                Add my live website address later
+              </summary>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                Leave this empty until you are ready for real customers and
+                payments.
+              </p>
+              <label
+                htmlFor="integration-live-origins"
+                className="mt-3 block auth-label"
+              >
+                Live website address
               </label>
               <textarea
                 id="integration-live-origins"
@@ -587,22 +624,22 @@ export function OrganiserIntegrations() {
                 onChange={(event) => setLiveOrigins(event.target.value)}
                 disabled={busy}
                 rows={3}
-                className="auth-input w-full py-3"
+                className="auth-input mt-2 w-full py-3"
                 placeholder="https://events.example.com"
               />
               <p className="mt-1 text-xs text-slate-500">
-                HTTPS only. No paths, wildcards or secret credentials.
+                One address per line. HTTPS only; do not add a page path,
+                wildcard or password.
               </p>
-            </div>
+            </details>
             <fieldset className="min-w-0 sm:col-span-2">
               <legend className="auth-label">
-                Events this application may access
+                Events this website can sell
               </legend>
               <p className="mb-2 text-xs leading-5 text-slate-500">
-                Choose which events this website can access through its API
-                keys, checkout links and widgets. No selection means no event
-                access. Save integration to apply changes; a draft must still be
-                published separately.
+                Select only the events this website should show or sell. It
+                cannot access unselected events. Selecting one does not publish
+                a draft event.
               </p>
               {selected && (
                 <output
@@ -651,33 +688,11 @@ export function OrganiserIntegrations() {
                 )}
               </div>
               <p className="mt-2 text-xs leading-5 text-slate-500">
-                Public event pages remain visible on Naija Tickets. Connecting
-                an API key alone only verifies the connection; it does not grant
-                access to every event.
+                This keeps each website and API key limited to the events you
+                approve.
               </p>
             </fieldset>
-            <div>
-              <label htmlFor="integration-status" className="auth-label">
-                Integration status
-              </label>
-              <select
-                id="integration-status"
-                value={status}
-                disabled={busy}
-                onChange={(event) =>
-                  setStatus(event.target.value as 'active' | 'disabled')
-                }
-                className="auth-input w-full bg-white"
-              >
-                <option value="active">Active</option>
-                <option value="disabled">Disabled</option>
-              </select>
-              <p className="mt-1 text-xs text-slate-500">
-                Disabling pauses API access, new checkouts and outgoing
-                notifications. You can enable it again.
-              </p>
-            </div>
-            <div className="flex items-end">
+            <div className="flex items-end sm:col-span-2">
               <Button
                 type="submit"
                 disabled={busy}
@@ -686,14 +701,34 @@ export function OrganiserIntegrations() {
                 {busy
                   ? 'Saving…'
                   : selectedId
-                    ? 'Save integration'
-                    : 'Register application'}
+                    ? 'Save website settings'
+                    : 'Save and continue'}
               </Button>
             </div>
           </form>
           {selected && (
+            <section className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:p-5">
+              <p className="text-xs font-black uppercase tracking-widest text-emerald-800">
+                3.{' '}
+                {setupPath === 'link'
+                  ? 'Create your button'
+                  : 'Connect your developer'}
+              </p>
+              <h2 className="mt-1 text-xl font-black">
+                {setupPath === 'link'
+                  ? 'Create a checkout link and add it to your website'
+                  : 'Create one key, then use the short setup guide'}
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700">
+                {setupPath === 'link'
+                  ? 'No programming is needed. Buyers choose tickets and pay on secure Naija Tickets checkout.'
+                  : 'Your developer keeps the key on the server, creates a checkout session, then sends buyers to the secure checkout page.'}
+              </p>
+            </section>
+          )}
+          {selected && (
             <section
-              className="mt-5 flex flex-wrap items-center justify-between gap-4 border border-[#241b3f]/10 bg-white p-4 sm:p-6"
+              className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#241b3f]/10 bg-white p-4 sm:p-6"
               aria-labelledby="integration-access-heading"
             >
               <div className="min-w-0 flex-1 basis-56">
@@ -752,7 +787,7 @@ export function OrganiserIntegrations() {
               </div>
             </section>
           )}
-          {selected && (
+          {selected && setupPath === 'link' && (
             <OrganiserHostedCheckout
               key={'hosted-' + selected.id}
               application={selected}
@@ -760,13 +795,19 @@ export function OrganiserIntegrations() {
               settingsPending={unsavedChanges}
             />
           )}
-          <details className="mt-6 rounded-xl border border-[#241b3f]/10 bg-white p-4 sm:p-6">
+          <details
+            className="mt-6 rounded-xl border border-[#241b3f]/10 bg-white p-4 sm:p-6"
+            open={setupPath === 'api'}
+          >
             <summary className="cursor-pointer font-black">
-              Advanced connections · API keys, widgets and webhooks
+              {setupPath === 'api'
+                ? 'Developer API setup'
+                : 'Need a developer? API keys, webhooks and widgets'}
             </summary>
             <p className="mt-2 text-sm text-slate-600">
-              These tools are for developers. A Buy Tickets link above works
-              without them.
+              {setupPath === 'api'
+                ? 'Complete the three steps below. The API key stays on your developer’s server; it never belongs in website browser code.'
+                : 'A Buy Tickets link works without these tools. Open this section only if a developer needs a custom integration.'}
             </p>
             {selected && (
               <section
@@ -779,14 +820,14 @@ export function OrganiserIntegrations() {
                     id="integration-keys-heading"
                     className="text-xl font-black"
                   >
-                    API credentials
+                    Step 1. Create a server key
                   </h2>
                 </div>
                 <p className="mt-2 text-sm text-slate-600">
-                  For developers only. Skip this section when using a checkout
-                  link. Keep secret keys on your server. Never place them in an
-                  embed snippet or browser code. Rotation revokes the previous
-                  key immediately.
+                  Use this only for a custom integration. The recommended
+                  permissions below let a developer list your events, create
+                  checkout sessions and verify completed purchases. Keep every
+                  secret key on the server, never in browser code.
                 </p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   <div>
@@ -847,64 +888,96 @@ export function OrganiserIntegrations() {
                     </Button>
                   </div>
                 </div>
-                <fieldset className="mt-4 grid gap-2 sm:grid-cols-2">
-                  <legend className="mb-2 text-sm font-semibold">
-                    Key permissions
-                  </legend>
-                  {INTEGRATION_SCOPES.map((scope) => (
-                    <label
-                      key={scope}
-                      className="flex min-h-10 items-center gap-3 text-sm"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={readScopes.includes(scope)}
-                        disabled={busy}
-                        onChange={(event) =>
-                          setReadScopes((current) =>
-                            event.target.checked
-                              ? [...current, scope]
-                              : current.filter((value) => value !== scope),
-                          )
-                        }
-                        className="h-4 w-4 shrink-0 accent-emerald-600"
-                      />
-                      <span>
-                        {
+                <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                  <p className="text-sm font-bold text-emerald-950">
+                    Recommended for a standard checkout integration
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-emerald-900">
+                    Event list, ticket types, availability, checkout creation
+                    and payment verification. It does not share attendee contact
+                    details or ticket QR codes.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy}
+                    className="mt-3 bg-white"
+                    onClick={() => setReadScopes(RECOMMENDED_CHECKOUT_SCOPES)}
+                  >
+                    Use recommended permissions
+                  </Button>
+                  <p className="mt-2 text-xs font-semibold text-emerald-900">
+                    {readScopes.length} permission
+                    {readScopes.length === 1 ? '' : 's'} selected
+                  </p>
+                </div>
+                <details className="mt-4 rounded-lg border border-[#241b3f]/10 p-3">
+                  <summary className="cursor-pointer text-sm font-bold">
+                    Change individual permissions
+                  </summary>
+                  <fieldset className="mt-4 grid gap-2 sm:grid-cols-2">
+                    <legend className="mb-2 text-sm font-semibold">
+                      Key permissions
+                    </legend>
+                    {INTEGRATION_SCOPES.map((scope) => (
+                      <label
+                        key={scope}
+                        className="flex min-h-10 items-center gap-3 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={readScopes.includes(scope)}
+                          disabled={busy}
+                          onChange={(event) =>
+                            setReadScopes((current) =>
+                              event.target.checked
+                                ? [...current, scope]
+                                : current.filter((value) => value !== scope),
+                            )
+                          }
+                          className="h-4 w-4 shrink-0 accent-emerald-600"
+                        />
+                        <span>
                           {
-                            'integration:read': 'Integration details',
-                            'events:read': 'Event information',
-                            'tickets:read': 'Ticket types and prices',
-                            'availability:read': 'Available ticket quantities',
-                            'checkout:write': 'Create hosted checkouts',
-                            'orders:read':
-                              'Your application’s orders and checkout results',
-                            'tickets:status':
-                              'Purchased ticket status (no QR codes)',
-                            'attendees:read': 'Registered attendee names',
-                            'attendees:contact':
-                              'Attendee email and phone (also select attendee names)',
-                            'sales:read': 'Your application’s sales totals',
-                            'groups:read':
-                              'Group registration counts (no invite links)',
-                            'refunds:read':
-                              'Recorded refund status (read only)',
-                            'entry:verify':
-                              'Verify your application’s tickets as the key creator',
-                            'entry:check-in':
-                              'Check in tickets as the key creator (also select verification)',
-                          }[scope]
-                        }
-                        <code className="block text-xs text-slate-500">
-                          {scope}
-                        </code>
-                      </span>
-                    </label>
-                  ))}
-                </fieldset>
+                            {
+                              'integration:read': 'Integration details',
+                              'events:read': 'Event information',
+                              'tickets:read': 'Ticket types and prices',
+                              'availability:read':
+                                'Available ticket quantities',
+                              'checkout:write': 'Create hosted checkouts',
+                              'external_events:write':
+                                'Create and update externally managed events',
+                              'orders:read':
+                                'Your application’s orders and checkout results',
+                              'tickets:status':
+                                'Purchased ticket status (no QR codes)',
+                              'attendees:read': 'Registered attendee names',
+                              'attendees:contact':
+                                'Attendee email and phone (also select attendee names)',
+                              'sales:read': 'Your application’s sales totals',
+                              'groups:read':
+                                'Group registration counts (no invite links)',
+                              'refunds:read':
+                                'Recorded refund status (read only)',
+                              'entry:verify':
+                                'Verify your application’s tickets as the key creator',
+                              'entry:check-in':
+                                'Check in tickets as the key creator (also select verification)',
+                            }[scope]
+                          }
+                          <code className="block text-xs text-slate-500">
+                            {scope}
+                          </code>
+                        </span>
+                      </label>
+                    ))}
+                  </fieldset>
+                </details>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  Existing keys keep their permissions. Generate a new key to
-                  add access; rotating preserves its current permissions.
+                  Existing keys keep their permissions. Create a new key after
+                  changing permissions. Rotating replaces the current key with
+                  the same permissions.
                 </p>
                 {secret && (
                   <div className="mt-4 border border-amber-300 bg-amber-50 p-4">
@@ -1000,30 +1073,43 @@ export function OrganiserIntegrations() {
                     </p>
                   )}
                 </div>
-                <p className="mt-3 break-all text-xs text-slate-500">
-                  Public widget identifier: <code>{selected.widgetId}</code>.
-                  Use it in the embed snippet below; it cannot authenticate
-                  private API requests.
-                </p>
+                <section className="mt-6 rounded-lg border border-[#241b3f]/10 bg-slate-50 p-4">
+                  <h3 className="font-black">
+                    Step 2. Add the key to your server
+                  </h3>
+                  <ol className="mt-2 list-inside list-decimal space-y-1 text-sm leading-6 text-slate-600">
+                    <li>Save the key as a private environment variable.</li>
+                    <li>
+                      Use it on your server to list events and create checkout
+                      sessions.
+                    </li>
+                    <li>
+                      Send the buyer to the returned secure checkout address.
+                    </li>
+                  </ol>
+                  <a
+                    className="mt-2 inline-flex min-h-11 items-center text-sm font-bold text-emerald-800 underline"
+                    href="/developers/checkout"
+                  >
+                    Copy the developer implementation steps →
+                  </a>
+                </section>
+                <section className="mt-4 rounded-lg border border-[#241b3f]/10 bg-slate-50 p-4">
+                  <h3 className="font-black">
+                    Step 3. Verify a completed purchase
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    After checkout returns to your website, your server checks
+                    the session using <code>orders:read</code> before showing a
+                    paid confirmation. Do not trust the return page alone.
+                  </p>
+                </section>
               </section>
             )}
-            {selected && (
-              <OrganiserWidget
-                key={'widget-' + selected.id}
-                application={selected}
-                events={dashboard.events}
-              />
-            )}
-            {selected && (
-              <OrganiserWebhooks
-                key={selected.id}
-                applicationId={selected.id}
-              />
-            )}
-            <section className="mt-6 border border-[#241b3f]/10 bg-white p-4 sm:p-6">
+            <section className="mt-6 rounded-lg border border-[#241b3f]/10 bg-white p-4 sm:p-6">
               <h2 className="flex items-center gap-2 text-lg font-black">
                 <Code2 className="h-5 w-5 text-emerald-700" />
-                Check your connection
+                Optional: check your connection
               </h2>
               <p className="mt-2 text-sm text-slate-600">
                 From your server, send a GET request to{' '}
@@ -1034,7 +1120,46 @@ export function OrganiserIntegrations() {
                 tickets.
               </p>
             </section>
+            <details className="mt-4 rounded-lg border border-[#241b3f]/10 bg-white p-4">
+              <summary className="cursor-pointer text-sm font-bold">
+                Other developer tools: webhooks and embedded ticket checkout
+              </summary>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Most integrations do not need these. Use webhooks for automatic
+                updates to another system. The widget is kept for older embeds;
+                new websites should use Hosted Checkout.
+              </p>
+              {selected && (
+                <OrganiserWebhooks
+                  key={selected.id}
+                  applicationId={selected.id}
+                />
+              )}
+              {selected && (
+                <OrganiserWidget
+                  key={'widget-' + selected.id}
+                  application={selected}
+                  events={dashboard.events}
+                />
+              )}
+            </details>
           </details>
+          {selected && setupPath === 'api' && (
+            <details className="mt-5 rounded-xl border border-emerald-200 bg-white p-4 sm:p-6">
+              <summary className="cursor-pointer font-black">
+                Prefer the no-code Buy Tickets link instead?
+              </summary>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Use this if you do not need custom event pages or a developer.
+              </p>
+              <OrganiserHostedCheckout
+                key={'hosted-' + selected.id}
+                application={selected}
+                events={dashboard.events}
+                settingsPending={unsavedChanges}
+              />
+            </details>
+          )}
         </>
       )}
     </div>

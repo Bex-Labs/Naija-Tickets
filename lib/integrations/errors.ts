@@ -20,6 +20,10 @@ export function integrationDatabaseError(error: unknown): IntegrationError {
     error && typeof error === 'object' && 'code' in error
       ? String(error.code)
       : '';
+  const message =
+    error && typeof error === 'object' && 'message' in error
+      ? String(error.message)
+      : '';
   if (code === 'NT423')
     return new IntegrationError(
       423,
@@ -108,10 +112,15 @@ export function integrationDatabaseError(error: unknown): IntegrationError {
       'NOT_FOUND',
       'Integration or API key not found.',
     );
-  const message =
-    error && typeof error === 'object' && 'message' in error
-      ? String(error.message)
-      : '';
+  if (
+    code === '42883' &&
+    message.includes('change_organiser_integration_lifecycle')
+  )
+    return new IntegrationError(
+      503,
+      'INTEGRATION_REMOVAL_NOT_READY',
+      'Website connection removal is not available until the platform database update is applied.',
+    );
   if (
     code === '22023' &&
     message === 'Enable this integration before issuing keys.'

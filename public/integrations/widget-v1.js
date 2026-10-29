@@ -75,7 +75,7 @@
         frame.referrerPolicy = 'no-referrer';
         frame.setAttribute(
           'sandbox',
-          'allow-scripts allow-forms allow-same-origin allow-top-navigation-by-user-activation',
+          'allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox',
         );
         frame.style.width = '100%';
         frame.style.maxWidth = '100%';
@@ -94,6 +94,40 @@
       });
   }
   window.addEventListener('message', function (event) {
+    if (
+      event.origin === origin &&
+      event.data &&
+      event.data.type === 'naija:widget:checkout-complete:v1'
+    ) {
+      const entry = frames.find(function (item) {
+        return (
+          item.channel === event.data.channel &&
+          /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(
+            event.data.sessionId || '',
+          ) &&
+          event.data.status === 'paid' &&
+          /^(test|live)$/.test(event.data.environment || '')
+        );
+      });
+      if (!entry) return;
+      const detail = Object.freeze({
+        sessionId: event.data.sessionId,
+        status: event.data.status,
+        environment: event.data.environment,
+      });
+      window.dispatchEvent(
+        new CustomEvent('naijaTicketsCheckoutComplete', { detail: detail }),
+      );
+      if (!entry.frame.parentNode.querySelector('.naija-ticket-status')) {
+        const status = document.createElement('p');
+        status.className = 'naija-ticket-status';
+        status.setAttribute('role', 'status');
+        status.textContent =
+          'Payment confirmed. Your ticket details are being verified.';
+        entry.frame.parentNode.appendChild(status);
+      }
+      return;
+    }
     if (
       event.origin !== origin ||
       !event.data ||

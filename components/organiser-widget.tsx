@@ -121,13 +121,12 @@ export function OrganiserWidget({
       aria-labelledby="widget-heading"
     >
       <h2 id="widget-heading" className="text-xl font-black">
-        Legacy: embed ticket selection
+        Embedded ticket checkout
       </h2>
       <p className="mt-2 text-sm text-slate-600">
-        Existing integrations remain supported. Use Hosted Checkout above for
-        new websites. Show ticket choices on a registered website. Buyers
-        continue to Naija Tickets to enter their details and pay. Only assigned,
-        published and upcoming events can load.
+        Add ticket choices directly to your registered website or app. Buyers
+        complete payment in a secure Naija Tickets popup, then return to your
+        page. Only assigned, published and upcoming events can load.
       </p>
       {error && (
         <p role="alert" className="mt-3 text-sm text-red-700">
@@ -182,7 +181,7 @@ export function OrganiserWidget({
               disabled={busy || !settings}
               onChange={(event) => setCheckout(event.target.checked)}
             />
-            Allow hosted checkout
+            Allow secure checkout popup
           </label>
         </div>
         <Button

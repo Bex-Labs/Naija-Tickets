@@ -5,6 +5,7 @@ export const INTEGRATION_SCOPES = [
   'tickets:read',
   'availability:read',
   'checkout:write',
+  'external_events:write',
   'orders:read',
   'tickets:status',
   'attendees:read',

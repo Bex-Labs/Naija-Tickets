@@ -1,0 +1,104 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Naija Tickets external events",
+    "version": "1.0.0",
+    "description": "Create or update a private, externally managed backing event. The event uses the existing Naija Tickets ticket, checkout, payment, QR and entry records, but is excluded from the public catalogue. This endpoint is server-to-server only."
+  },
+  "paths": {
+    "/api/v1/external-events/{externalId}": {
+      "put": {
+        "summary": "Create or update an externally managed event",
+        "description": "Requires external_events:write. A stable externalId makes this operation idempotent. Ticket prices are integer NGN kobo and capacity is packages multiplied by admissions_per_ticket.",
+        "security": [{ "IntegrationKey": ["external_events:write"] }],
+        "parameters": [{
+          "name": "externalId",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,100}$" }
+        }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ExternalEventInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The private backing event is ready for hosted checkout or an enabled widget.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ExternalEventResponse" } } }
+          },
+          "400": { "description": "Invalid dates, ticket values or duplicate external ticket identifiers." },
+          "401": { "description": "Missing, expired or invalid server key." },
+          "403": { "description": "Browser requests and keys without external_events:write are denied." },
+          "409": { "description": "A price/admission change after orders, or capacity below sold or reserved admissions, is denied." },
+          "503": { "description": "Test resource mode is not configured." }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "IntegrationKey": { "type": "http", "scheme": "bearer", "bearerFormat": "nt_test_ or nt_live_ server key" }
+    },
+    "schemas": {
+      "ExternalEventInput": {
+        "type": "object",
+        "required": ["title", "starts_at", "ends_at", "tickets"],
+        "properties": {
+          "title": { "type": "string", "minLength": 2, "maxLength": 160 },
+          "presenter_line": { "type": "string", "maxLength": 160 },
+          "description": { "type": "string", "maxLength": 2000 },
+          "venue_name": { "type": "string", "maxLength": 160 },
+          "address": { "type": "string", "maxLength": 300 },
+          "city": { "type": "string", "maxLength": 80 },
+          "state": { "type": "string", "maxLength": 80 },
+          "timezone": { "type": "string", "example": "Africa/Lagos" },
+          "starts_at": { "type": "string", "format": "date-time" },
+          "ends_at": { "type": "string", "format": "date-time" },
+          "sales_start_at": { "type": "string", "format": "date-time" },
+          "sales_end_at": { "type": "string", "format": "date-time" },
+          "image_url": { "type": "string", "format": "uri" },
+          "source_url": { "type": "string", "format": "uri" },
+          "tickets": {
+            "type": "array", "minItems": 1, "maxItems": 20,
+            "items": { "$ref": "#/components/schemas/ExternalTicketInput" }
+          }
+        }
+      },
+      "ExternalTicketInput": {
+        "type": "object",
+        "required": ["external_id", "name", "price_kobo", "quantity"],
+        "properties": {
+          "external_id": { "type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,100}$" },
+          "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+          "description": { "type": "string" },
+          "price_kobo": { "type": "integer", "minimum": 0, "description": "NGN kobo: ₦45,000 is 4500000." },
+          "quantity": { "type": "integer", "minimum": 0, "maximum": 100000, "description": "Number of ticket packages for sale." },
+          "admissions_per_ticket": { "type": "integer", "minimum": 1, "maximum": 100, "default": 1 },
+          "min_per_order": { "type": "integer", "minimum": 1, "maximum": 20, "default": 1 },
+          "max_per_order": { "type": "integer", "minimum": 1, "maximum": 20, "default": 10 }
+        }
+      },
+      "ExternalEventResponse": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["id", "external_id", "title", "status"],
+            "properties": {
+              "id": { "type": "string", "format": "uuid", "description": "Backing event ID for the widget or checkout-session API." },
+              "external_id": { "type": "string" },
+              "title": { "type": "string" },
+              "status": { "type": "string", "enum": ["published"] }
+            }
+          },
+          "meta": { "type": "object" }
+        }
+      }
+    }
+  }
+}

@@ -26,6 +26,7 @@ export async function createOperationsFixture(mode: 'test' | 'live' = 'live') {
       '202609150004_guest_privacy_and_ticket_email.sql',
       '202609300001_isolate_event_entry.sql',
       '202610160003_integration_operations.sql',
+      '202610290001_external_embed_events.sql',
     ]) {
       const sql = hostedCheckoutMigration(name);
       await db.exec(

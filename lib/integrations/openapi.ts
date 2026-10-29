@@ -63,7 +63,7 @@ export function assemblePublicOpenApi(
         continue;
       if (paths[path]) throw new Error('Duplicate public API path');
       const projected = visit(definition) as Record<string, unknown>;
-      for (const method of ['get', 'post', 'options']) {
+      for (const method of ['get', 'post', 'put', 'options']) {
         const operation = projected[method] as
           | Record<string, unknown>
           | undefined;
@@ -222,9 +222,9 @@ export function assemblePublicOpenApi(
     openapi: '3.1.0',
     info: {
       title: 'Naija Tickets Integration API',
-      version: '1.7.0',
+      version: '1.8.0',
       description:
-        'Implemented contract through Phase 7. Server secret keys stay on partner servers; public widgets use separate identifiers. Test operations require a separate database/deployment and Paystack test mode. Features fail closed until configured. Public sandbox purchase, receiver and scheduled-delivery acceptance must be recorded separately; this document is not proof of activation.',
+        'Implemented contract through Phase 8. Server secret keys stay on partner servers; public widgets use separate identifiers. Externally managed events are private backing records that reuse Naija Tickets checkout and tickets. Test operations require a separate database/deployment and Paystack test mode. Features fail closed until configured. Public sandbox purchase, receiver and scheduled-delivery acceptance must be recorded separately; this document is not proof of activation.',
     },
     servers: [
       {

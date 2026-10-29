@@ -11,6 +11,14 @@ import type { Event } from '@/lib/events';
 import { eventHasEnded } from '@/lib/event-availability';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
+function missingExternalEventColumn(error: unknown) {
+  return (
+    !!error &&
+    typeof error === 'object' &&
+    JSON.stringify(error).includes('external_managed')
+  );
+}
+
 export function usePublishedEvents() {
   const [catalogue, setCatalogue] = useState<Event[]>([]);
   const channelId = useId();
@@ -24,12 +32,20 @@ export function usePublishedEvents() {
     }
     let active = true;
     const load = async () => {
-      const { data, error } = await client
+      let { data, error } = await client
         .from('events')
         .select(publicEventSelect)
         .eq('status', 'published')
+        .eq('external_managed', false)
         .gt('ends_at', new Date().toISOString())
         .order('published_at', { ascending: false });
+      if (missingExternalEventColumn(error))
+        ({ data, error } = await client
+          .from('events')
+          .select(publicEventSelect)
+          .eq('status', 'published')
+          .gt('ends_at', new Date().toISOString())
+          .order('published_at', { ascending: false }));
       if (!active || error) return;
       const liveEvents = ((data || []) as unknown as DatabaseEventRow[])
         .filter((event) => !isRetiredSeedEvent(event))

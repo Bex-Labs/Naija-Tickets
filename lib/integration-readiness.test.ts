@@ -59,7 +59,7 @@ const overview = {
 };
 void test('public OpenAPI has implemented routes, unique IDs, resolved namespaced references and no private control surface', () => {
   const document = publicIntegrationSpec;
-  assert.equal(Object.keys(document.paths).length, 20);
+  assert.equal(Object.keys(document.paths).length, 21);
   const operationIds = new Set();
   for (const [path, value] of Object.entries(document.paths)) {
     assert.ok(
@@ -70,7 +70,7 @@ void test('public OpenAPI has implemented routes, unique IDs, resolved namespace
     const source =
       'app' + path.replaceAll(/\{([^}]+)\}/g, '[$1]') + '/route.ts';
     assert.ok(existsSync(source), source);
-    for (const method of ['get', 'post', 'options']) {
+    for (const method of ['get', 'post', 'put', 'options']) {
       const op = (value as Record<string, { operationId: string }>)[method];
       if (!op) continue;
       assert.ok(!operationIds.has(op.operationId));

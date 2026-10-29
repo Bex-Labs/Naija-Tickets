@@ -40,8 +40,31 @@
   form.addEventListener('submit', function (event) {
     update();
     if (button.disabled) event.preventDefault();
-    // Native form navigation preserves the user gesture and opens checkout at
-    // the top level. No checkout capability is posted to the parent website.
+    // A named popup preserves the user gesture. The private checkout
+    // capability remains inside Naija Tickets and never reaches the parent.
+  });
+  window.addEventListener('message', function (event) {
+    if (
+      event.origin !== location.origin ||
+      !event.data ||
+      event.data.type !== 'naija:checkout:complete:v1' ||
+      !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(
+        event.data.sessionId || '',
+      ) ||
+      event.data.status !== 'paid' ||
+      !/^(test|live)$/.test(event.data.environment || '')
+    )
+      return;
+    parent.postMessage(
+      {
+        type: 'naija:widget:checkout-complete:v1',
+        channel: root.getAttribute('data-channel'),
+        sessionId: event.data.sessionId,
+        status: event.data.status,
+        environment: event.data.environment,
+      },
+      root.getAttribute('data-parent-origin'),
+    );
   });
   function resize() {
     if (parent === window) return;
