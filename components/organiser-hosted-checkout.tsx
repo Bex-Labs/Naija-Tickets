@@ -7,6 +7,7 @@ import type {
 } from '@/lib/integrations/types';
 import type { HostedReport } from '@/lib/integrations/hosted-report';
 import { IntegrationSalesReport } from './integration-sales-report';
+import { hostedLinkTestPage } from '@/lib/integrations/test-page';
 type Link = {
   id: string;
   publicId: string;
@@ -87,16 +88,23 @@ export function OrganiserHostedCheckout({
     setError('');
     setNotice('');
     try {
+      const destination =
+        returnUrl ??
+        selected?.returnUrl ??
+        (registered[0] ? registered[0].origin + '/' : '');
+      if (
+        !registered.some((item) => item.origin === new URL(destination).origin)
+      )
+        throw new Error(
+          `Add ${new URL(destination).origin} to your ${mode} website addresses and save the connection first.`,
+        );
       const response = await accountFetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           event_id: activeEvent,
           environment: mode,
-          return_url:
-            returnUrl ??
-            selected?.returnUrl ??
-            (registered[0] ? registered[0].origin + '/' : ''),
+          return_url: destination,
           enabled: true,
         }),
       });
@@ -153,6 +161,22 @@ export function OrganiserHostedCheckout({
       setNotice('Select and copy the text below.');
     }
   }
+  function downloadTestPage() {
+    try {
+      const blob = new Blob([hostedLinkTestPage(url)], { type: 'text/html' });
+      const address = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = address;
+      anchor.download = 'buy-tickets.html';
+      anchor.click();
+      setTimeout(() => URL.revokeObjectURL(address), 1000);
+      setNotice(
+        'Downloaded buy-tickets.html. Open it to try your button. The return address must still be running.',
+      );
+    } catch {
+      setError('Create a valid checkout link before downloading a test page.');
+    }
+  }
   return (
     <section className="mt-6 min-w-0 rounded-xl border border-emerald-700/20 bg-white p-4 sm:p-6">
       <p className="text-xs font-black uppercase tracking-widest text-emerald-700">
@@ -160,15 +184,8 @@ export function OrganiserHostedCheckout({
       </p>
       <h2 className="mt-2 text-2xl font-black">Create a Buy Tickets link</h2>
       <p className="mt-3 text-sm leading-6 text-slate-600">
-        <strong>Hosted Checkout Link:</strong> no programming or API key
-        required. Add a Buy Tickets button to your website. Customers choose
-        tickets and pay on a focused Naija Tickets page, then return to your
-        approved website.
-      </p>
-      <p className="mt-2 text-sm leading-6 text-slate-600">
-        You do not need API keys, a server or a webhook. Naija Tickets handles
-        ticket selection, payment verification and ticket delivery. Your website
-        builder only needs to support a button with a website link.
+        Choose an event and where buyers should return. Copy the link into your
+        website’s button.
       </p>
       {settingsPending && (
         <output className="mt-4 block rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
@@ -241,9 +258,8 @@ export function OrganiserHostedCheckout({
             placeholder="https://your-website.example/events"
           />
           <span className="mt-2 block text-xs font-normal text-slate-500">
-            Use one of your registered {mode} website origins above. No query,
-            fragment or login credentials. Test links require an isolated
-            sandbox deployment.
+            A page on your saved {mode} website. Local Test example:
+            http://localhost:3010/buy-tickets.html
           </span>
         </label>
         <button
@@ -312,6 +328,15 @@ export function OrganiserHostedCheckout({
           >
             Copy checkout link
           </button>
+          {mode === 'test' && selected.enabled && (
+            <button
+              type="button"
+              onClick={downloadTestPage}
+              className="ml-4 inline-flex min-h-11 items-center text-sm font-bold text-emerald-800 underline"
+            >
+              Download test website
+            </button>
+          )}
           <a
             href={url}
             target="_blank"
@@ -354,24 +379,14 @@ export function OrganiserHostedCheckout({
           </details>
         </div>
       )}
-      <details className="mt-6 border-t pt-5">
-        <summary className="cursor-pointer font-black">
-          Hosted Checkout API · for developers
-        </summary>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
-          Create sessions from your server using a key with checkout:write. Send
-          the event ID; ticket selections and buyer prefill are optional.
-          Redirect the buyer to checkout_url. Keep secret keys on your server
-          and verify purchases using orders:read.
-        </p>
-        <a
-          className="mt-2 inline-flex min-h-11 items-center font-bold text-emerald-800 underline"
-          href="/developers/checkout"
-        >
-          Read integration instructions →
-        </a>
-      </details>
-      {report && <IntegrationSalesReport report={report} />}
+      {report && (
+        <details className="mt-6 border-t pt-4">
+          <summary className="cursor-pointer font-bold">
+            Sales from this connection
+          </summary>
+          <IntegrationSalesReport report={report} />
+        </details>
+      )}
     </section>
   );
 }

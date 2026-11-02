@@ -1,6 +1,14 @@
 # Naija Tickets integrations progress
 
-Last updated: 29 October 2026 (Africa/Lagos).
+Last updated: 1 November 2026 (Africa/Lagos).
+
+## Simplified setup and local testing — 1 November 2026
+
+Local implementation: preserved the existing organiser styling and two setup choices; shortened default copy; kept API credentials out of the no-code path; collapsed connection management and sales reporting. Embedded ticket selection remains available as an optional no-code tool. The authenticated dashboard now reports its configured resource mode without exposing secrets. This label is not a deployment-readiness check.
+
+Test hosted links can download a standalone HTML button page with no secret credentials or private checkout-session URLs. Return-origin mismatches are explained before link submission. `/developers/local-testing` covers the downloadable page and the existing server-side Node starter, using a consistent localhost port and explicit sandbox/partner address roles. The API panel exposes saved assigned event IDs for setup. Existing authentication, permissions, server payment verification and sandbox isolation remain in force.
+
+Verification: TypeScript and production build pass; 22 focused tests pass, including download URL validation, starter authentication/CSRF/server confirmation and real-SQL hosted link permissions/inventory. The first build hit a generated-folder ENOTEMPTY cleanup error; retry passed. No new browser payment, remote migration, deployment or environment change was performed. Sandbox operation remains required for real Test-mode checkout; these UI changes do not repair an unavailable sandbox deployment.
 
 Current status: **The replacement hosted-checkout upgrade is implemented and verified on the separate public sandbox and Partner Demo. No-code event links, optional API selections/prefill, focused checkout/confirmation, safe organiser return, source reporting and temporary-prefill cleanup are implemented. Main production is unchanged; email is deferred. Production migration/configuration and the earlier physical-device, scheduled-delivery, refund/recovery and security/load gates remain pending. Disable/Enable and removal controls are additionally implemented locally and require the 18 October migration/deployment. Read the 18 and 17 October reports before historical notes.**
 

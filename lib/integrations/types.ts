@@ -43,6 +43,7 @@ export type IntegrationApplication = {
   keys: IntegrationKeyMetadata[];
 };
 export type IntegrationDashboard = {
+  workspaceMode?: IntegrationEnvironment | null;
   organisers: { id: string; name: string }[];
   integrations: IntegrationApplication[];
   events: { id: string; organiserId: string; title: string; status: string }[];

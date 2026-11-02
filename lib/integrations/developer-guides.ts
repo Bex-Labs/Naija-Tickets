@@ -4,6 +4,56 @@ export type DeveloperGuide = {
   sections: { heading: string; body: string[]; code?: string }[];
 };
 export const developerGuides: Record<string, DeveloperGuide> = {
+  'local-testing': {
+    title: 'Test on your computer',
+    intro:
+      'Your website does not need to be published. The sandbox handles test payments and tickets; your website runs on localhost.',
+    sections: [
+      {
+        heading: '1. Set up one test connection',
+        body: [
+          'Sign into the sandbox organiser workspace. Publish a test event, open Developers & Integrations, and choose Buy Tickets button or Developer API.',
+          'Save http://localhost:3010 as the Test website address and select your event. This is the partner website address. The sandbox address is where Naija Tickets runs; these are different addresses.',
+          'If you already run a website on another port, use its exact address instead. Keep localhost and 127.0.0.1 consistent.',
+        ],
+      },
+      {
+        heading: '2A. No-code: try a button',
+        body: [
+          'Create a Test checkout link with http://localhost:3010/buy-tickets.html as the return URL. Choose Download test website. Put buy-tickets.html in an empty folder.',
+          'If Python 3 is installed, open a terminal in that folder and run the command below. Then open http://localhost:3010/buy-tickets.html and click Buy Tickets. You can also use your website builder’s preview if its address is registered.',
+          'No secret key is needed. For your real website later, paste the generated link into its button settings. This opens hosted checkout; an embedded widget is optional.',
+        ],
+        code: 'python3 -m http.server 3010 --bind 127.0.0.1',
+      },
+      {
+        heading: '2B. API: run the server starter',
+        body: [
+          'Use the examples/hosted-checkout folder in the Naija Tickets source checkout. It needs Node 24 and no extra packages. Create a Test key with the recommended permissions.',
+          'Copy .env.example to .env.local. Set NT_API_ORIGIN to your sandbox address, NT_PARTNER_ORIGIN to http://localhost:3010, NT_EVENT_ID to the assigned sandbox event ID, and NT_API_KEY to your Test key. Keep NT_MODE=test.',
+          'Generate a dedicated cookie secret using the first command below and save it as NT_EXAMPLE_COOKIE_SECRET in .env.local. Run the second command from the example folder, then open http://localhost:3010. Stop any other server using port 3010 first.',
+          'Buy Tickets creates a checkout session through the server. On return, the server checks the session before displaying Payment verified. Keep keys in server environment variables, including for mobile apps; apps call your backend.',
+        ],
+        code: "node -e \"console.log(require('node:crypto').randomBytes(32).toString('base64url'))\"\nnode --env-file=.env.local node.mjs",
+      },
+      {
+        heading: '3. Check the result',
+        body: [
+          'Complete a payment marked Test. Confirm the order and tickets in the sandbox, check the remaining inventory, and follow the return link to your localhost page.',
+          'Also cancel a payment and try an unassigned event. Neither should produce a valid paid ticket. The no-code test page does not verify orders; checkout shows the authoritative result. The API starter verifies the result on its server.',
+          'Local tests need the sandbox running, but do not need a published partner website. Webhook delivery needs a reachable HTTPS server and can be tested separately later.',
+        ],
+      },
+      {
+        heading: 'If something does not load',
+        body: [
+          'Refused to connect: confirm the address of the page containing the widget is registered in Test website addresses. Check the widget and hosted checkout are enabled. Browser security policies or deployment login protection can also block an iframe.',
+          'Return URL error: save the matching website origin first. Test and Live address lists are separate. Do not use the sandbox address as your partner return address.',
+          'Checkout unavailable: the sandbox operator must check its database binding, checkout settings and Paystack Test configuration. Changing the website address cannot enable a missing backend service.',
+        ],
+      },
+    ],
+  },
   'no-code': {
     title: 'Add a Buy Tickets button without coding',
     intro:

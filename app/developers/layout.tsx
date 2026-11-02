@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 };
 const links = [
   ['No-code setup', '/developers/no-code'],
+  ['Test locally', '/developers/local-testing'],
   ['Overview', '/developers'],
   ['Get started', '/developers/getting-started'],
   ['API reference', '/developers/reference'],
