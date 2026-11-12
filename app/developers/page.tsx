@@ -53,7 +53,7 @@ export default function DevelopersPage() {
               href="/developers/getting-started"
               className="inline-flex min-h-12 items-center gap-3 bg-emerald-600 px-5 text-sm font-bold text-white hover:bg-emerald-700"
             >
-              Start in the sandbox <ArrowRight className="h-4 w-4" />
+              Connect your website or app <ArrowRight className="h-4 w-4" />
             </a>
             <a
               href="/organiser"

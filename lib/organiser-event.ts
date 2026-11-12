@@ -28,6 +28,7 @@ export type OrganiserEventInput = {
   venue: string;
   address: string;
   directionsUrl: string | null;
+  websiteUrl: string | null;
   date: string;
   time: string;
   endDate: string;
@@ -103,6 +104,7 @@ export function parseOrganiserEventInput(
   const venue = text(body, 'venue');
   const address = text(body, 'address');
   const directionsInput = text(body, 'directionsUrl');
+  const websiteInput = text(body, 'websiteUrl');
   const date = text(body, 'date');
   const time = text(body, 'time');
   const endDate = text(body, 'endDate');
@@ -137,6 +139,16 @@ export function parseOrganiserEventInput(
   const directionsUrl = httpUrl(directionsInput);
   if (directionsInput && !directionsUrl) {
     return { error: 'Use a valid HTTP or HTTPS directions link.' };
+  }
+  const websiteUrl = httpUrl(websiteInput);
+  if (websiteInput.length > 2048 || (websiteInput && !websiteUrl)) {
+    return { error: 'Use a valid event website link under 2048 characters.' };
+  }
+  if (websiteUrl) {
+    const parsedWebsite = new URL(websiteUrl);
+    if (parsedWebsite.username || parsedWebsite.password) {
+      return { error: 'The event website link cannot contain login details.' };
+    }
   }
   if (!/^[A-Z0-9 +:/-]{2,16}$/.test(timezoneLabel)) {
     return { error: 'Use a short timezone label such as WAT.' };
@@ -392,6 +404,7 @@ export function parseOrganiserEventInput(
       venue,
       address,
       directionsUrl,
+      websiteUrl,
       date,
       time,
       endDate,

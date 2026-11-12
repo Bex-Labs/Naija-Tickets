@@ -109,6 +109,41 @@ void test('integration configuration normalises exact origins and rejects unsafe
   assert.equal(result.domains.length, 1);
   assert.deepEqual(result.eventIds, []);
 });
+void test('website setup accepts local Test addresses while preserving HTTPS-only Live addresses', () => {
+  for (const origin of [
+    'http://localhost:3111',
+    'http://127.0.0.1:3003',
+    'http://[::1]:3111',
+  ]) {
+    const input = {
+      organiserId: owner,
+      name: 'Local website',
+      domains: [{ origin, environment: 'test' }],
+    };
+    assert.equal(parseIntegrationApplication(input).domains[0].origin, origin);
+    assert.throws(
+      () =>
+        parseIntegrationApplication({
+          ...input,
+          domains: [{ origin, environment: 'live' }],
+        }),
+      /Choose Test \/ local website/,
+    );
+  }
+  const result = parseIntegrationApplication({
+    organiserId: owner,
+    name: 'Both environments',
+    domains: [
+      { origin: 'http://localhost:3111', environment: 'test' },
+      { origin: 'https://events.example.com', environment: 'live' },
+    ],
+  });
+  assert.equal(result.domains.length, 2);
+  assert.throws(
+    () => canonicalIntegrationOrigin('http://events.example.com', 'live'),
+    IntegrationError,
+  );
+});
 void test('only implemented read scopes are grantable and expiry is bounded', () => {
   assert.deepEqual(
     parseIntegrationKey({ environment: 'live', scopes: [], expiresInDays: 30 })

@@ -1,6 +1,6 @@
 'use client';
 import { OrganiserHostedCheckout } from '@/components/organiser-hosted-checkout';
-import { useEffect, useState, type SyntheticEvent } from 'react';
+import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
 import {
   Code2,
   Copy,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { accountFetch } from '@/lib/supabase/account-fetch';
 import { INTEGRATION_SCOPES } from '@/lib/integrations/types';
+import { canonicalIntegrationOrigin } from '@/lib/integrations/validation';
 import type {
   IntegrationScope,
   IntegrationApplication,
@@ -56,6 +57,7 @@ export function OrganiserIntegrations() {
   const [clock, setClock] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [reload, setReload] = useState(0);
+  const initialModeSet = useRef(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [selectedId, setSelectedId] = useState('');
@@ -64,9 +66,11 @@ export function OrganiserIntegrations() {
   const [status, setStatus] = useState<'active' | 'disabled'>('active');
   const [testOrigins, setTestOrigins] = useState('');
   const [liveOrigins, setLiveOrigins] = useState('');
+  const [connectionEnvironment, setConnectionEnvironment] =
+    useState<IntegrationEnvironment>('live');
   const [eventIds, setEventIds] = useState<string[]>([]);
   const [environment, setEnvironment] =
-    useState<IntegrationEnvironment>('test');
+    useState<IntegrationEnvironment>('live');
   const [readScopes, setReadScopes] = useState<IntegrationScope[]>(
     RECOMMENDED_CHECKOUT_SCOPES,
   );
@@ -79,6 +83,11 @@ export function OrganiserIntegrations() {
     action: 'enable' | 'disable' | 'remove';
   } | null>(null);
   const selected = dashboard?.integrations.find((app) => app.id === selectedId);
+  const eventWebsite = dashboard?.events.find(
+    (event) => eventIds.includes(event.id) && event.websiteUrl,
+  )?.websiteUrl;
+  const defaultEnvironment =
+    dashboard?.workspaceMode === 'test' ? 'test' : 'live';
   const originsText = (text: string) =>
     text
       .split(/\r?\n/)
@@ -134,6 +143,16 @@ export function OrganiserIntegrations() {
         .join('\n') || '',
     );
     setEventIds(app?.eventIds || []);
+    if (!app) {
+      setConnectionEnvironment(defaultEnvironment);
+      setEnvironment(defaultEnvironment);
+    } else {
+      const modes = new Set(app.domains.map((domain) => domain.environment));
+      const mode =
+        modes.size === 1 ? app.domains[0].environment : connectionEnvironment;
+      setConnectionEnvironment(mode);
+      setEnvironment(mode);
+    }
     setSecret('');
     setError('');
     setNotice('');
@@ -157,6 +176,12 @@ export function OrganiserIntegrations() {
           );
         if (!controller.signal.aborted) {
           setDashboard(result.data);
+          if (!initialModeSet.current) {
+            const mode = result.data.workspaceMode === 'test' ? 'test' : 'live';
+            setEnvironment(mode);
+            setConnectionEnvironment(mode);
+            initialModeSet.current = true;
+          }
           const available = result.data.organisers;
           setOrganiserId((current) =>
             available.some((org) => org.id === current)
@@ -215,7 +240,10 @@ export function OrganiserIntegrations() {
         .split(/\r?\n/)
         .map((origin) => origin.trim())
         .filter(Boolean)
-        .map((origin) => ({ origin, environment: mode }));
+        .map((origin) => ({
+          origin: canonicalIntegrationOrigin(origin, mode),
+          environment: mode,
+        }));
     try {
       const app = await mutate<IntegrationApplication>(
         selectedId
@@ -369,7 +397,7 @@ export function OrganiserIntegrations() {
       </output>
     );
   return (
-    <div className="animate-rise max-w-5xl min-w-0">
+    <div className="integration-fields animate-rise max-w-5xl min-w-0">
       <AlertDialog
         open={Boolean(lifecycleTarget)}
         onOpenChange={(open) => {
@@ -440,9 +468,6 @@ export function OrganiserIntegrations() {
           Refresh
         </Button>
       </div>
-      <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-        Choose a method, save your website, then connect.
-      </p>
       <section
         className="mt-5 grid gap-3 sm:grid-cols-2"
         aria-label="Choose how to connect"
@@ -457,9 +482,7 @@ export function OrganiserIntegrations() {
             RECOMMENDED · NO CODE
           </p>
           <h2 className="mt-1 text-lg font-black">Buy Tickets button</h2>
-          <p className="mt-2 text-sm leading-5 text-slate-600">
-            Copy a link into any website button. No API key needed.
-          </p>
+          <p className="mt-2 text-sm leading-5 text-slate-600">Copy a checkout link.</p>
         </button>
         <button
           type="button"
@@ -469,22 +492,20 @@ export function OrganiserIntegrations() {
         >
           <p className="text-sm font-black text-[#241b3f]">FOR DEVELOPERS</p>
           <h2 className="mt-1 text-lg font-black">Connect with the API</h2>
-          <p className="mt-2 text-sm leading-5 text-slate-600">
-            Use your own website or app with a secure server connection.
-          </p>
+          <p className="mt-2 text-sm leading-5 text-slate-600">Connect your server.</p>
         </button>
       </section>
       <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-slate-600">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
         {dashboard?.workspaceMode === 'test'
-          ? 'Test workspace · Connect a localhost website and use Paystack Test payments.'
+          ? 'Test workspace · No real charges.'
           : dashboard?.workspaceMode === 'live'
-            ? 'Main workspace · For local Test purchases, open your sandbox organiser workspace.'
-            : 'Testing locally? Use your sandbox account and a localhost website address.'}
+            ? 'Live workspace'
+            : 'Choose a website and event.'}
       </p>
       <details className="mt-3 rounded-lg border border-[#241b3f]/10 bg-white p-3">
         <summary className="cursor-pointer text-sm font-bold">
-          Test before your website is live
+          Optional: try a test purchase first
         </summary>
         <ol className="mt-3 list-inside list-decimal space-y-2 text-sm text-slate-600">
           <li>
@@ -572,9 +593,6 @@ export function OrganiserIntegrations() {
           >
             <div className="sm:col-span-2">
               <h2 className="font-black">2. Set up this website</h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Your website address and the events it can sell.
-              </p>
             </div>
             <div>
               <label htmlFor="integration-organiser" className="auth-label">
@@ -614,62 +632,124 @@ export function OrganiserIntegrations() {
                 placeholder="My event website"
               />
             </div>
-            <div>
-              <label htmlFor="integration-test-origins" className="auth-label">
-                Test website address
+            <fieldset className="min-w-0 sm:col-span-2">
+              <legend className="auth-label">What are you setting up?</legend>
+              <div className="grid grid-cols-2 gap-3">
+                {(['test', 'live'] as const).map((mode) => (
+                  <label
+                    key={mode}
+                    className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm font-bold ${connectionEnvironment === mode ? 'border-emerald-600 bg-emerald-50 text-emerald-900' : 'border-[#241b3f]/15 bg-white'}`}
+                  >
+                    <input
+                      type="radio"
+                      name="connection-environment"
+                      value={mode}
+                      checked={connectionEnvironment === mode}
+                      disabled={busy}
+                      onChange={() => {
+                        // Correct a localhost address entered before choosing Test.
+                        if (mode === 'test') {
+                          const lines = liveOrigins.split(/\r?\n/);
+                          const local = (value: string) => {
+                            try {
+                              return [
+                                'localhost',
+                                '127.0.0.1',
+                                '[::1]',
+                              ].includes(new URL(value.trim()).hostname);
+                            } catch {
+                              return false;
+                            }
+                          };
+                          const testing = lines.filter(local);
+                          if (testing.length) {
+                            setTestOrigins(
+                              [
+                                ...new Set(
+                                  [...testOrigins.split(/\r?\n/), ...testing]
+                                    .map((value) => value.trim())
+                                    .filter(Boolean),
+                                ),
+                              ].join('\n'),
+                            );
+                            setLiveOrigins(
+                              lines.filter((line) => !local(line)).join('\n'),
+                            );
+                          }
+                        }
+                        setConnectionEnvironment(mode);
+                        setEnvironment(mode);
+                        setSecret('');
+                        setError('');
+                        setNotice('');
+                      }}
+                      className="accent-emerald-600"
+                    />
+                    {mode === 'test'
+                      ? 'Test / local website'
+                      : 'Live deployment'}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <div className="sm:col-span-2">
+              <label htmlFor="integration-origins" className="auth-label">
+                {connectionEnvironment === 'test'
+                  ? 'Test website address'
+                  : 'Live website or app backend address'}
               </label>
               <textarea
-                id="integration-test-origins"
-                value={testOrigins}
-                onChange={(event) => setTestOrigins(event.target.value)}
+                id="integration-origins"
+                value={
+                  connectionEnvironment === 'test' ? testOrigins : liveOrigins
+                }
+                onChange={(event) =>
+                  connectionEnvironment === 'test'
+                    ? setTestOrigins(event.target.value)
+                    : setLiveOrigins(event.target.value)
+                }
                 disabled={busy}
                 rows={3}
                 className="auth-input w-full py-3"
-                placeholder="http://localhost:3010"
+                placeholder={
+                  connectionEnvironment === 'test'
+                    ? 'http://localhost:3111'
+                    : 'https://events.example.com'
+                }
+                aria-describedby="integration-origins-help"
               />
-              <p className="mt-1 text-xs text-slate-500">
-                Your website’s address, not the Naija Tickets address. Include
-                the port; omit page paths.
-              </p>
-            </div>
-            <details
-              className="rounded-lg border border-[#241b3f]/10 p-3 sm:col-span-2"
-              open={Boolean(liveOrigins)}
-            >
-              <summary className="cursor-pointer text-sm font-bold">
-                Add my live website address later
-              </summary>
-              <p className="mt-2 text-xs leading-5 text-slate-500">
-                Leave this empty until you are ready for real customers and
-                payments.
-              </p>
-              <label
-                htmlFor="integration-live-origins"
-                className="mt-3 block auth-label"
+              <p
+                id="integration-origins-help"
+                className="mt-1 text-xs text-slate-500"
               >
-                Live website address
-              </label>
-              <textarea
-                id="integration-live-origins"
-                value={liveOrigins}
-                onChange={(event) => setLiveOrigins(event.target.value)}
-                disabled={busy}
-                rows={3}
-                className="auth-input mt-2 w-full py-3"
-                placeholder="https://events.example.com"
-              />
-              <p className="mt-1 text-xs text-slate-500">
-                One address per line. HTTPS only; do not add a page path,
-                wildcard or password.
+                {connectionEnvironment === 'test'
+                  ? 'Use your website address, such as http://localhost:3010. No page path.'
+                  : 'Use a public HTTPS address. No page path.'}
               </p>
-            </details>
+              {eventWebsite &&
+                (connectionEnvironment === 'test' || eventWebsite.startsWith('https://')) && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className="mt-2 text-sm font-bold text-emerald-800 underline"
+                    onClick={() => {
+                      const origin = new URL(eventWebsite).origin;
+                      const current = connectionEnvironment === 'test' ? testOrigins : liveOrigins;
+                      const next = [...new Set([...current.split(/\r?\n/), origin].map((value) => value.trim()).filter(Boolean))].join('\n');
+                      if (connectionEnvironment === 'test') setTestOrigins(next);
+                      else setLiveOrigins(next);
+                    }}
+                  >
+                    Use saved event website
+                  </button>
+                )}
+            </div>
             <fieldset className="min-w-0 sm:col-span-2">
               <legend className="auth-label">
                 Events this website can sell
               </legend>
               <p className="mb-2 text-xs leading-5 text-slate-500">
-                Only selected events are available through this connection.
-                Publish drafts before selling.
+                Select the events this connection may use.
               </p>
               {selected && (
                 <output
@@ -745,11 +825,9 @@ export function OrganiserIntegrations() {
                   ? 'Copy your Buy Tickets link'
                   : 'Create your server key'}
               </h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-700">
-                {setupPath === 'link'
-                  ? 'Naija Tickets handles checkout and tickets.'
-                  : 'Keep the key on your server, including when testing locally.'}
-              </p>
+              {setupPath === 'api' && (
+                <p className="mt-2 text-sm text-slate-700">Keep the key on your server.</p>
+              )}
             </section>
           )}
           {selected && (
@@ -820,9 +898,10 @@ export function OrganiserIntegrations() {
           )}
           {selected && setupPath === 'link' && (
             <OrganiserHostedCheckout
-              key={'hosted-' + selected.id}
+              key={'hosted-' + selected.id + connectionEnvironment}
               application={selected}
               events={dashboard.events}
+              defaultEnvironment={connectionEnvironment}
               settingsPending={unsavedChanges}
             />
           )}
@@ -1201,9 +1280,10 @@ export function OrganiserIntegrations() {
                 )}
                 {selected && (
                   <OrganiserWidget
-                    key={'widget-' + selected.id}
+                    key={'widget-' + selected.id + connectionEnvironment}
                     application={selected}
                     events={dashboard.events}
+                    defaultEnvironment={connectionEnvironment}
                   />
                 )}
               </details>
@@ -1215,9 +1295,10 @@ export function OrganiserIntegrations() {
                 Optional: embed ticket selection
               </summary>
               <OrganiserWidget
-                key={'no-code-widget-' + selected.id}
+                key={'no-code-widget-' + selected.id + connectionEnvironment}
                 application={selected}
                 events={dashboard.events}
+                defaultEnvironment={connectionEnvironment}
               />
             </details>
           )}
@@ -1230,9 +1311,10 @@ export function OrganiserIntegrations() {
                 Use this if you do not need custom event pages or a developer.
               </p>
               <OrganiserHostedCheckout
-                key={'hosted-' + selected.id}
+                key={'hosted-' + selected.id + connectionEnvironment}
                 application={selected}
                 events={dashboard.events}
+                defaultEnvironment={connectionEnvironment}
                 settingsPending={unsavedChanges}
               />
             </details>

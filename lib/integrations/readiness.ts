@@ -1,4 +1,7 @@
-import { integrationResourceMode } from './resource-mode.ts';
+import {
+  integrationResourceMode,
+  requireHostedPaymentMode,
+} from './resource-mode.ts';
 import { validateSigningKeys } from './checkout-access.ts';
 import { webhookEncryption } from './webhook-encryption.ts';
 export const ACCEPTANCE_GATES = [
@@ -118,14 +121,19 @@ export function integrationReadiness(
         'Configure valid dedicated hosted signing material and bounded previous versions.',
       );
     }
+    let paymentReady = false;
+    try {
+      if (mode === 'test' || mode === 'live') {
+        requireHostedPaymentMode(mode, settings);
+        paymentReady = true;
+      }
+    } catch {
+      /* Fail closed on payment configuration. */
+    }
     check(
       'payment_mode',
-      Boolean(
-        settings.PAYSTACK_SECRET_KEY?.startsWith(
-          mode === 'test' ? 'sk_test_' : 'sk_live_',
-        ),
-      ),
-      'The provider secret must match the deployment mode; connectivity is not certified by its prefix.',
+      paymentReady,
+      'The provider secret must match the explicit hosted payment mode, or the resource mode when unset; connectivity still needs verification.',
     );
   }
   if (settings.INTEGRATIONS_WEBHOOKS_ENABLED === 'true') {

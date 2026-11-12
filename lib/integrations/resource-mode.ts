@@ -68,14 +68,37 @@ export function requireHostedPaymentMode(
   settings: Settings,
 ) {
   requireHostedCheckoutConfiguration(environment, settings);
+  const paymentMode = hostedPaymentMode(environment, settings);
   if (
     !settings.PAYSTACK_SECRET_KEY?.startsWith(
-      environment === 'test' ? 'sk_test_' : 'sk_live_',
+      paymentMode === 'test' ? 'sk_test_' : 'sk_live_',
     )
   )
     throw new IntegrationError(
       503,
       'PAYMENT_MODE_MISMATCH',
-      'The payment key does not match this checkout environment.',
+      'The payment key does not match the configured checkout payment mode.',
     );
+  return paymentMode;
+}
+
+// Business-data binding and Paystack payment mode are separate settings.
+// The owner may explicitly run Test payments on the main hosted website.
+// Browser input cannot select this mode; isolated Test resources never charge Live.
+export function hostedPaymentMode(
+  environment: IntegrationEnvironment,
+  settings: Settings,
+): IntegrationEnvironment {
+  const mode = settings.HOSTED_CHECKOUT_PAYMENT_MODE ?? environment;
+  if (
+    (mode !== 'test' && mode !== 'live') ||
+    (environment === 'test' && mode !== 'test')
+  ) {
+    throw new IntegrationError(
+      503,
+      'PAYMENT_MODE_MISMATCH',
+      'Configure a valid server-side checkout payment mode.',
+    );
+  }
+  return mode;
 }

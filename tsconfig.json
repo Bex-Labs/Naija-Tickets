@@ -28,6 +28,7 @@
     "**/*.mts"
   ],
   "exclude": [
+    "mobile",
     "node_modules",
     "dist",
     "dist 2",

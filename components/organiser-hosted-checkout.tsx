@@ -20,21 +20,30 @@ type Link = {
 export function OrganiserHostedCheckout({
   application,
   events,
+  defaultEnvironment = 'live',
   settingsPending = false,
 }: {
   application: IntegrationApplication;
   events: IntegrationDashboard['events'];
+  defaultEnvironment?: 'test' | 'live';
   settingsPending?: boolean;
 }) {
   const available = events.filter(
     (e) => e.status === 'published' && application.eventIds.includes(e.id),
   );
   const [event, setEvent] = useState(available[0]?.id ?? ''),
-    [mode, setMode] = useState<'test' | 'live'>('test'),
+    [mode, setMode] = useState<'test' | 'live'>(defaultEnvironment),
     [returnUrl, setReturnUrl] = useState<string | null>(null),
     [links, setLinks] = useState<Link[]>([]),
     [origin, setOrigin] = useState(''),
     [platformAvailable, setPlatformAvailable] = useState<boolean | null>(null),
+    [paymentsReady, setPaymentsReady] = useState<boolean | null>(null),
+    [paymentMode, setPaymentMode] = useState<'test' | 'live' | null>(null),
+    [serverEnvironment, setServerEnvironment] = useState<
+      'live' | 'test' | null
+    >(null),
+    [loadFailed, setLoadFailed] = useState(false),
+    [refresh, setRefresh] = useState(0),
     [report, setReport] = useState<HostedReport | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
@@ -48,6 +57,9 @@ export function OrganiserHostedCheckout({
         origin: string;
         report: HostedReport;
         hostedLinksAvailable?: boolean;
+        paymentsReady?: boolean;
+        paymentMode?: 'test' | 'live' | null;
+        environment?: 'live' | 'test' | null;
       };
       error?: { message?: string };
     };
@@ -55,17 +67,31 @@ export function OrganiserHostedCheckout({
       throw new Error(
         result.error?.message || 'Hosted checkout could not be loaded.',
       );
+    if (typeof result.data.hostedLinksAvailable !== 'boolean')
+      throw new Error(
+        'Checkout settings are out of date. Restart this app and refresh the page.',
+      );
     setLinks(result.data.links);
     setOrigin(result.data.origin);
     setPlatformAvailable(result.data.hostedLinksAvailable === true);
+    setPaymentsReady(
+      typeof result.data.paymentsReady === 'boolean'
+        ? result.data.paymentsReady
+        : null,
+    );
+    setServerEnvironment(result.data.environment || null);
+    setPaymentMode(result.data.paymentMode || null);
     setReport(result.data.report);
   }, [endpoint]);
   useEffect(() => {
     void (async () => {
       try {
         await load();
+        setLoadFailed(false);
+        setError('');
       } catch (cause) {
-        setPlatformAvailable(false);
+        setPlatformAvailable(null);
+        setLoadFailed(true);
         setError(
           cause instanceof Error
             ? cause.message
@@ -73,7 +99,7 @@ export function OrganiserHostedCheckout({
         );
       }
     })();
-  }, [load]);
+  }, [load, refresh]);
   const activeEvent = available.some((item) => item.id === event)
     ? event
     : (available[0]?.id ?? '');
@@ -81,9 +107,41 @@ export function OrganiserHostedCheckout({
       (l) => l.eventId === activeEvent && l.environment === mode,
     ),
     registered = application.domains.filter((d) => d.environment === mode);
+  const eventWebsite = available.find((item) => item.id === activeEvent)?.websiteUrl;
+  const suggestedReturnUrl = (() => {
+    if (!eventWebsite) return null;
+    try {
+      const url = new URL(eventWebsite);
+      return !url.search && !url.hash &&
+        registered.some((domain) => domain.origin === url.origin)
+        ? url.toString()
+        : null;
+    } catch {
+      return null;
+    }
+  })();
+  const blockedReason = busy
+    ? 'Saving your checkout link…'
+    : settingsPending
+      ? 'Save your website connection changes above first.'
+      : loadFailed
+        ? 'Retry loading checkout settings first.'
+        : platformAvailable === null
+          ? 'Checking checkout settings…'
+          : platformAvailable !== true
+            ? 'Hosted checkout must be activated on this server first.'
+            : serverEnvironment && mode !== serverEnvironment
+              ? `Test and Live use separate workspaces. Choose ${serverEnvironment === 'live' ? 'Live' : 'Test'} to create a link here.`
+              : !activeEvent
+                ? 'Select and save a published event in your website connection above.'
+                : !registered.length
+                  ? `Choose ${mode === 'live' ? 'Live deployment' : 'Test / local website'} above, add your ${mode === 'live' ? 'HTTPS ' : ''}website address, then save your connection.`
+                  : application.status !== 'active'
+                    ? 'Enable this website connection first.'
+                    : '';
   async function save(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (settingsPending || platformAvailable !== true) return;
+    if (blockedReason) return;
     setBusy(true);
     setError('');
     setNotice('');
@@ -91,6 +149,7 @@ export function OrganiserHostedCheckout({
       const destination =
         returnUrl ??
         selected?.returnUrl ??
+        suggestedReturnUrl ??
         (registered[0] ? registered[0].origin + '/' : '');
       if (
         !registered.some((item) => item.origin === new URL(destination).origin)
@@ -195,12 +254,78 @@ export function OrganiserHostedCheckout({
       )}
       {platformAvailable === false && (
         <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-          Checkout links are unavailable on this app. Test links must be created
-          in the separate sandbox organiser workspace, using a sandbox account
-          and event. Main-site accounts and events are separate, even when
-          Paystack uses Test payments. For Live links, the platform
-          administrator must activate hosted checkout on the main app.
+          {mode === 'live' ? 'Live' : 'Test'} checkout needs platform activation
+          on {origin || 'this server'}. Ask the platform administrator to
+          configure hosted checkout and matching payment settings.
         </p>
+      )}
+      {platformAvailable === true && (
+        <p className="mt-3 break-words text-xs text-emerald-800">
+          Checkout enabled · {origin}
+        </p>
+      )}
+      {platformAvailable === true && paymentsReady === false && (
+        <output
+          className="mt-3 block rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+        >
+          You can create checkout links. Paid checkout still needs a Paystack
+          secret matching the server’s configured payment mode. Paid purchases
+          remain blocked until then.
+        </output>
+      )}
+      {paymentsReady && paymentMode === 'test' && (
+        <output
+          className="mt-3 block rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+        >
+          Paystack Test payments are enabled on this website. No real money will
+          be charged. Test bookings are recorded against the selected events.
+        </output>
+      )}
+      {platformAvailable === true &&
+        serverEnvironment &&
+        mode !== serverEnvironment && (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+            <p>
+              This is a {serverEnvironment === 'live' ? 'Live' : 'Test'}{' '}
+              workspace.
+              {serverEnvironment === 'live'
+                ? ' Test links use your separate sandbox account and event.'
+                : ' Live links use your main organiser account and event.'}
+            </p>
+            <button
+              type="button"
+              disabled={busy || settingsPending}
+              onClick={() => {
+                setMode(serverEnvironment);
+                setReturnUrl(null);
+                setError('');
+                setNotice('');
+              }}
+              className="mt-2 min-h-11 rounded-lg border border-amber-400 bg-white px-4 font-bold disabled:opacity-50"
+            >
+              Use {serverEnvironment === 'live' ? 'Live' : 'Test'} here
+            </button>
+          </div>
+        )}
+      {loadFailed && (
+        <div
+          role="alert"
+          className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+        >
+          Checkout settings could not be loaded. Retry before creating a link.
+          <button
+            type="button"
+            onClick={() => {
+              setPlatformAvailable(null);
+              setLoadFailed(false);
+              setError('');
+              setRefresh((value) => value + 1);
+            }}
+            className="ml-3 min-h-11 font-bold underline"
+          >
+            Retry loading settings
+          </button>
+        </div>
       )}
       <form
         onSubmit={(e) => void save(e)}
@@ -238,8 +363,8 @@ export function OrganiserHostedCheckout({
             }}
             disabled={busy || settingsPending}
           >
-            <option value="test">Test</option>
             <option value="live">Live</option>
+            <option value="test">Test (optional sandbox)</option>
           </select>
         </label>
         <label className="auth-label sm:col-span-2">
@@ -252,35 +377,42 @@ export function OrganiserHostedCheckout({
             value={
               returnUrl ??
               selected?.returnUrl ??
+              suggestedReturnUrl ??
               (registered[0] ? registered[0].origin + '/' : '')
             }
             onChange={(e) => setReturnUrl(e.target.value)}
             placeholder="https://your-website.example/events"
           />
           <span className="mt-2 block text-xs font-normal text-slate-500">
-            A page on your saved {mode} website. Local Test example:
-            http://localhost:3010/buy-tickets.html
+            A page on your saved {mode} website, for example
+            https://events.example.com/thank-you.
           </span>
         </label>
         <button
-          disabled={
-            busy ||
-            settingsPending ||
-            platformAvailable !== true ||
-            !activeEvent ||
-            !registered.length ||
-            application.status !== 'active'
+          disabled={Boolean(blockedReason)}
+          aria-describedby={
+            blockedReason ? 'hosted-link-blocked-reason' : undefined
           }
           className="min-h-11 rounded-lg bg-emerald-600 px-4 font-bold text-white disabled:opacity-50"
         >
-          {platformAvailable === null
-            ? 'Checking checkout availability…'
-            : busy
-              ? 'Saving…'
-              : selected
-                ? 'Update / enable checkout link'
-                : 'Create checkout link'}
+          {loadFailed
+            ? 'Load checkout settings first'
+            : platformAvailable === null
+              ? 'Checking checkout availability…'
+              : busy
+                ? 'Saving…'
+                : selected
+                  ? 'Update / enable checkout link'
+                  : 'Create checkout link'}
         </button>
+        {blockedReason && (
+          <output
+            id="hosted-link-blocked-reason"
+            className="block text-sm text-amber-950 sm:col-span-2"
+          >
+            {blockedReason}
+          </output>
+        )}
         {selected && (
           <button
             type="button"
@@ -301,12 +433,6 @@ export function OrganiserHostedCheckout({
         <output className="mt-4 block text-sm text-emerald-800">
           {notice}
         </output>
-      )}
-      {!registered.length && (
-        <p className="mt-3 text-sm text-slate-600">
-          Add your website address under {mode === 'test' ? 'Test' : 'Live'}{' '}
-          website origins above, then save the connection first.
-        </p>
       )}
       {selected && !settingsPending && platformAvailable === true && (
         <div className="mt-5 space-y-3">

@@ -529,6 +529,23 @@ export function OrganiserEventEditor({
               className="auth-input"
             />
           </div>
+          <div className="sm:col-span-2">
+            <label className="auth-label" htmlFor="eventWebsite">
+              Event website (optional)
+            </label>
+            <Input
+              id="eventWebsite"
+              type="url"
+              maxLength={2048}
+              value={value.websiteUrl}
+              placeholder="https://your-event-site.com/event"
+              onChange={(event) => update('websiteUrl', event.target.value)}
+              className="auth-input"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              You can use this address when connecting a website later.
+            </p>
+          </div>
         </div>
 
         <div className="mt-6 border border-[#241b3f]/10 bg-white p-5 sm:p-7">

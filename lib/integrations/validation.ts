@@ -49,6 +49,10 @@ export function canonicalIntegrationOrigin(
     return invalid('Enter a valid website origin.');
   }
   const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  if (environment === 'live' && local)
+    return invalid(
+      'Localhost is for testing. Choose Test / local website and enter this address under Test website address.',
+    );
   if (
     url.username ||
     url.password ||

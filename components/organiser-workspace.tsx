@@ -56,6 +56,7 @@ function blankEvent(profile?: OrganiserProfile): EventEditorValue {
     venue: '',
     address: '',
     directionsUrl: '',
+    websiteUrl: '',
     date: '',
     time: '',
     endDate: '',

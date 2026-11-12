@@ -16,6 +16,7 @@ import {
 } from '@/lib/integrations/checkout-sessions.server';
 import { projectIntegrationTicket } from '@/lib/integrations/events';
 import { IntegrationError } from '@/lib/integrations/errors';
+import { hostedPaymentMode } from '@/lib/integrations/resource-mode';
 import { HostedPopupCompletion } from '@/components/hosted-popup-completion';
 export const metadata: Metadata = {
   title: 'Secure checkout | Naija Tickets',
@@ -36,6 +37,7 @@ async function model(id: string) {
       access,
       reserved: await hostedReservation(view),
       feeRule: await getPlatformFeeRule(),
+      paymentMode: hostedPaymentMode(view.session.environment, process.env),
     };
   } catch (cause) {
     return {
@@ -80,7 +82,7 @@ export default async function HostedCheckoutPage({
         </section>
       </main>
     );
-  const { view, access, reserved, feeRule } = m;
+  const { view, access, reserved, feeRule, paymentMode } = m;
   const date = new Date(view.event.starts_at).toLocaleString('en-NG', {
     timeZone: view.event.timezone,
     dateStyle: 'medium',
@@ -124,9 +126,10 @@ export default async function HostedCheckoutPage({
         </div>
       </header>
       <section className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
-        {view.session.environment === 'test' && (
+        {paymentMode === 'test' && (
           <p className="no-print mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-900">
-            Test checkout · No real charge or event admission
+            Paystack Test payment · No real money will be charged. Test bookings
+            are recorded on this website.
           </p>
         )}
         <div className="grid items-start gap-6 lg:grid-cols-[.9fr_1.1fr]">

@@ -1,6 +1,28 @@
 # Naija Tickets integrations progress
 
-Last updated: 1 November 2026 (Africa/Lagos).
+Last updated: 6 November 2026 (Africa/Lagos).
+
+## Explicit Test / Live website setup — 6 November 2026
+
+Added visible Test / local website and Live deployment choices before the website address. The selected mode shows its matching address field and defaults the API key, hosted checkout and widget controls. Existing connections with addresses in only one mode open in that mode; connections with both retain both sets of addresses when switching or saving. Choosing Test moves a localhost address mistakenly entered in Live into the Test field. Address validation runs before saving and gives a specific instruction for localhost in Live; server-side HTTPS and sandbox isolation rules remain enforced. This choice configures the connection, not the server's resource binding or payment settings.
+
+Verification: 21 focused configuration/authentication/checkout/readiness tests and TypeScript passed. Browser checks on the local organiser form confirmed the localhost validation message, switching to Test without losing the address, retaining separate addresses across mode changes and clearing an unsaved draft. No connection was saved during browser verification and no purchase, database migration, secret change or deployment was performed.
+
+Follow-up: hosted checkout now explains its blocking condition immediately below the disabled button and offers Use Live/Test here when the selected mode differs from the server. The submit handler uses the same guard. Browser inspection of the existing Test App connection confirmed two consecutive blockers: Test selected in the Live workspace, then no saved Live website address after switching checkout to Live. Eight focused checkout/readiness tests and TypeScript passed. No saved origins, credentials or server modes were changed.
+
+## Local main-app hosted-link activation — 5 November 2026
+
+Read-only checks confirmed the main database already has the hosted-link schema and a Live resource binding; no migration or database write was needed. Enabled `INTEGRATIONS_CHECKOUT_ENABLED` and `INTEGRATIONS_HOSTED_LINKS_ENABLED` only in the main checkout's private `.env.local`, generating a dedicated signing secret without rotating existing secrets or replacing the provider key. `scripts/enable-local-hosted-links.ts --apply` reproduces the guarded local activation and never deploys or changes provider credentials.
+
+Hosted-link availability now checks signing configuration as well as feature flags. The authenticated organiser response separately reports provider-mode readiness without returning secrets. The organiser can configure a link while seeing that paid Live checkout still needs its matching Paystack Live credential; mismatched workspace modes cannot submit through the button. Payment enforcement remains on the server. The existing Paystack Test key was preserved, so real paid checkout is still blocked. No Vercel settings or deployments changed.
+
+Verification: TypeScript and 21 focused signing/payment-mode/SQL-hosted-link tests pass. Private local status confirms Live resource mode, hostedLinksAvailable=true and paymentsReady=false. Restart the local dev server to guarantee it loads the updated environment. Actual Live provider authentication and a real purchase have not been tested.
+
+## Live-first integration setup — 4 November 2026
+
+The main organiser setup now prioritises published websites and mobile-app backends. Live addresses are visible by default; Test addresses and the sandbox walkthrough are optional expandable sections. Main-workspace credentials, hosted links and embedded widgets default to Live; an explicitly configured Test workspace passes Test defaults to those tools. No existing origins, grants, keys or links are modified by this UI change. The developer landing CTA, no-code guide, API starter guide and widget example now lead with Live setup. Hosted checkout still requires server activation, valid signing/payment settings and matching database mode; no production settings were enabled.
+
+Verification: TypeScript and 21 focused checkout/hosted-link/example tests pass. Changes are local; real Live payment and production activation remain pending.
 
 ## Simplified setup and local testing — 1 November 2026
 

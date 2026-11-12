@@ -12,6 +12,7 @@ import { IntegrationError } from '@/lib/integrations/errors';
 import { getTrustedAppOrigin } from '@/lib/paystack';
 import { verifyIntegrationResourceBinding } from '@/lib/integrations/resource-mode.server';
 import { projectHostedReport } from '@/lib/integrations/hosted-report';
+import { hostedLinkReadiness } from '@/lib/integrations/hosted-link-readiness';
 type Context = { params: Promise<{ id: string }> };
 export async function GET(request: Request, context: Context) {
   return organiserIntegrationHandler(async (req, user) => {
@@ -23,9 +24,7 @@ export async function GET(request: Request, context: Context) {
       ...data,
       report: projectHostedReport(data.report),
       origin: getTrustedAppOrigin(req.url),
-      hostedLinksAvailable:
-        process.env.INTEGRATIONS_HOSTED_LINKS_ENABLED === 'true' &&
-        process.env.INTEGRATIONS_CHECKOUT_ENABLED === 'true',
+      ...hostedLinkReadiness(process.env),
     };
   })(request);
 }

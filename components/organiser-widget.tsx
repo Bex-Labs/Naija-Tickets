@@ -12,14 +12,16 @@ type Settings = WidgetConfiguration & { widgetOrigin: string };
 export function OrganiserWidget({
   application,
   events,
+  defaultEnvironment = 'live',
 }: {
   application: IntegrationApplication;
   events: IntegrationDashboard['events'];
+  defaultEnvironment?: 'test' | 'live';
 }) {
   const [appearance, setAppearance] = useState<'light' | 'dark'>('light'),
     [accent, setAccent] = useState<'green' | 'blue' | 'violet'>('green'),
     [button, setButton] = useState<'rounded' | 'square'>('rounded');
-  const [mode, setMode] = useState<'test' | 'live'>('test');
+  const [mode, setMode] = useState<'test' | 'live'>(defaultEnvironment);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [enabled, setEnabled] = useState(false),
     [checkout, setCheckout] = useState(false);
@@ -158,8 +160,8 @@ export function OrganiserWidget({
               setMode(event.target.value as 'test' | 'live');
             }}
           >
-            <option value="test">Test</option>
             <option value="live">Live</option>
+            <option value="test">Test (optional sandbox)</option>
           </select>
         </div>
         <div className="space-y-2 pt-2">

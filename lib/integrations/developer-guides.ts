@@ -6,50 +6,45 @@ export type DeveloperGuide = {
 export const developerGuides: Record<string, DeveloperGuide> = {
   'local-testing': {
     title: 'Test on your computer',
-    intro:
-      'Your website does not need to be published. The sandbox handles test payments and tickets; your website runs on localhost.',
+    intro: 'Use a separate Naija Tickets sandbox and a local website. Test payments do not charge real money.',
     sections: [
       {
-        heading: '1. Set up one test connection',
+        heading: '1. Prepare the sandbox',
         body: [
-          'Sign into the sandbox organiser workspace. Publish a test event, open Developers & Integrations, and choose Buy Tickets button or Developer API.',
-          'Save http://localhost:3010 as the Test website address and select your event. This is the partner website address. The sandbox address is where Naija Tickets runs; these are different addresses.',
-          'If you already run a website on another port, use its exact address instead. Keep localhost and 127.0.0.1 consistent.',
+          'Start your sandbox, sign in as an organiser, and publish a test event with a ticket.',
+          'In Developers & Integrations, choose Test / local website. Save http://localhost:3010 as the website address and select the event. This address is for the small website you will run below, not for Naija Tickets.',
         ],
       },
       {
-        heading: '2A. No-code: try a button',
+        heading: '2A. Try a Buy Tickets button',
         body: [
-          'Create a Test checkout link with http://localhost:3010/buy-tickets.html as the return URL. Choose Download test website. Put buy-tickets.html in an empty folder.',
-          'If Python 3 is installed, open a terminal in that folder and run the command below. Then open http://localhost:3010/buy-tickets.html and click Buy Tickets. You can also use your website builder’s preview if its address is registered.',
-          'No secret key is needed. For your real website later, paste the generated link into its button settings. This opens hosted checkout; an embedded widget is optional.',
+          'Choose the saved event, set the return page to http://localhost:3010/buy-tickets.html, and create a Test checkout link.',
+          'Download test website. In Terminal, open the folder containing buy-tickets.html, run the command below, then visit http://localhost:3010/buy-tickets.html and click Buy Tickets.',
         ],
         code: 'python3 -m http.server 3010 --bind 127.0.0.1',
       },
       {
-        heading: '2B. API: run the server starter',
+        heading: '2B. Try the developer API',
         body: [
-          'Use the examples/hosted-checkout folder in the Naija Tickets source checkout. It needs Node 24 and no extra packages. Create a Test key with the recommended permissions.',
-          'Copy .env.example to .env.local. Set NT_API_ORIGIN to your sandbox address, NT_PARTNER_ORIGIN to http://localhost:3010, NT_EVENT_ID to the assigned sandbox event ID, and NT_API_KEY to your Test key. Keep NT_MODE=test.',
-          'Generate a dedicated cookie secret using the first command below and save it as NT_EXAMPLE_COOKIE_SECRET in .env.local. Run the second command from the example folder, then open http://localhost:3010. Stop any other server using port 3010 first.',
-          'Buy Tickets creates a checkout session through the server. On return, the server checks the session before displaying Payment verified. Keep keys in server environment variables, including for mobile apps; apps call your backend.',
+          'Stop the Python server first. Create a Test API key with the recommended permissions. Keep the key private.',
+          'In examples/hosted-checkout, copy .env.example to .env.local. Set NT_API_ORIGIN to your sandbox address, NT_PARTNER_ORIGIN to http://localhost:3010, NT_EVENT_ID to your saved event ID, NT_API_KEY to your Test key, and NT_MODE=test.',
+          'Generate a private cookie secret with the first command below; save it as NT_EXAMPLE_COOKIE_SECRET. Run the second command in that example folder and open http://localhost:3010.',
         ],
         code: "node -e \"console.log(require('node:crypto').randomBytes(32).toString('base64url'))\"\nnode --env-file=.env.local node.mjs",
       },
       {
-        heading: '3. Check the result',
+        heading: '3. Confirm the purchase',
         body: [
-          'Complete a payment marked Test. Confirm the order and tickets in the sandbox, check the remaining inventory, and follow the return link to your localhost page.',
-          'Also cancel a payment and try an unassigned event. Neither should produce a valid paid ticket. The no-code test page does not verify orders; checkout shows the authoritative result. The API starter verifies the result on its server.',
-          'Local tests need the sandbox running, but do not need a published partner website. Webhook delivery needs a reachable HTTPS server and can be tested separately later.',
+          'Complete a Paystack Test payment. Check that the sandbox order is paid, tickets were issued, and available tickets decreased. The API example verifies payment on its server before showing success.',
+          'Also cancel one checkout: it must not issue a paid ticket. You can test on localhost without publishing your website.',
         ],
       },
       {
-        heading: 'If something does not load',
+        heading: 'If something fails',
         body: [
-          'Refused to connect: confirm the address of the page containing the widget is registered in Test website addresses. Check the widget and hosted checkout are enabled. Browser security policies or deployment login protection can also block an iframe.',
-          'Return URL error: save the matching website origin first. Test and Live address lists are separate. Do not use the sandbox address as your partner return address.',
-          'Checkout unavailable: the sandbox operator must check its database binding, checkout settings and Paystack Test configuration. Changing the website address cannot enable a missing backend service.',
+          'Refused to connect: save the exact website origin shown in your browser. Do not put a page path in the website address field.',
+          'Return URL rejected: use a page on that saved website and the same Test mode.',
+          'Checkout unavailable: check that the sandbox is running and its checkout and Paystack Test settings are enabled.',
         ],
       },
     ],
@@ -60,25 +55,25 @@ export const developerGuides: Record<string, DeveloperGuide> = {
       'Create a checkout link, copy it and paste it into a button on your website. You do not need an API key or your own payment backend.',
     sections: [
       {
-        heading: '1. Choose where to test',
+        heading: '1. Prepare your live event',
         body: [
-          'Use your organiser account on the separate Naija Tickets sandbox for Test purchases. The main website and sandbox have separate accounts, events and connections. Test mode never permits access to live business data.',
-          'Create and publish your event, with its ticket types, on the same platform where you create the checkout link. For real purchases later, the main platform must have Live payments and hosted checkout configured by its administrator.',
+          'Sign into the main Naija Tickets organiser workspace. Create and publish your event and ticket types. Hosted checkout and Live payments must be activated by the platform administrator.',
+          'Testing is optional. To try fictional purchases first, use a separate sandbox account and event; follow the local-testing guide.',
         ],
       },
       {
         heading: '2. Save your website connection',
         body: [
           'Open Developers & Integrations in your organiser workspace and choose New application. Application simply means the website you are connecting: give it a recognisable name.',
-          'Add your website address under Test website origins when testing, or Live website origins for real sales. Use only the scheme and hostname, for example https://my-website.example; no page path. Local testing can use http://localhost:3001. A deployed website can still use Test mode.',
+          'Add your public HTTPS website address under Live website address, for example https://my-website.example, with no page path. Leave the optional Test address empty unless you use the sandbox.',
           'Under Events this application may access, tick the events this website should sell and press Register application or Save integration. Changes are only applied when saved. Unticked events stay unavailable through this connection; their public Naija Tickets pages are independent.',
         ],
       },
       {
         heading: '3. Create your checkout link',
         body: [
-          'In Create a Buy Tickets link, choose a saved, published event and Test or Live. Enter the page on your registered website where buyers should return, such as https://my-website.example/thank-you. Press Create checkout link, then Copy checkout link.',
-          'If hosted links are not active or the sandbox is not configured, ask the platform administrator to enable them before sharing a link. Creating a connection does not activate missing platform services.',
+          'In Create a Buy Tickets link, choose a saved, published event and Live. Enter the page on your registered website where buyers should return, such as https://my-website.example/thank-you. Press Create checkout link, then Copy checkout link.',
+          'If checkout needs platform activation, the administrator must configure hosted checkout, its database helpers and matching Live payment settings before customers can buy.',
         ],
       },
       {
@@ -92,7 +87,7 @@ export const developerGuides: Record<string, DeveloperGuide> = {
         heading: '5. Check the complete purchase',
         body: [
           'Click the published button. Customers select tickets, provide their details and pay on the focused Naija Tickets checkout. Naija Tickets verifies payment before showing tickets. Buyers can then return to your approved website.',
-          'In the sandbox, use Paystack Test payment details and confirm the booking in your organiser dashboard. Repeat with an ordinary ticket and a group ticket if you sell both. Test cancellations and sold-out tickets too.',
+          'Optional rehearsal: use the sandbox and Paystack Test payment details before taking real payments. Confirm ordinary/group tickets, cancellations and sold-out states there.',
           'Your website does not need a backend for this button. Ticket records, inventory, verification and group claims remain on Naija Tickets. Ticket emails depend on email service configuration. A personalised payment confirmation on your own website needs a developer to verify the result through the API; a return URL alone does not prove payment.',
         ],
       },
@@ -108,19 +103,19 @@ export const developerGuides: Record<string, DeveloperGuide> = {
   'getting-started': {
     title: 'From your website to a verified ticket',
     intro:
-      'Start with an isolated test application. Your backend creates a hosted checkout; Naija Tickets handles the buyer, payment and admission tickets.',
+      'Connect your live website or mobile app through your backend. Naija Tickets handles checkout, verified payment and admission tickets. Sandbox testing is optional.',
     sections: [
       {
-        heading: '1. Use the separate sandbox',
+        heading: '1. Use the main platform',
         body: [
-          'A Test key is not a separate database. The sandbox must have its own website, Supabase project, Paystack test key and matching resource binding. Ask your platform operator for its HTTPS origin. Never substitute the main Naija Tickets hostname.',
-          'Feature availability depends on the chosen deployment. Endpoint documentation describes the implemented contract; it does not mean every deployment has enabled it. For a Buy Tickets button without programming or secret keys, use the no-code guide.',
+          'Use the main Naija Tickets HTTPS address as your API base. The platform administrator must activate hosted checkout and Live payments before real sales. A website connection alone cannot activate the payment backend.',
+          'To test first, use a separate sandbox connection and Test key. This is optional and keeps fictional purchases separate from live sales. The local-testing guide covers the starter.',
         ],
       },
       {
         heading: '2. Register an application',
         body: [
-          'Sign in as an authorised organiser and open Developers & Integrations. Name the application, register the exact Test website origin and assign a published sandbox event. Only an owner or explicitly delegated integration manager can manage credentials.',
+          'Sign in as an authorised organiser and open Developers & Integrations. Name the application, register your Live HTTPS website origin and assign a published event. For a mobile app, register its backend/return website and keep the secret key there. Only an owner or explicitly delegated integration manager can manage credentials.',
           'An origin is the scheme, hostname and port, such as https://partner.example. It has no path. Test localhost HTTP is allowed; Live origins require public HTTPS. A return URL can add a simple path under that origin.',
         ],
       },
@@ -129,7 +124,7 @@ export const developerGuides: Record<string, DeveloperGuide> = {
         body: [
           'Select integration:read, events:read, tickets:read, availability:read, checkout:write and orders:read for an initial hosted checkout. Add external_events:write only when your website will create and update its own event records through the API. The secret appears once; keep it in your server environment. Rotation preserves scopes; existing keys never acquire new permissions automatically.',
         ],
-        code: 'NT_API_BASE=https://YOUR_SANDBOX_HOST\nNT_API_KEY=YOUR_SERVER_TEST_KEY\n# Store in an ignored server environment file; never NEXT_PUBLIC_*.',
+        code: 'NT_API_BASE=https://naija-tickets.vercel.app\nNT_API_KEY=YOUR_SERVER_LIVE_KEY\n# Private server variables. Never embed a secret in a browser or mobile app.',
       },
       {
         heading: '4. Confirm the connection',
@@ -141,7 +136,7 @@ export const developerGuides: Record<string, DeveloperGuide> = {
       {
         heading: '5. Buy, verify and reconcile',
         body: [
-          'Create a checkout using the checkout guide. Complete Paystack TEST payment in the sandbox, verify status on your server and compare the order and admissions with the buyer/organiser records. Test free and group bookings too. Keep the same idempotency key on retries.',
+          'Create checkout using the checkout guide. Verify the final payment status on your server and reconcile the order and admissions with the organiser records. Live payments charge the buyer. For a rehearsal without real charges, use the optional sandbox and Test key. Keep the same idempotency key on retries.',
           'A browser return saying paid is not payment proof. Never deliver access solely from query parameters. Use authoritative session status and signed, durably stored webhooks. Email testing is currently deferred.',
         ],
       },
@@ -261,7 +256,7 @@ export const developerGuides: Record<string, DeveloperGuide> = {
         body: [
           'Register the external website’s exact origin, assign an event, choose Test/Live and explicitly enable its widget. Enable hosted checkout separately when the deployment is ready. Copy the generated snippet. Never place an API secret in it.',
         ],
-        code: '<div data-naija-widget="YOUR_PUBLIC_WIDGET_ID"\n     data-event="YOUR_ASSIGNED_EVENT_UUID"\n     data-environment="test"></div>\n<script src="https://YOUR_SANDBOX_HOST/integrations/widget-v1.js" defer></script>',
+        code: '<div data-naija-widget="YOUR_PUBLIC_WIDGET_ID"\n     data-event="YOUR_ASSIGNED_EVENT_UUID"\n     data-environment="live"></div>\n<script src="https://naija-tickets.vercel.app/integrations/widget-v1.js" defer></script>',
       },
       {
         heading: 'Keep the purchase secure',

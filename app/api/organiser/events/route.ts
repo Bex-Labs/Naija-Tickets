@@ -168,6 +168,13 @@ export async function POST(request: Request) {
     );
     if (saveError) throw saveError;
 
+    const { error: websiteError } = await client
+      .from('events')
+      .update({ website_url: values.websiteUrl })
+      .eq('id', savedId)
+      .eq('organiser_id', organiserId);
+    if (websiteError) throw websiteError;
+
     const events = await listEvents(user.id);
     return NextResponse.json({
       event: events.find((event) => event.id === savedId),

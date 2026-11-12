@@ -107,6 +107,13 @@ a {
     @apply h-12 border-[#241b3f]/15 bg-white text-[#241b3f] placeholder:text-slate-400;
     min-height: 3rem;
   }
+  .integration-fields :is(input:not([type='checkbox']):not([type='radio']):not([type='hidden']), select, textarea) {
+    border: 1px solid #bdb1ce;
+    border-radius: 0.5rem;
+  }
+  .integration-fields :is(input:not([type='checkbox']):not([type='radio']):not([type='hidden']), select, textarea):focus-visible {
+    border-color: #059669;
+  }
   .detail-section {
     @apply mt-10 border-t border-[#241b3f]/10 pt-9;
   }
