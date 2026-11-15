@@ -1,3 +1,4 @@
+import type { PaymentEnvironment } from './payment-environment.ts';
 import {
   IntegrationError,
   integrationDatabaseError,
@@ -26,6 +27,7 @@ export type PaymentStartDependencies = {
   deliver(orderId: string): void;
   completedUrl?(orderId: string): Promise<string | null>;
   requirePaymentMode?(amountKobo: number): void;
+  paymentEnvironment?(isTest: boolean): PaymentEnvironment;
   log?(metadata: { code: string }): void;
 };
 type PreparedPayment = {
@@ -231,7 +233,7 @@ export async function startCheckoutPayment(
 
     const { data: settlementOrder, error: settlementOrderError } = await admin
       .from('orders')
-      .select('fee_kobo,events!inner(organiser_id)')
+      .select('fee_kobo,is_test,events!inner(organiser_id)')
       .eq('id', input.orderId)
       .abortSignal(AbortSignal.timeout(8000))
       .single();
@@ -254,7 +256,23 @@ export async function startCheckoutPayment(
       payoutError?.code || '',
     );
     if (payoutError && !payoutTablePending) throw payoutError;
-    const payout = payoutTablePending ? null : payoutData;
+    const payout =
+      settlementOrder.is_test || payoutTablePending ? null : payoutData;
+    const paymentEnvironment = dependencies.paymentEnvironment?.(
+      settlementOrder.is_test === true,
+    );
+    if (paymentEnvironment) {
+      const { data: pinned, error: pinError } = await admin
+        .rpc('pin_checkout_payment_environment', {
+          p_order: input.orderId,
+          p_reference: prepared.payment_reference,
+          p_lease: leaseId,
+          p_environment: paymentEnvironment,
+        })
+        .abortSignal(AbortSignal.timeout(8000));
+      if (pinError) throw pinError;
+      if (!pinned) throw new Error('Payment mode could not be pinned.');
+    }
     const feeKobo = Number(settlementOrder.fee_kobo);
     if (!Number.isSafeInteger(feeKobo) || feeKobo < 0) {
       throw new Error('The stored service fee is invalid.');
@@ -262,6 +280,7 @@ export async function startCheckoutPayment(
     const callbackUrl = `${dependencies.origin(input.requestUrl)}/payment/callback`;
     providerRequested = true;
     const initialization = await dependencies.initialize({
+      ...(paymentEnvironment ? { paymentEnvironment } : {}),
       email: prepared.purchaser_email,
       amountKobo,
       currency: prepared.currency,

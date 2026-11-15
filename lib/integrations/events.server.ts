@@ -1,14 +1,14 @@
 import { requireIntegrationResourceMode } from './resource-mode.ts';
 import { verifyIntegrationResourceBinding } from './resource-mode.server.ts';
-import { integrationRpc } from './store.server.ts';
 import type { EventReadDependencies } from './events.ts';
+import { integrationResourceRpc } from './testing.server.ts';
 
 export const integrationEventDependencies: EventReadDependencies = {
   read: async (proof, operation, eventId, query) => {
     requireIntegrationResourceMode(proof.environment, process.env);
     if (proof.environment === 'test')
       await verifyIntegrationResourceBinding(proof.environment);
-    return integrationRpc('read_integration_events', {
+    return integrationResourceRpc(proof, 'read_integration_events', {
       p_key_id: proof.keyId,
       p_digest: proof.digest,
       p_environment: proof.environment,

@@ -10,12 +10,14 @@ import { Input } from '@/components/ui/input';
 
 export function OrganiserWebhooks({
   applicationId,
+  defaultEnvironment = 'live',
 }: {
   applicationId: string;
+  defaultEnvironment?: 'test' | 'live';
 }) {
   const [state, setState] = useState<WebhookDashboard | null>(null);
   const [url, setUrl] = useState(''),
-    [mode, setMode] = useState('test');
+    [mode, setMode] = useState(defaultEnvironment);
   const [events, setEvents] = useState<string[]>(['order.paid']);
   const [error, setError] = useState(''),
     [secret, setSecret] = useState('');
@@ -176,7 +178,7 @@ export function OrganiserWebhooks({
             id="webhook-mode"
             className="auth-input w-full bg-white"
             value={mode}
-            onChange={(event) => setMode(event.target.value)}
+            onChange={(event) => setMode(event.target.value as 'test' | 'live')}
             disabled={busy}
           >
             <option value="test">Test</option>

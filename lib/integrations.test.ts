@@ -127,7 +127,7 @@ void test('website setup accepts local Test addresses while preserving HTTPS-onl
           ...input,
           domains: [{ origin, environment: 'live' }],
         }),
-      /Choose Test \/ local website/,
+      /Choose On my computer and Test a purchase/,
     );
   }
   const result = parseIntegrationApplication({

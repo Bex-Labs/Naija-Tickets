@@ -8,6 +8,7 @@ import type {
 import type { HostedReport } from '@/lib/integrations/hosted-report';
 import { IntegrationSalesReport } from './integration-sales-report';
 import { hostedLinkTestPage } from '@/lib/integrations/test-page';
+import { setupStatus, type WebsiteLocation } from '@/lib/integrations/testing';
 type Link = {
   id: string;
   publicId: string;
@@ -22,35 +23,37 @@ export function OrganiserHostedCheckout({
   events,
   defaultEnvironment = 'live',
   settingsPending = false,
+  websiteLocation = 'hosted',
 }: {
   application: IntegrationApplication;
   events: IntegrationDashboard['events'];
   defaultEnvironment?: 'test' | 'live';
   settingsPending?: boolean;
+  websiteLocation?: WebsiteLocation;
 }) {
   const available = events.filter(
     (e) => e.status === 'published' && application.eventIds.includes(e.id),
   );
   const [event, setEvent] = useState(available[0]?.id ?? ''),
-    [mode, setMode] = useState<'test' | 'live'>(defaultEnvironment),
     [returnUrl, setReturnUrl] = useState<string | null>(null),
     [links, setLinks] = useState<Link[]>([]),
     [origin, setOrigin] = useState(''),
     [platformAvailable, setPlatformAvailable] = useState<boolean | null>(null),
     [paymentsReady, setPaymentsReady] = useState<boolean | null>(null),
     [paymentMode, setPaymentMode] = useState<'test' | 'live' | null>(null),
-    [serverEnvironment, setServerEnvironment] = useState<
-      'live' | 'test' | null
-    >(null),
+    [unavailableReason, setUnavailableReason] = useState(''),
     [loadFailed, setLoadFailed] = useState(false),
     [refresh, setRefresh] = useState(0),
     [report, setReport] = useState<HostedReport | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [notice, setNotice] = useState('');
+  const mode = defaultEnvironment;
   const endpoint = `/api/organiser/integrations/${application.id}/hosted-links`;
   const load = useCallback(async () => {
-    const response = await accountFetch(endpoint, { cache: 'no-store' });
+    const response = await accountFetch(endpoint + '?environment=' + mode, {
+      cache: 'no-store',
+    });
     const result = (await response.json()) as {
       data?: {
         links: Link[];
@@ -60,6 +63,7 @@ export function OrganiserHostedCheckout({
         paymentsReady?: boolean;
         paymentMode?: 'test' | 'live' | null;
         environment?: 'live' | 'test' | null;
+        unavailableReason?: string;
       };
       error?: { message?: string };
     };
@@ -79,10 +83,10 @@ export function OrganiserHostedCheckout({
         ? result.data.paymentsReady
         : null,
     );
-    setServerEnvironment(result.data.environment || null);
+    setUnavailableReason(result.data.unavailableReason || '');
     setPaymentMode(result.data.paymentMode || null);
     setReport(result.data.report);
-  }, [endpoint]);
+  }, [endpoint, mode]);
   useEffect(() => {
     void (async () => {
       try {
@@ -107,12 +111,15 @@ export function OrganiserHostedCheckout({
       (l) => l.eventId === activeEvent && l.environment === mode,
     ),
     registered = application.domains.filter((d) => d.environment === mode);
-  const eventWebsite = available.find((item) => item.id === activeEvent)?.websiteUrl;
+  const eventWebsite = available.find(
+    (item) => item.id === activeEvent,
+  )?.websiteUrl;
   const suggestedReturnUrl = (() => {
     if (!eventWebsite) return null;
     try {
       const url = new URL(eventWebsite);
-      return !url.search && !url.hash &&
+      return !url.search &&
+        !url.hash &&
         registered.some((domain) => domain.origin === url.origin)
         ? url.toString()
         : null;
@@ -120,6 +127,17 @@ export function OrganiserHostedCheckout({
       return null;
     }
   })();
+  const savedReturnUrl =
+    selected?.returnUrl &&
+    registered.some((d) => {
+      try {
+        return new URL(selected.returnUrl).origin === d.origin;
+      } catch {
+        return false;
+      }
+    })
+      ? selected.returnUrl
+      : null;
   const blockedReason = busy
     ? 'Saving your checkout link…'
     : settingsPending
@@ -129,16 +147,15 @@ export function OrganiserHostedCheckout({
         : platformAvailable === null
           ? 'Checking checkout settings…'
           : platformAvailable !== true
-            ? 'Hosted checkout must be activated on this server first.'
-            : serverEnvironment && mode !== serverEnvironment
-              ? `Test and Live use separate workspaces. Choose ${serverEnvironment === 'live' ? 'Live' : 'Test'} to create a link here.`
-              : !activeEvent
-                ? 'Select and save a published event in your website connection above.'
-                : !registered.length
-                  ? `Choose ${mode === 'live' ? 'Live deployment' : 'Test / local website'} above, add your ${mode === 'live' ? 'HTTPS ' : ''}website address, then save your connection.`
-                  : application.status !== 'active'
-                    ? 'Enable this website connection first.'
-                    : '';
+            ? unavailableReason ||
+              'Checkout is not configured for this purchase mode yet.'
+            : !activeEvent
+              ? 'Select and save a published event in your website connection above.'
+              : !registered.length
+                ? 'Add your website address above and save the connection first.'
+                : application.status !== 'active'
+                  ? 'Enable this website connection first.'
+                  : '';
   async function save(e: SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     if (blockedReason) return;
@@ -148,7 +165,7 @@ export function OrganiserHostedCheckout({
     try {
       const destination =
         returnUrl ??
-        selected?.returnUrl ??
+        savedReturnUrl ??
         suggestedReturnUrl ??
         (registered[0] ? registered[0].origin + '/' : '');
       if (
@@ -175,7 +192,11 @@ export function OrganiserHostedCheckout({
           result.error?.message || 'The checkout link could not be created.',
         );
       await load();
-      setNotice('Hosted checkout link saved. No API key is needed to use it.');
+      setNotice(
+        mode === 'test'
+          ? 'Test checkout link saved. No real money will be charged.'
+          : 'Live checkout link saved. Customers can make real purchases.',
+      );
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Link unavailable.');
     } finally {
@@ -254,59 +275,28 @@ export function OrganiserHostedCheckout({
       )}
       {platformAvailable === false && (
         <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-          {mode === 'live' ? 'Live' : 'Test'} checkout needs platform activation
-          on {origin || 'this server'}. Ask the platform administrator to
-          configure hosted checkout and matching payment settings.
+          {unavailableReason ||
+            'Checkout is not configured for this purchase mode yet.'}
         </p>
       )}
       {platformAvailable === true && (
         <p className="mt-3 break-words text-xs text-emerald-800">
-          Checkout enabled · {origin}
+          {setupStatus(websiteLocation, mode)}
         </p>
       )}
       {platformAvailable === true && paymentsReady === false && (
-        <output
-          className="mt-3 block rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
-        >
+        <output className="mt-3 block rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
           You can create checkout links. Paid checkout still needs a Paystack
           secret matching the server’s configured payment mode. Paid purchases
           remain blocked until then.
         </output>
       )}
       {paymentsReady && paymentMode === 'test' && (
-        <output
-          className="mt-3 block rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
-        >
-          Paystack Test payments are enabled on this website. No real money will
-          be charged. Test bookings are recorded against the selected events.
+        <output className="mt-3 block rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+          Test purchases use a hidden event copy in this app. No real charges or
+          changes to live stock.
         </output>
       )}
-      {platformAvailable === true &&
-        serverEnvironment &&
-        mode !== serverEnvironment && (
-          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-            <p>
-              This is a {serverEnvironment === 'live' ? 'Live' : 'Test'}{' '}
-              workspace.
-              {serverEnvironment === 'live'
-                ? ' Test links use your separate sandbox account and event.'
-                : ' Live links use your main organiser account and event.'}
-            </p>
-            <button
-              type="button"
-              disabled={busy || settingsPending}
-              onClick={() => {
-                setMode(serverEnvironment);
-                setReturnUrl(null);
-                setError('');
-                setNotice('');
-              }}
-              className="mt-2 min-h-11 rounded-lg border border-amber-400 bg-white px-4 font-bold disabled:opacity-50"
-            >
-              Use {serverEnvironment === 'live' ? 'Live' : 'Test'} here
-            </button>
-          </div>
-        )}
       {loadFailed && (
         <div
           role="alert"
@@ -352,21 +342,6 @@ export function OrganiserHostedCheckout({
             ))}
           </select>
         </label>
-        <label className="auth-label">
-          Environment
-          <select
-            className="auth-input mt-2 w-full bg-white"
-            value={mode}
-            onChange={(e) => {
-              setMode(e.target.value as 'test' | 'live');
-              setReturnUrl(null);
-            }}
-            disabled={busy || settingsPending}
-          >
-            <option value="live">Live</option>
-            <option value="test">Test (optional sandbox)</option>
-          </select>
-        </label>
         <label className="auth-label sm:col-span-2">
           Return to your website
           <input
@@ -376,7 +351,7 @@ export function OrganiserHostedCheckout({
             disabled={busy || settingsPending}
             value={
               returnUrl ??
-              selected?.returnUrl ??
+              savedReturnUrl ??
               suggestedReturnUrl ??
               (registered[0] ? registered[0].origin + '/' : '')
             }
@@ -384,8 +359,9 @@ export function OrganiserHostedCheckout({
             placeholder="https://your-website.example/events"
           />
           <span className="mt-2 block text-xs font-normal text-slate-500">
-            A page on your saved {mode} website, for example
-            https://events.example.com/thank-you.
+            {websiteLocation === 'local'
+              ? 'Full local page address, for example http://127.0.0.1:5500/dist/index.html.'
+              : 'Full page address on your saved website, for example https://mywebsite.com/thank-you.'}
           </span>
         </label>
         <button
@@ -402,8 +378,10 @@ export function OrganiserHostedCheckout({
               : busy
                 ? 'Saving…'
                 : selected
-                  ? 'Update / enable checkout link'
-                  : 'Create checkout link'}
+                  ? 'Update checkout link'
+                  : mode === 'test'
+                    ? 'Create test checkout link'
+                    : 'Create live checkout link'}
         </button>
         {blockedReason && (
           <output
@@ -440,7 +418,9 @@ export function OrganiserHostedCheckout({
             Link {selected.enabled ? 'enabled' : 'disabled'}
           </p>
           <label className="auth-label">
-            Your checkout link
+            {mode === 'test'
+              ? 'Your test checkout link'
+              : 'Your live checkout link'}
             <input
               readOnly
               value={url}
@@ -508,7 +488,9 @@ export function OrganiserHostedCheckout({
       {report && (
         <details className="mt-6 border-t pt-4">
           <summary className="cursor-pointer font-bold">
-            Sales from this connection
+            {mode === 'test'
+              ? 'Test purchase activity'
+              : 'Sales from this connection'}
           </summary>
           <IntegrationSalesReport report={report} />
         </details>

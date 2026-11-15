@@ -1,3 +1,4 @@
+import { orderPaymentEnvironment } from '@/lib/payment-environment';
 import { NextResponse, after } from 'next/server';
 import { startCheckoutPayment } from '@/lib/payment-start';
 import { getSupabaseAdminClient } from '@/lib/supabase/server';
@@ -51,6 +52,8 @@ export async function POST(request: Request) {
     {
       client: getSupabaseAdminClient(),
       initialize: initializePaystackTransaction,
+      paymentEnvironment: (isTest) =>
+        orderPaymentEnvironment(isTest, process.env),
       origin: getTrustedAppOrigin,
       deliver: (orderId) => after(deliverOrderTickets(orderId)),
       completedUrl: (orderId) => integrationCompletedUrl(orderId, request.url),

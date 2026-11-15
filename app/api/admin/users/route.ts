@@ -69,6 +69,7 @@ async function listAccounts() {
   );
   const activeUsers = authData.users.filter(
     (user) =>
+      user.id !== '00000000-0000-4000-8000-000000000007' &&
       !user.is_anonymous &&
       !(user as unknown as { deleted_at?: string }).deleted_at,
   );

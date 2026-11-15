@@ -1,3 +1,7 @@
+import {
+  paystackSecretForMode,
+  type PaymentEnvironment,
+} from './payment-environment.ts';
 const PAYSTACK_API_URL = 'https://api.paystack.co';
 const REFERENCE_PATTERN = /^[A-Za-z0-9.=-]{8,100}$/;
 
@@ -66,9 +70,16 @@ function getPaystackSecretKey() {
   return secret;
 }
 
-async function paystackRequest<T>(path: string, init?: RequestInit) {
+async function paystackRequest<T>(
+  path: string,
+  init?: RequestInit,
+  mode?: PaymentEnvironment,
+) {
   const headers = new Headers(init?.headers);
-  headers.set('Authorization', `Bearer ${getPaystackSecretKey()}`);
+  headers.set(
+    'Authorization',
+    `Bearer ${mode ? paystackSecretForMode(mode, process.env) : getPaystackSecretKey()}`,
+  );
   headers.set('Content-Type', 'application/json');
   const response = await fetch(`${PAYSTACK_API_URL}${path}`, {
     ...init,
@@ -97,6 +108,7 @@ export async function initializePaystackTransaction(input: {
   orderReference: string;
   subaccountCode?: string;
   transactionChargeKobo?: number;
+  paymentEnvironment?: PaymentEnvironment;
 }) {
   const split = paystackSplitFields(
     input.subaccountCode,
@@ -120,6 +132,7 @@ export async function initializePaystackTransaction(input: {
         }),
       }),
     },
+    input.paymentEnvironment,
   );
   return payload;
 }
@@ -203,20 +216,28 @@ export async function deactivatePaystackSubaccount(subaccountCode: string) {
   );
 }
 
-export async function verifyPaystackTransaction(reference: string) {
+export async function verifyPaystackTransaction(
+  reference: string,
+  mode?: PaymentEnvironment,
+) {
   if (!isValidPaystackReference(reference)) {
     throw new Error('The payment reference is invalid.');
   }
   return paystackRequest<PaystackVerification>(
     `/transaction/verify/${encodeURIComponent(reference)}`,
+    undefined,
+    mode,
   );
 }
 
-export async function getPaystackRefund(refundId: string) {
+export async function getPaystackRefund(
+  refundId: string,
+  mode?: PaymentEnvironment,
+) {
   if (!/^[0-9]{1,20}$/.test(refundId)) {
     throw new Error('The Paystack refund ID is invalid.');
   }
-  return paystackRequest<unknown>(`/refund/${refundId}`);
+  return paystackRequest<unknown>(`/refund/${refundId}`, undefined, mode);
 }
 
 export function isValidPaystackReference(value: string) {
@@ -285,11 +306,14 @@ function constantTimeEqual(left: string, right: string) {
 export async function verifyPaystackWebhookSignature(
   rawPayload: string | ArrayBuffer,
   suppliedSignature: string,
+  mode?: PaymentEnvironment,
 ) {
   if (!/^[a-f0-9]{128}$/i.test(suppliedSignature)) return false;
   const key = await crypto.subtle.importKey(
     'raw',
-    new TextEncoder().encode(getPaystackSecretKey()),
+    new TextEncoder().encode(
+      mode ? paystackSecretForMode(mode, process.env) : getPaystackSecretKey(),
+    ),
     { name: 'HMAC', hash: 'SHA-512' },
     false,
     ['sign'],

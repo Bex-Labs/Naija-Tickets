@@ -45,9 +45,14 @@ export type StoredCheckoutSession = HostedSessionIdentity & {
   external_reference?: string | null;
 };
 export type CheckoutSessionDependencies = {
-  signingKeys(): CheckoutSigningKeys;
+  signingKeys(
+    context?: Pick<IntegrationContext, 'environment'>,
+  ): CheckoutSigningKeys;
   requireConfiguration(context: IntegrationContext): void;
-  origin(request: Request): string;
+  origin(
+    request: Request,
+    context?: Pick<IntegrationContext, 'environment'>,
+  ): string;
   create(
     this: void,
     proof: IntegrationAuthProof,
@@ -261,7 +266,7 @@ export function createCheckoutSessionHandler(
         context,
       );
       checkout.requireConfiguration(context);
-      const signing = checkout.signingKeys();
+      const signing = checkout.signingKeys(context);
       const session: HostedSessionIdentity = {
         id: crypto.randomUUID(),
         environment: context.environment,
@@ -299,7 +304,7 @@ export function createCheckoutSessionHandler(
         );
       const url = new URL(
         `/integrations/checkout/${stored.id}`,
-        checkout.origin(request),
+        checkout.origin(request, context),
       );
       url.searchParams.set('access', recoveredAccess);
       return {

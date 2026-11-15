@@ -20,6 +20,11 @@ export default async function HostedLinkPage({
         <p className="text-sm font-bold text-emerald-700">
           Naija Tickets · Secure checkout
         </p>
+        {link?.environment === 'test' && (
+          <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-bold text-amber-950">
+            Test purchase · No real charges · Not valid for live event entry
+          </p>
+        )}
         <h1 className="mt-4 text-3xl font-black">
           {link ? link.event.title : 'Checkout unavailable'}
         </h1>

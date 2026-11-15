@@ -1,3 +1,28 @@
+# Current update — 13 November 2026: single-project Test and Live checkout
+
+This user-approved approach supersedes the separate-sandbox requirement in earlier phase records below. Preserve those records as history; do not follow their separate-project setup for the current default workflow.
+
+- One main app, organiser account and Supabase database. The existing Test/local versus Test/hosted and Live/hosted website choices remain. Hidden Test event copies have their own inventory, Test orders and ticket records; no second project or login is needed.
+- Added `202611130001_single_project_testing.sql`; applied it transactionally to main project `pxbjptykiudostxcedqy` and recorded migration history. The actual main schema was missing the previously implemented `202610290001_external_embed_events.sql` dependency; installed and recorded that additive migration too. No database reset or historical record conversion.
+- Activated only local `INTEGRATIONS_LOCAL_TESTING_ENABLED` and the private Paystack Test key in ignored `.env.development.local`. Existing `.env.local` and the main Paystack Test preference are preserved. No Vercel deployment or Live key change.
+- Reused checkout, Paystack, order, group claim, QR and check-in engines. Added server-selected/pinned provider modes, callback/webhook mode checks, hidden Test markers, exclusion from real admin totals/lists and protection for already-open sessions after revocation/suspension. Test tickets cannot be used at the original live event. Live links require configured Live payments and HTTPS partner origins.
+- Fixed cancellation return to use the session's Test mode, so local return URLs are accepted. Existing link return suggestions now fall back to an address registered for the saved mode instead of an outdated website.
+- Added `npm run integrations:enable-testing` and rewrote `docs/integrated-testing.md` with the short local, hosted Test and Live paths. Older standalone sandboxes/Partner Demo remain optional and unchanged.
+
+Validation: 396 full-suite tests passed; TypeScript, focused lint and production Vercel build passed. PostgreSQL tests exercise no-code/API free bookings, simulated verified paid group finalization, ten unclaimed slots from two Group-of-5 packages, claims, one-time entry, original-stock preservation, real-total exclusion, mode rejection, source key revocation and suspension. Actual local HTTP checks passed for Test authentication, event/ticket retrieval, API session creation, reservation, Paystack Test initialization and cancellation back to `http://127.0.0.1:5500/dist/index.html`; temporary API keys were revoked and reservations cancelled. Browser opened the real no-code Test link and displayed the [TEST] Book Club ticket selection. A 77-file public bundle scan found no configured private credentials.
+
+Remaining acceptance: no actual Paystack payment was completed, no ticket email sent and nothing redeployed. User should complete one Paystack Test transaction from the local website and verify confirmation/return. Provider finalization/issuance was exercised with verified payloads in disposable database fixtures, not misrepresented as an actual provider payment. Optional public webhook receiver/scheduling and controlled real-money Live launch acceptance remain separate checks. Production must be redeployed with the new code/settings to receive the new UI and all list filters.
+
+
+## Developer API button and saved preference repair — 13 November 2026
+
+- Added and applied additive migration `202611130002_integration_setup_path.sql`. Each connection now stores `setupPath` (API/no-code), including authorised validation and migration of active-key connections. The organiser restores its remembered connection per signed-in account and the saved path after a browser refresh. If there is no remembered selection, it opens the most recently created connection. No key is stored in browser storage.
+- Diagnosed the supplied `http://127.0.0.1:5173` website as AMARA at `/Users/Abbas/Documents/amara-music`. Its existing Test key was paired with Live mode and the deployed provider endpoint. Corrected only private local mode/API/return settings, preserving the key and mapping. Its server now resolves source IDs through the authenticated Test catalogue before creating checkout, preserving strict event and URL validation for hidden Test event IDs. Restarted its existing development service; port 3000 was not stopped.
+- Updated the bundled Node/Next starter and local guide: `.env`/`.env.local` load automatically in the Node runner, event ID and local cookie secret are optional, assigned events appear in a chooser, and errors give safe actionable instructions. A static frontend still needs a backend; adding a key alone cannot wire a button.
+- Validation: 401 main regression tests and 17 AMARA adapter tests pass. TypeScript, focused lint and both production builds pass. Browser clicked AMARA's actual Buy Ticket button and reached `[TEST] Amara music show` on `http://localhost:3000` with a return to `http://127.0.0.1:5173`. The actual database metadata returns `setupPath=api`. Public build scan found no configured private material. No payment or email was made and no Vercel deployment performed.
+
+---
+
 # Naija Tickets integrations progress
 
 Last updated: 6 November 2026 (Africa/Lagos).

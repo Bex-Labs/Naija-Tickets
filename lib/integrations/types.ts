@@ -41,12 +41,23 @@ export type IntegrationApplication = {
   domains: IntegrationDomain[];
   eventIds: string[];
   keys: IntegrationKeyMetadata[];
+  setupPath?: 'link' | 'api';
+  setupMode?: IntegrationEnvironment;
+  websiteLocation?: 'local' | 'hosted';
 };
 export type IntegrationDashboard = {
+  viewerId?: string;
   workspaceMode?: IntegrationEnvironment | null;
+  integratedTesting?: boolean;
   organisers: { id: string; name: string }[];
   integrations: IntegrationApplication[];
-  events: { id: string; organiserId: string; title: string; status: string; websiteUrl?: string | null }[];
+  events: {
+    id: string;
+    organiserId: string;
+    title: string;
+    status: string;
+    websiteUrl?: string | null;
+  }[];
 };
 export type IntegrationContext = {
   keyId: string;

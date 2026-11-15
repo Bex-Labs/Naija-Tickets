@@ -98,7 +98,7 @@ export function integrationDatabaseError(error: unknown): IntegrationError {
     return new IntegrationError(
       503,
       'SANDBOX_NOT_CONFIGURED',
-      'An isolated test event database is not configured. Test keys cannot read live events.',
+      'Testing is not enabled for these resources. Ask the platform administrator to complete single-project testing setup.',
     );
   if (code === '42501')
     return new IntegrationError(

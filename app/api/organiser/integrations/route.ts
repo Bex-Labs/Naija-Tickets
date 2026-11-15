@@ -1,5 +1,6 @@
 import { organiserIntegrationHandler } from '@/lib/integrations/store.server';
 import { integrationResourceMode } from '@/lib/integrations/resource-mode';
+import { testServiceConfiguration } from '@/lib/integrations/testing';
 import {
   listIntegrations,
   saveIntegration,
@@ -12,7 +13,14 @@ export const GET = organiserIntegrationHandler(async (_request, userId) => {
   } catch {
     /* Show configuration failure without secrets. */
   }
-  return { ...dashboard, workspaceMode };
+  let integratedTesting = false;
+  try {
+    testServiceConfiguration(process.env);
+    integratedTesting = true;
+  } catch {
+    /* No secrets in dashboard metadata. */
+  }
+  return { ...dashboard, viewerId: userId, workspaceMode, integratedTesting };
 });
 export const POST = organiserIntegrationHandler((request, userId) =>
   saveIntegration(request, userId),

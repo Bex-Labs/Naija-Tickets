@@ -28,7 +28,7 @@ void test('runnable Node/Next partner example protects keys, CSRF, redirects and
   const id = '10000000-0000-4000-8000-000000000001',
     env = {
       NODE_ENV: 'test' as const,
-    NT_API_ORIGIN: 'https://sandbox.example',
+      NT_API_ORIGIN: 'https://sandbox.example',
       NT_PARTNER_ORIGIN: 'https://partner.example',
       NT_MODE: 'test',
       NT_API_KEY: 'nt_test_' + 'a'.repeat(32) + '_' + 'b'.repeat(43),
@@ -121,4 +121,99 @@ void test('runnable Node/Next partner example protects keys, CSRF, redirects and
     (await handleHostedExample(outsider, env, upstream)).status,
     403,
   );
+});
+
+void test('starter chooses Test catalogue IDs when no event ID is configured', async () => {
+  const id = '10000000-0000-4000-8000-000000000001';
+  const env = {
+    NODE_ENV: 'test' as const,
+    NT_API_ORIGIN: 'http://localhost:3000',
+    NT_PARTNER_ORIGIN: 'http://localhost:3010',
+    NT_MODE: 'test',
+    NT_API_KEY: 'nt_test_' + 'a'.repeat(32) + '_' + 'b'.repeat(43),
+    NT_EXAMPLE_COOKIE_SECRET: 'x'.repeat(43),
+  };
+  const calls: string[] = [];
+  const fetcher: typeof fetch = async (url, options) => {
+    const href =
+      typeof url === 'string' ? url : url instanceof URL ? url.href : url.url;
+    calls.push(href);
+    assert.equal(
+      new Headers(options?.headers).get('Authorization'),
+      'Bearer ' + env.NT_API_KEY,
+    );
+    return href.endsWith('/events')
+      ? Response.json({ data: [{ id, title: '[TEST] Show' }] })
+      : Response.json({
+          data: {
+            id,
+            environment: 'test',
+            event_id: id,
+            checkout_url: `http://localhost:3000/integrations/checkout/${id}?access=${'c'.repeat(64)}`,
+          },
+        });
+  };
+  const page = await handleHostedExample(
+    new Request('http://localhost:3010'),
+    env,
+    fetcher,
+  );
+  const text = await page.text();
+  assert.ok(text.includes('[TEST] Show'));
+  assert.ok(!text.includes(env.NT_API_KEY));
+  const csrf = /name="csrf" value="([^"]+)"/.exec(text)![1];
+  const result = await handleHostedExample(
+    new Request('http://localhost:3010', {
+      method: 'POST',
+      headers: {
+        Origin: 'http://localhost:3010',
+        Cookie: page.headers.get('set-cookie')!.split(';')[0],
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({ csrf, event_id: id }),
+    }),
+    env,
+    fetcher,
+  );
+  assert.equal(result.status, 303);
+  assert.equal(calls.length, 2);
+  assert.ok(
+    result.headers
+      .get('location')
+      ?.startsWith('http://localhost:3000/integrations/checkout/'),
+  );
+});
+void test('starter reports missing server configuration and upstream permission errors without leaking secrets', async () => {
+  const missing = await handleHostedExample(
+    new Request('http://localhost:3010'),
+    {
+      NODE_ENV: 'test' as const,
+      NT_API_ORIGIN: 'http://localhost:3000',
+      NT_PARTNER_ORIGIN: 'http://localhost:3010',
+    },
+  );
+  assert.equal(missing.status, 503);
+  assert.ok((await missing.text()).includes('NT_API_KEY'));
+  const secret = 'nt_test_' + 'a'.repeat(32) + '_' + 'b'.repeat(43);
+  const env = {
+    NODE_ENV: 'test' as const,
+    NT_API_ORIGIN: 'http://localhost:3000',
+    NT_PARTNER_ORIGIN: 'http://localhost:3010',
+    NT_MODE: 'test',
+    NT_API_KEY: secret,
+    NT_EXAMPLE_COOKIE_SECRET: 'x'.repeat(43),
+  };
+  const denied = await handleHostedExample(
+    new Request('http://localhost:3010'),
+    env,
+    async () =>
+      Response.json(
+        { error: { code: 'INSUFFICIENT_SCOPE', message: 'private ' + secret } },
+        { status: 403 },
+      ),
+  );
+  const html = await denied.text();
+  assert.equal(denied.status, 503);
+  assert.ok(html.includes('events:read'));
+  assert.ok(!html.includes(secret));
 });

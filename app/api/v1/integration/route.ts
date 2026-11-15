@@ -25,7 +25,7 @@ const handle = integrationApiHandler(
     }
     try {
       requireHostedCheckoutConfiguration(context.environment, process.env);
-      checkoutSigningKeys();
+      checkoutSigningKeys(context);
       checkout = reads;
     } catch {
       /* No secret details in capability metadata. */

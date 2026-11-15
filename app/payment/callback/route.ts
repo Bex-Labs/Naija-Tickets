@@ -21,7 +21,10 @@ async function statusRedirect(
   paymentReference = '',
 ) {
   if (reference) {
-    const destination = await integrationReturnForReference(reference, request.url);
+    const destination = await integrationReturnForReference(
+      reference,
+      request.url,
+    );
     if (destination) {
       const response = NextResponse.redirect(destination, 303);
       response.headers.set('Referrer-Policy', 'no-referrer');
@@ -54,7 +57,10 @@ export async function GET(request: Request) {
     orderReference = (await findOrderReference(expectedPayment.order_id)) || '';
     if (!orderReference) return statusRedirect(request, 'invalid');
 
-    const verification = await verifyPaystackTransaction(reference);
+    const verification = await verifyPaystackTransaction(
+      reference,
+      expectedPayment.payment_environment || undefined,
+    );
     const transaction = verification.data;
     if (transaction.reference !== reference) {
       return statusRedirect(request, 'invalid');

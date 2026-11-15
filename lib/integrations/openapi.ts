@@ -224,13 +224,13 @@ export function assemblePublicOpenApi(
       title: 'Naija Tickets Integration API',
       version: '1.8.0',
       description:
-        'Implemented contract through Phase 8. Server secret keys stay on partner servers; public widgets use separate identifiers. Externally managed events are private backing records that reuse Naija Tickets checkout and tickets. Test operations require a separate database/deployment and Paystack test mode. Features fail closed until configured. Public sandbox purchase, receiver and scheduled-delivery acceptance must be recorded separately; this document is not proof of activation.',
+        'Implemented contract through Phase 8. Server secret keys stay on partner servers; public widgets use separate identifiers. Externally managed events are private backing records that reuse Naija Tickets checkout and tickets. Single-project Test operations use hidden test event copies and Paystack Test credentials in the existing app/database. Live purchases use Live credentials and separate inventory. Features fail closed until configured. Public sandbox purchase, receiver and scheduled-delivery acceptance must be recorded separately; this document is not proof of activation.',
     },
     servers: [
       {
         url: '/',
         description:
-          'This deployment origin. Use the separately configured sandbox origin for test purchases; never assume main-site Test prefixes isolate business data.',
+          'This deployment origin. Use this same origin with a Test key for test purchases. Test event copies isolate inventory; no second account or project is required when single-project testing is enabled.',
       },
     ],
     paths,

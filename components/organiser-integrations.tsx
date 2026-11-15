@@ -1,6 +1,17 @@
 'use client';
+import {
+  integrationSelectionKey,
+  restoredIntegrationSelection,
+  integrationSetupPath,
+} from '@/lib/integrations/setup-preference';
 import { OrganiserHostedCheckout } from '@/components/organiser-hosted-checkout';
-import { useEffect, useRef, useState, type SyntheticEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type SyntheticEvent,
+} from 'react';
 import {
   Code2,
   Copy,
@@ -15,6 +26,11 @@ import {
 import { accountFetch } from '@/lib/supabase/account-fetch';
 import { INTEGRATION_SCOPES } from '@/lib/integrations/types';
 import { canonicalIntegrationOrigin } from '@/lib/integrations/validation';
+import {
+  setupStatus,
+  websiteLocation as inferLocation,
+  type WebsiteLocation,
+} from '@/lib/integrations/testing';
 import type {
   IntegrationScope,
   IntegrationApplication,
@@ -67,10 +83,11 @@ export function OrganiserIntegrations() {
   const [testOrigins, setTestOrigins] = useState('');
   const [liveOrigins, setLiveOrigins] = useState('');
   const [connectionEnvironment, setConnectionEnvironment] =
-    useState<IntegrationEnvironment>('live');
+    useState<IntegrationEnvironment>('test');
+  const [location, setLocation] = useState<WebsiteLocation>('local');
   const [eventIds, setEventIds] = useState<string[]>([]);
   const [environment, setEnvironment] =
-    useState<IntegrationEnvironment>('live');
+    useState<IntegrationEnvironment>('test');
   const [readScopes, setReadScopes] = useState<IntegrationScope[]>(
     RECOMMENDED_CHECKOUT_SCOPES,
   );
@@ -86,8 +103,9 @@ export function OrganiserIntegrations() {
   const eventWebsite = dashboard?.events.find(
     (event) => eventIds.includes(event.id) && event.websiteUrl,
   )?.websiteUrl;
-  const defaultEnvironment =
-    dashboard?.workspaceMode === 'test' ? 'test' : 'live';
+  const defaultEnvironment = 'test';
+  const nativeToolsAvailable =
+    connectionEnvironment === 'live' || dashboard?.workspaceMode === 'test';
   const originsText = (text: string) =>
     text
       .split(/\r?\n/)
@@ -98,6 +116,9 @@ export function OrganiserIntegrations() {
   const unsavedChanges =
     !!selected &&
     (selected.name !== name ||
+      integrationSetupPath(selected) !== setupPath ||
+      selected.setupMode !== connectionEnvironment ||
+      selected.websiteLocation !== location ||
       selected.status !== status ||
       selected.organiserId !== organiserId ||
       [...selected.eventIds].sort().join(',') !==
@@ -116,47 +137,75 @@ export function OrganiserIntegrations() {
             .map((d) => d.origin)
             .join('\n'),
         ));
+  const applyApp = useCallback(
+    (
+      app?: IntegrationApplication,
+      fallbackOrganiser?: string,
+      viewerId?: string,
+    ) => {
+      setLifecycleTarget(null);
+      setSelectedId(app?.id || '');
+      if (app) setSetupPath(integrationSetupPath(app));
+      if (viewerId) {
+        try {
+          window.localStorage.setItem(
+            integrationSelectionKey(viewerId),
+            app?.id || '',
+          );
+        } catch {
+          /* Optional UI preference; no account data or credentials. */
+        }
+      }
+      setOrganiserId(app?.organiserId || fallbackOrganiser || '');
+      setName(app?.name || '');
+      setStatus(app?.status || 'active');
+      setTestOrigins(
+        app?.domains
+          .filter((domain) => domain.environment === 'test')
+          .map((domain) => domain.origin)
+          .join('\n') || '',
+      );
+      setLiveOrigins(
+        app?.domains
+          .filter((domain) => domain.environment === 'live')
+          .map((domain) => domain.origin)
+          .join('\n') || '',
+      );
+      setEventIds(app?.eventIds || []);
+      if (!app) {
+        setConnectionEnvironment(defaultEnvironment);
+        setEnvironment(defaultEnvironment);
+        setLocation('local');
+      } else {
+        const modes = new Set(app.domains.map((domain) => domain.environment));
+        const mode =
+          app.setupMode ??
+          (modes.size === 1 ? app.domains[0].environment : 'test');
+        setConnectionEnvironment(mode);
+        setEnvironment(mode);
+        setLocation(
+          app.websiteLocation ??
+            inferLocation(
+              app.domains.find((d) => d.environment === mode)?.origin ||
+                'http://localhost',
+            ),
+        );
+      }
+      setSecret('');
+      setError('');
+      setNotice('');
+    },
+    [],
+  );
   const selectApp = (
     app?: IntegrationApplication,
     fallbackOrganiser?: string,
-  ) => {
-    setLifecycleTarget(null);
-    setSelectedId(app?.id || '');
-    setOrganiserId(
-      app?.organiserId ||
-        fallbackOrganiser ||
-        dashboard?.organisers[0]?.id ||
-        '',
+  ) =>
+    applyApp(
+      app,
+      fallbackOrganiser || dashboard?.organisers[0]?.id,
+      dashboard?.viewerId,
     );
-    setName(app?.name || '');
-    setStatus(app?.status || 'active');
-    setTestOrigins(
-      app?.domains
-        .filter((domain) => domain.environment === 'test')
-        .map((domain) => domain.origin)
-        .join('\n') || '',
-    );
-    setLiveOrigins(
-      app?.domains
-        .filter((domain) => domain.environment === 'live')
-        .map((domain) => domain.origin)
-        .join('\n') || '',
-    );
-    setEventIds(app?.eventIds || []);
-    if (!app) {
-      setConnectionEnvironment(defaultEnvironment);
-      setEnvironment(defaultEnvironment);
-    } else {
-      const modes = new Set(app.domains.map((domain) => domain.environment));
-      const mode =
-        modes.size === 1 ? app.domains[0].environment : connectionEnvironment;
-      setConnectionEnvironment(mode);
-      setEnvironment(mode);
-    }
-    setSecret('');
-    setError('');
-    setNotice('');
-  };
   useEffect(() => {
     const timer = window.setInterval(() => setClock(Date.now()), 60_000);
     return () => window.clearInterval(timer);
@@ -177,9 +226,23 @@ export function OrganiserIntegrations() {
         if (!controller.signal.aborted) {
           setDashboard(result.data);
           if (!initialModeSet.current) {
-            const mode = result.data.workspaceMode === 'test' ? 'test' : 'live';
-            setEnvironment(mode);
-            setConnectionEnvironment(mode);
+            let remembered: string | null = null;
+            try {
+              if (result.data.viewerId)
+                remembered = window.localStorage.getItem(
+                  integrationSelectionKey(result.data.viewerId),
+                );
+            } catch {
+              /* Blocked browser storage still permits normal setup. */
+            }
+            applyApp(
+              restoredIntegrationSelection(
+                result.data.integrations,
+                remembered,
+              ),
+              result.data.organisers[0]?.id,
+              result.data.viewerId,
+            );
             initialModeSet.current = true;
           }
           const available = result.data.organisers;
@@ -201,7 +264,7 @@ export function OrganiserIntegrations() {
       }
     })();
     return () => controller.abort();
-  }, [reload]);
+  }, [reload, applyApp]);
   async function mutate<T>(url: string, method: string, body?: unknown) {
     const response = await accountFetch(url, {
       method,
@@ -259,6 +322,9 @@ export function OrganiserIntegrations() {
             ...origins(liveOrigins, 'live'),
           ],
           eventIds,
+          setupMode: connectionEnvironment,
+          websiteLocation: location,
+          setupPath,
         },
       );
       replaceApp(app);
@@ -266,7 +332,9 @@ export function OrganiserIntegrations() {
       setNotice(
         selectedId
           ? 'Integration updated.'
-          : 'Website connection saved. Create a checkout link below; no API key is needed.',
+          : setupPath === 'api'
+            ? 'Website connection saved. Create your server key below.'
+            : 'Website connection saved. Create a checkout link below; no API key is needed.',
       );
     } catch (cause) {
       setError(
@@ -482,7 +550,9 @@ export function OrganiserIntegrations() {
             RECOMMENDED · NO CODE
           </p>
           <h2 className="mt-1 text-lg font-black">Buy Tickets button</h2>
-          <p className="mt-2 text-sm leading-5 text-slate-600">Copy a checkout link.</p>
+          <p className="mt-2 text-sm leading-5 text-slate-600">
+            Copy a checkout link.
+          </p>
         </button>
         <button
           type="button"
@@ -492,25 +562,21 @@ export function OrganiserIntegrations() {
         >
           <p className="text-sm font-black text-[#241b3f]">FOR DEVELOPERS</p>
           <h2 className="mt-1 text-lg font-black">Connect with the API</h2>
-          <p className="mt-2 text-sm leading-5 text-slate-600">Connect your server.</p>
+          <p className="mt-2 text-sm leading-5 text-slate-600">
+            Connect your server.
+          </p>
         </button>
       </section>
       <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-slate-600">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
-        {dashboard?.workspaceMode === 'test'
-          ? 'Test workspace · No real charges.'
-          : dashboard?.workspaceMode === 'live'
-            ? 'Live workspace'
-            : 'Choose a website and event.'}
+        {setupStatus(location, connectionEnvironment)}
       </p>
       <details className="mt-3 rounded-lg border border-[#241b3f]/10 bg-white p-3">
         <summary className="cursor-pointer text-sm font-bold">
           Optional: try a test purchase first
         </summary>
         <ol className="mt-3 list-inside list-decimal space-y-2 text-sm text-slate-600">
-          <li>
-            Open the sandbox organiser workspace and publish a test event.
-          </li>
+          <li>Choose where your website runs and select Test a purchase.</li>
           <li>
             Add your own local website address below, for example{' '}
             <code>http://localhost:3010</code>. Select the event and save.
@@ -521,8 +587,8 @@ export function OrganiserIntegrations() {
               : 'Create a Test key with the recommended permissions. Run the local starter from the guide below.'}
           </li>
           <li>
-            Complete a Paystack Test payment and check the ticket in the
-            sandbox.
+            Complete a Paystack Test payment and check the ticket in the test
+            checkout.
           </li>
         </ol>
         <a
@@ -633,50 +699,53 @@ export function OrganiserIntegrations() {
               />
             </div>
             <fieldset className="min-w-0 sm:col-span-2">
-              <legend className="auth-label">What are you setting up?</legend>
-              <div className="grid grid-cols-2 gap-3">
-                {(['test', 'live'] as const).map((mode) => (
+              <legend className="auth-label">
+                Where is your website running?
+              </legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {(['local', 'hosted'] as const).map((place) => (
                   <label
-                    key={mode}
-                    className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm font-bold ${connectionEnvironment === mode ? 'border-emerald-600 bg-emerald-50 text-emerald-900' : 'border-[#241b3f]/15 bg-white'}`}
+                    key={place}
+                    className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm font-bold ${location === place ? 'border-emerald-600 bg-emerald-50 text-emerald-900' : 'border-[#241b3f]/15 bg-white'}`}
                   >
                     <input
                       type="radio"
-                      name="connection-environment"
-                      value={mode}
-                      checked={connectionEnvironment === mode}
+                      name="website-location"
+                      checked={location === place}
                       disabled={busy}
                       onChange={() => {
-                        // Correct a localhost address entered before choosing Test.
-                        if (mode === 'test') {
-                          const lines = liveOrigins.split(/\r?\n/);
-                          const local = (value: string) => {
-                            try {
-                              return [
-                                'localhost',
-                                '127.0.0.1',
-                                '[::1]',
-                              ].includes(new URL(value.trim()).hostname);
-                            } catch {
-                              return false;
-                            }
-                          };
-                          const testing = lines.filter(local);
-                          if (testing.length) {
-                            setTestOrigins(
-                              [
-                                ...new Set(
-                                  [...testOrigins.split(/\r?\n/), ...testing]
-                                    .map((value) => value.trim())
-                                    .filter(Boolean),
-                                ),
-                              ].join('\n'),
-                            );
-                            setLiveOrigins(
-                              lines.filter((line) => !local(line)).join('\n'),
-                            );
-                          }
+                        setLocation(place);
+                        if (place === 'local') {
+                          setConnectionEnvironment('test');
+                          setEnvironment('test');
                         }
+                        setSecret('');
+                        setError('');
+                        setNotice('');
+                      }}
+                      className="accent-emerald-600"
+                    />
+                    {place === 'local' ? 'On my computer' : 'On the internet'}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset className="min-w-0 sm:col-span-2">
+              <legend className="auth-label">What do you want to do?</legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {(['test', 'live'] as const).map((mode) => (
+                  <label
+                    key={mode}
+                    className={`flex items-center gap-2 rounded-lg border p-3 text-sm font-bold ${connectionEnvironment === mode ? 'border-emerald-600 bg-emerald-50 text-emerald-900' : 'border-[#241b3f]/15 bg-white'} ${mode === 'live' && location === 'local' ? 'opacity-50' : 'cursor-pointer'}`}
+                  >
+                    <input
+                      type="radio"
+                      name="purchase-mode"
+                      checked={connectionEnvironment === mode}
+                      disabled={
+                        busy || (mode === 'live' && location === 'local')
+                      }
+                      onChange={() => {
                         setConnectionEnvironment(mode);
                         setEnvironment(mode);
                         setSecret('');
@@ -686,17 +755,23 @@ export function OrganiserIntegrations() {
                       className="accent-emerald-600"
                     />
                     {mode === 'test'
-                      ? 'Test / local website'
-                      : 'Live deployment'}
+                      ? 'Test a purchase'
+                      : 'Accept real purchases'}
                   </label>
                 ))}
               </div>
+              <output className="mt-3 block rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-900">
+                {setupStatus(location, connectionEnvironment)}
+              </output>
+              <p className="mt-2 text-xs text-slate-600">
+                {connectionEnvironment === 'test'
+                  ? 'Test purchases use a separate event copy and do not reduce live inventory.'
+                  : 'Customer purchases charge real money and use live ticket inventory.'}
+              </p>
             </fieldset>
             <div className="sm:col-span-2">
               <label htmlFor="integration-origins" className="auth-label">
-                {connectionEnvironment === 'test'
-                  ? 'Test website address'
-                  : 'Live website or app backend address'}
+                Website address
               </label>
               <textarea
                 id="integration-origins"
@@ -710,10 +785,10 @@ export function OrganiserIntegrations() {
                 }
                 disabled={busy}
                 rows={3}
-                className="auth-input w-full py-3"
+                className="auth-input w-full px-3 py-3"
                 placeholder={
-                  connectionEnvironment === 'test'
-                    ? 'http://localhost:3111'
+                  location === 'local'
+                    ? 'http://localhost:5500'
                     : 'https://events.example.com'
                 }
                 aria-describedby="integration-origins-help"
@@ -722,21 +797,33 @@ export function OrganiserIntegrations() {
                 id="integration-origins-help"
                 className="mt-1 text-xs text-slate-500"
               >
-                {connectionEnvironment === 'test'
-                  ? 'Use your website address, such as http://localhost:3010. No page path.'
-                  : 'Use a public HTTPS address. No page path.'}
+                {location === 'local'
+                  ? 'Example: http://127.0.0.1:5500 — leave out /dist/index.html.'
+                  : 'Example: https://mywebsite.com — leave out the page path.'}
               </p>
               {eventWebsite &&
-                (connectionEnvironment === 'test' || eventWebsite.startsWith('https://')) && (
+                inferLocation(eventWebsite) === location &&
+                (connectionEnvironment === 'test' ||
+                  eventWebsite.startsWith('https://')) && (
                   <button
                     type="button"
                     disabled={busy}
                     className="mt-2 text-sm font-bold text-emerald-800 underline"
                     onClick={() => {
                       const origin = new URL(eventWebsite).origin;
-                      const current = connectionEnvironment === 'test' ? testOrigins : liveOrigins;
-                      const next = [...new Set([...current.split(/\r?\n/), origin].map((value) => value.trim()).filter(Boolean))].join('\n');
-                      if (connectionEnvironment === 'test') setTestOrigins(next);
+                      const current =
+                        connectionEnvironment === 'test'
+                          ? testOrigins
+                          : liveOrigins;
+                      const next = [
+                        ...new Set(
+                          [...current.split(/\r?\n/), origin]
+                            .map((value) => value.trim())
+                            .filter(Boolean),
+                        ),
+                      ].join('\n');
+                      if (connectionEnvironment === 'test')
+                        setTestOrigins(next);
                       else setLiveOrigins(next);
                     }}
                   >
@@ -826,7 +913,9 @@ export function OrganiserIntegrations() {
                   : 'Create your server key'}
               </h2>
               {setupPath === 'api' && (
-                <p className="mt-2 text-sm text-slate-700">Keep the key on your server.</p>
+                <p className="mt-2 text-sm text-slate-700">
+                  Keep the key on your server.
+                </p>
               )}
             </section>
           )}
@@ -903,6 +992,7 @@ export function OrganiserIntegrations() {
               events={dashboard.events}
               defaultEnvironment={connectionEnvironment}
               settingsPending={unsavedChanges}
+              websiteLocation={location}
             />
           )}
           {setupPath === 'api' && (
@@ -946,20 +1036,16 @@ export function OrganiserIntegrations() {
                       >
                         Mode
                       </label>
-                      <select
+                      <input
                         id="integration-key-mode"
-                        value={environment}
-                        onChange={(event) =>
-                          setEnvironment(
-                            event.target.value as IntegrationEnvironment,
-                          )
+                        readOnly
+                        value={
+                          environment === 'test'
+                            ? 'Test key · No real charges'
+                            : 'Live key · Real purchases'
                         }
-                        disabled={busy}
                         className="auth-input w-full bg-white"
-                      >
-                        <option value="test">Test</option>
-                        <option value="live">Live</option>
-                      </select>
+                      />
                     </div>
                     <div>
                       <label
@@ -1193,7 +1279,7 @@ export function OrganiserIntegrations() {
                     </h3>
                     <details className="mt-3">
                       <summary className="cursor-pointer text-sm font-bold">
-                        Assigned event IDs for your API requests
+                        Assigned source event IDs
                       </summary>
                       {dashboard.events
                         .filter((event) => selected.eventIds.includes(event.id))
@@ -1215,6 +1301,12 @@ export function OrganiserIntegrations() {
                         </p>
                       )}
                     </details>
+                    {environment === 'test' && (
+                      <p className="mt-2 text-sm text-slate-600">
+                        For Test checkout, read <code>/api/v1/events</code> and
+                        use the Test event and ticket IDs returned by the API.
+                      </p>
+                    )}
                     <ol className="mt-2 list-inside list-decimal space-y-1 text-sm leading-6 text-slate-600">
                       <li>Save the key as a private environment variable.</li>
                       <li>
@@ -1272,13 +1364,14 @@ export function OrganiserIntegrations() {
                   Webhooks send automatic order updates. The widget embeds
                   ticket selection.
                 </p>
-                {selected && (
+                {selected && nativeToolsAvailable && (
                   <OrganiserWebhooks
-                    key={selected.id}
+                    key={selected.id + connectionEnvironment}
                     applicationId={selected.id}
+                    defaultEnvironment={connectionEnvironment}
                   />
                 )}
-                {selected && (
+                {selected && nativeToolsAvailable && (
                   <OrganiserWidget
                     key={'widget-' + selected.id + connectionEnvironment}
                     application={selected}
@@ -1286,10 +1379,17 @@ export function OrganiserIntegrations() {
                     defaultEnvironment={connectionEnvironment}
                   />
                 )}
+                {!nativeToolsAvailable && (
+                  <p className="mt-3 text-sm text-slate-600">
+                    Use the Test checkout link or API above. Test webhook
+                    delivery and legacy widgets need separate platform
+                    configuration.
+                  </p>
+                )}
               </details>
             </details>
           )}
-          {selected && setupPath === 'link' && (
+          {selected && setupPath === 'link' && nativeToolsAvailable && (
             <details className="mt-5 rounded-xl border border-[#241b3f]/10 bg-white p-4">
               <summary className="cursor-pointer text-sm font-bold">
                 Optional: embed ticket selection
@@ -1316,6 +1416,7 @@ export function OrganiserIntegrations() {
                 events={dashboard.events}
                 defaultEnvironment={connectionEnvironment}
                 settingsPending={unsavedChanges}
+                websiteLocation={location}
               />
             </details>
           )}

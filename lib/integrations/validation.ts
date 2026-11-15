@@ -49,9 +49,13 @@ export function canonicalIntegrationOrigin(
     return invalid('Enter a valid website origin.');
   }
   const local = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+  if (url.pathname !== '/' || url.search || url.hash)
+    return invalid(
+      `Enter only ${url.origin}; remove the page path, query or fragment. Put the full page URL in Return to your website.`,
+    );
   if (environment === 'live' && local)
     return invalid(
-      'Localhost is for testing. Choose Test / local website and enter this address under Test website address.',
+      'Choose On my computer and Test a purchase to use a localhost address.',
     );
   if (
     url.username ||
@@ -66,7 +70,7 @@ export function canonicalIntegrationOrigin(
       !/^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/.test(url.hostname))
   ) {
     return invalid(
-      'Use HTTPS origins; HTTP localhost is allowed only for test integrations.',
+      'Hosted websites need HTTPS. For HTTP localhost, choose On my computer and Test a purchase.',
     );
   }
   return url.origin;
@@ -85,6 +89,12 @@ export function parseIntegrationApplication(value: unknown) {
   const status = body.status ?? 'active';
   if (status !== 'active' && status !== 'disabled')
     return invalid('Choose active or disabled.');
+  if (
+    body.setupPath !== undefined &&
+    body.setupPath !== 'link' &&
+    body.setupPath !== 'api'
+  )
+    return invalid('Choose a checkout link or developer API.');
   const domains = body.domains ?? [];
   if (!Array.isArray(domains) || domains.length > 20)
     return invalid('Register no more than 20 website origins.');
@@ -102,8 +112,17 @@ export function parseIntegrationApplication(value: unknown) {
     organiserId,
     name,
     status,
+    ...(body.setupPath !== undefined
+      ? { setupPath: body.setupPath as 'link' | 'api' }
+      : {}),
     domains: [...unique.values()],
     eventIds: [...new Set(eventIds.map(integrationId))],
+    ...(body.setupMode !== undefined || body.websiteLocation !== undefined
+      ? {
+          setupMode: integrationEnvironment(body.setupMode),
+          websiteLocation: body.websiteLocation,
+        }
+      : {}),
   };
 }
 export function parseIntegrationKey(value: unknown) {

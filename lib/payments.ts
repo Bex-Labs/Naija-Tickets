@@ -10,7 +10,9 @@ export type PaymentOutcome = {
 export async function findPaystackPayment(reference: string) {
   const { data, error } = await getSupabaseAdminClient()
     .from('payments')
-    .select('id,order_id,provider_reference,amount_kobo,currency,status')
+    .select(
+      'id,order_id,provider_reference,amount_kobo,currency,status,payment_environment',
+    )
     .eq('provider', 'paystack')
     .eq('provider_reference', reference)
     .maybeSingle();

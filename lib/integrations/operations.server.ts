@@ -1,5 +1,5 @@
-import { integrationRpc } from './store.server.ts';
 import { verifyIntegrationResourceBinding } from './resource-mode.server.ts';
+import { integrationResourceRpc } from './testing.server.ts';
 import {
   requireAdvancedConfiguration,
   operationDatabaseError,
@@ -11,7 +11,8 @@ export const integrationOperationsDependencies: OperationsDependencies = {
     await verifyIntegrationResourceBinding(context.environment);
   },
   read: (proof, operation, query) =>
-    integrationRpc(
+    integrationResourceRpc(
+      proof,
       'read_integration_operations',
       {
         p_key: proof.keyId,
@@ -26,7 +27,8 @@ export const integrationOperationsDependencies: OperationsDependencies = {
       operationDatabaseError,
     ),
   entry: (proof, input) =>
-    integrationRpc(
+    integrationResourceRpc(
+      proof,
       'perform_integration_entry',
       {
         p_key: proof.keyId,

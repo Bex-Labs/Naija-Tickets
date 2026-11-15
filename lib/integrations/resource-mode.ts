@@ -1,5 +1,6 @@
 import { IntegrationError } from './errors.ts';
 import type { IntegrationEnvironment } from './types.ts';
+import { testServiceConfiguration, usesIntegratedTesting } from './testing.ts';
 
 type Settings = Record<string, string | undefined>;
 const sandboxUnavailable = (): never => {
@@ -48,6 +49,10 @@ export function requireIntegrationResourceMode(
   environment: IntegrationEnvironment,
   settings: Settings,
 ) {
+  if (usesIntegratedTesting(environment, settings)) {
+    testServiceConfiguration(settings);
+    return;
+  }
   if (integrationResourceMode(settings) !== environment)
     return sandboxUnavailable();
 }
@@ -70,9 +75,15 @@ export function requireHostedPaymentMode(
   requireHostedCheckoutConfiguration(environment, settings);
   const paymentMode = hostedPaymentMode(environment, settings);
   if (
-    !settings.PAYSTACK_SECRET_KEY?.startsWith(
-      paymentMode === 'test' ? 'sk_test_' : 'sk_live_',
-    )
+    !(
+      environment === 'test' &&
+      settings.INTEGRATIONS_LOCAL_TESTING_ENABLED === 'true'
+        ? settings.PAYSTACK_TEST_SECRET_KEY ||
+          (settings.PAYSTACK_SECRET_KEY?.startsWith('sk_test_')
+            ? settings.PAYSTACK_SECRET_KEY
+            : '')
+        : settings.PAYSTACK_SECRET_KEY
+    )?.startsWith(paymentMode === 'test' ? 'sk_test_' : 'sk_live_')
   )
     throw new IntegrationError(
       503,
@@ -89,6 +100,14 @@ export function hostedPaymentMode(
   environment: IntegrationEnvironment,
   settings: Settings,
 ): IntegrationEnvironment {
+  if (
+    usesIntegratedTesting(environment, settings) &&
+    (settings.INTEGRATIONS_TEST_ENABLED === 'true' ||
+      settings.INTEGRATIONS_LOCAL_TESTING_ENABLED === 'true')
+  ) {
+    testServiceConfiguration(settings);
+    return 'test';
+  }
   const mode = settings.HOSTED_CHECKOUT_PAYMENT_MODE ?? environment;
   if (
     (mode !== 'test' && mode !== 'live') ||

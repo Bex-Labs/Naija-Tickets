@@ -11,11 +11,25 @@ const escape = (value) =>
       ],
   );
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
+class ExampleError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+  }
+}
 function config(env) {
-  const api = new URL(env.NT_API_ORIGIN),
-    partner = new URL(env.NT_PARTNER_ORIGIN),
-    path = env.NT_EXAMPLE_PATH || '/';
-  const mode = env.NT_MODE || 'test',
+  let api, partner;
+  try {
+    api = new URL(env.NT_API_ORIGIN);
+    partner = new URL(env.NT_PARTNER_ORIGIN);
+  } catch {
+    throw new ExampleError(
+      'SETUP_ADDRESS',
+      'Set NT_API_ORIGIN to Naija Tickets and NT_PARTNER_ORIGIN to this website’s address in .env.local, then restart the server.',
+    );
+  }
+  const path = env.NT_EXAMPLE_PATH || '/',
+    mode = env.NT_MODE || 'test',
     key = env.NT_API_KEY,
     secret = env.NT_EXAMPLE_COOKIE_SECRET;
   for (const url of [api, partner])
@@ -30,24 +44,63 @@ function config(env) {
           ['localhost', '127.0.0.1'].includes(url.hostname)
         ))
     )
-      throw new Error('Use exact HTTPS origins; localhost HTTP is test-only.');
+      throw new ExampleError(
+        'SETUP_ADDRESS',
+        'Use base addresses without a page path. Local HTTP is supported in Test mode; Live requires HTTPS.',
+      );
   if (
     !['test', 'live'].includes(mode) ||
     !new RegExp('^nt_' + mode + '_[a-f0-9]{32}_[A-Za-z0-9_-]{43}$').test(
       key || '',
-    ) ||
-    !uuid.test(env.NT_EVENT_ID || '') ||
-    !secret ||
-    secret.length < 43 ||
-    secret === key ||
-    !/^\/[A-Za-z0-9_/-]*$/.test(path) ||
-    path.startsWith('//')
+    )
   )
-    throw new Error(
-      'Configure the example with an assigned event, matching mode/key and dedicated cookie secret.',
+    throw new ExampleError(
+      'SETUP_KEY',
+      'Set NT_API_KEY to your matching Test or Live server key in .env.local, then restart this server. Never use a VITE_ or NEXT_PUBLIC_ variable.',
     );
-  return { api: api.origin, partner: partner.origin, path, mode, key, secret };
+  if (env.NT_EVENT_ID && !uuid.test(env.NT_EVENT_ID))
+    throw new ExampleError(
+      'SETUP_EVENT',
+      'NT_EVENT_ID must be an assigned event ID. Leave it blank to choose an event from the API.',
+    );
+  if (!secret || secret.length < 43 || secret === key)
+    throw new ExampleError(
+      'SETUP_COOKIE',
+      'Configure a dedicated NT_EXAMPLE_COOKIE_SECRET of at least 43 characters on the server. The local Node starter generates one automatically for Test mode.',
+    );
+  if (!/^\/[A-Za-z0-9_/-]*$/.test(path) || path.startsWith('//'))
+    throw new ExampleError(
+      'SETUP_ROUTE',
+      'Use a server route such as /api/tickets/checkout for NT_EXAMPLE_PATH.',
+    );
+  return {
+    api: api.origin,
+    partner: partner.origin,
+    path,
+    mode,
+    key,
+    secret,
+    eventId: env.NT_EVENT_ID || '',
+  };
 }
+const upstreamErrors = {
+  INVALID_API_KEY:
+    'The API key was rejected. Check NT_API_KEY, its mode, expiry and whether the connection is active; restart after changing .env.local.',
+  INSUFFICIENT_SCOPE:
+    'This key needs events:read to choose events, checkout:write to start checkout and orders:read to verify payment. Generate a key with the recommended checkout permissions.',
+  NOT_FOUND:
+    'The event is unavailable or not assigned to this connection. Select an upcoming published event and save the website settings.',
+  INVALID_REQUEST:
+    'Check the event and return address. Register this website’s exact base address in the matching Test or Live connection.',
+  CHECKOUT_CONFLICT:
+    'This checkout conflicts with an earlier attempt or current ticket availability. Reload the page to start again.',
+  SANDBOX_NOT_CONFIGURED:
+    'Test checkout is not configured on this Naija Tickets server. Check single-project testing settings; a second sandbox is not required.',
+  TESTING_UNAVAILABLE:
+    'Test checkout is unavailable on the configured Naija Tickets server. Check single-project testing and the API origin.',
+  LIVE_PAYMENTS_UNAVAILABLE:
+    'Real payments are not enabled on Naija Tickets. Use Test mode for rehearsals or activate Live payments on the platform.',
+};
 function seal(value, secret) {
   const payload = Buffer.from(JSON.stringify(value)).toString('base64url');
   return (
@@ -105,13 +158,13 @@ export async function handleHostedExample(
     'Referrer-Policy': 'no-referrer',
     'X-Frame-Options': 'DENY',
     'Content-Security-Policy':
-      "default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+      "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
   };
   const page = (text, status = 200) =>
     new Response(
-      '<!doctype html><meta name="viewport" content="width=device-width, initial-scale=1"><title>Abuja TGIF partner example</title><main><h1>Abuja TGIF</h1>' +
+      '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Naija Tickets API example</title><style>body{margin:0;background:#fffaf0;color:#241b3f;font:16px/1.6 system-ui}main{max-width:520px;margin:8vh auto;padding:24px}button,select{font:inherit;padding:12px;border:1px solid #ccc;border-radius:8px}button{display:block;margin-top:16px;background:#008f66;color:white;font-weight:700;cursor:pointer}select{width:100%;background:white}code{overflow-wrap:anywhere}a{color:#008f66}</style><main><h1>Buy event tickets</h1>' +
         text +
-        '</main>',
+        '</main></html>',
       { status, headers },
     );
   try {
@@ -125,26 +178,45 @@ export async function handleHostedExample(
         .find((x) => x.startsWith('nt_example='))
         ?.slice(11) || '';
     let state = unseal(raw, c.secret);
-    const call = async (path, body) => {
-      const response = await fetchImpl(c.api + path, {
-        method: body ? 'POST' : 'GET',
-        headers: {
-          Authorization: 'Bearer ' + c.key,
-          ...(body
-            ? {
-                'Content-Type': 'application/json',
-                'Idempotency-Key': state.intent,
-              }
-            : {}),
-        },
-        ...(body ? { body: JSON.stringify(body) } : {}),
-        signal: AbortSignal.timeout(15000),
-        redirect: 'error',
-        cache: 'no-store',
-      });
-      const result = await response.json();
-      if (!response.ok || !result.data || result.data.environment !== c.mode)
-        throw new Error('Upstream checkout unavailable');
+    const call = async (path, body, requireMode = true) => {
+      let response;
+      try {
+        response = await fetchImpl(c.api + path, {
+          method: body ? 'POST' : 'GET',
+          headers: {
+            Authorization: 'Bearer ' + c.key,
+            ...(body
+              ? {
+                  'Content-Type': 'application/json',
+                  'Idempotency-Key': state.intent,
+                }
+              : {}),
+          },
+          ...(body ? { body: JSON.stringify(body) } : {}),
+          signal: AbortSignal.timeout(15000),
+          redirect: 'error',
+          cache: 'no-store',
+        });
+      } catch {
+        throw new ExampleError(
+          'API_UNREACHABLE',
+          'Cannot reach Naija Tickets. Check NT_API_ORIGIN and start its local server if you are using localhost.',
+        );
+      }
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        const code = result?.error?.code || 'API_ERROR';
+        throw new ExampleError(
+          code,
+          upstreamErrors[code] ||
+            'Naija Tickets could not start checkout. Check the saved website address, event permissions and server configuration.',
+        );
+      }
+      if (!result?.data || (requireMode && result.data.environment !== c.mode))
+        throw new ExampleError(
+          'API_MODE_MISMATCH',
+          'The response does not match NT_MODE. Use the Test key for testing and the Live key for real purchases.',
+        );
       return result.data;
     };
     if (request.method === 'GET' && url.searchParams.has('nt_session')) {
@@ -168,7 +240,26 @@ export async function handleHostedExample(
       );
     }
     if (request.method === 'GET') {
+      const events = c.eventId
+        ? [{ id: c.eventId, title: 'Selected event' }]
+        : await call('/api/v1/events', undefined, false);
+      if (
+        !Array.isArray(events) ||
+        events.some(
+          (event) => !uuid.test(event.id) || typeof event.title !== 'string',
+        )
+      )
+        throw new ExampleError(
+          'API_CATALOGUE',
+          'Naija Tickets returned an unexpected catalogue. Check that NT_API_ORIGIN points to the current app.',
+        );
+      if (!events.length)
+        throw new ExampleError(
+          'NO_EVENTS',
+          'No upcoming events are assigned to this key. Select a published event in Developers & Integrations and save website settings.',
+        );
       state = {
+        eventIds: events.map((event) => event.id),
         intent: randomUUID(),
         csrf: randomUUID(),
         exp: Date.now() + 1800000,
@@ -182,8 +273,23 @@ export async function handleHostedExample(
         (c.partner.startsWith('https:') ? '; Secure' : '');
       return page(
         '<p>' +
-          escape(c.mode) +
-          ' mode. Choose tickets and complete payment on Naija Tickets.</p><form method="POST"><input type="hidden" name="csrf" value="' +
+          escape(
+            c.mode === 'test'
+              ? 'Test purchase · No real charges'
+              : 'Live purchase · Real payments',
+          ) +
+          '</p><p>This button calls Naija Tickets from this website’s server.</p><form method="POST"><label>Event<select name="event_id">' +
+          events
+            .map(
+              (event) =>
+                '<option value="' +
+                escape(event.id) +
+                '">' +
+                escape(event.title) +
+                '</option>',
+            )
+            .join('') +
+          '</select></label><input type="hidden" name="csrf" value="' +
           escape(state.csrf) +
           '"><button>Buy Tickets</button></form>',
       );
@@ -204,11 +310,14 @@ export async function handleHostedExample(
       new URLSearchParams(body).get('csrf') !== state.csrf
     )
       return page('<p>Invalid form.</p>', 403);
+    const chosen = new URLSearchParams(body).get('event_id') || c.eventId;
+    if (!uuid.test(chosen || '') || !state.eventIds?.includes(chosen))
+      return page('<p>Select an event from this page.</p>', 400);
     const booking = await call('/api/v1/checkout-sessions', {
-      event_id: env.NT_EVENT_ID,
+      event_id: chosen,
       return_url: c.partner + c.path,
       cancel_url: c.partner + c.path,
-      external_reference: 'TGIF-' + state.intent,
+      external_reference: 'PARTNER-' + state.intent,
     });
     const target = new URL(booking.checkout_url);
     if (
@@ -234,9 +343,22 @@ export async function handleHostedExample(
       status: 303,
       headers: { ...headers, Location: target.toString() },
     });
-  } catch {
+  } catch (cause) {
+    const error =
+      cause instanceof ExampleError
+        ? cause
+        : new ExampleError(
+            'CHECKOUT_UNAVAILABLE',
+            'Checkout is temporarily unavailable. Check the backend configuration and try again.',
+          );
     return page(
-      '<p>Checkout is temporarily unavailable. Check the server configuration without sharing keys.</p>',
+      '<h2>Checkout needs attention</h2><p role="alert">' +
+        escape(error.message) +
+        '</p><p>Code: <code>' +
+        escape(error.code) +
+        '</code></p><p><a href="' +
+        escape(env.NT_EXAMPLE_PATH || '/') +
+        '">Try again</a></p>',
       503,
     );
   }

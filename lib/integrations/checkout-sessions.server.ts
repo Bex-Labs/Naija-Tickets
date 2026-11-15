@@ -1,3 +1,4 @@
+import { orderPaymentEnvironment } from '../payment-environment.ts';
 import { verifyIntegrationResourceBinding } from './resource-mode.server.ts';
 import {
   getSupabaseAdminClient,
@@ -32,6 +33,7 @@ import {
   integrationResourceMode,
   requireHostedCheckoutConfiguration,
   requireHostedPaymentMode,
+  hostedPaymentMode,
 } from './resource-mode.ts';
 import {
   checkoutReturnUrl,
@@ -39,8 +41,17 @@ import {
   type StoredCheckoutSession,
 } from './checkout-sessions.ts';
 import type { CheckoutLine } from '@/components/checkout-flow';
+import { usesIntegratedTesting, testServiceConfiguration } from './testing.ts';
+import {
+  integratedTestSigningKeys,
+  integrationResourceRpc,
+} from './testing.server.ts';
 
-export function checkoutSigningKeys(): CheckoutSigningKeys {
+export function checkoutSigningKeys(context?: {
+  environment: 'test' | 'live';
+}): CheckoutSigningKeys {
+  if (context && usesIntegratedTesting(context.environment, process.env))
+    return integratedTestSigningKeys();
   const activeVersion = process.env.INTEGRATIONS_SIGNING_KEY_VERSION ?? 'v1';
   let previous: unknown = {};
   try {
@@ -86,12 +97,25 @@ export function checkoutSigningKeys(): CheckoutSigningKeys {
 }
 export const checkoutSessionDependencies: CheckoutSessionDependencies = {
   signingKeys: checkoutSigningKeys,
-  requireConfiguration: (context) =>
-    requireHostedCheckoutConfiguration(context.environment, process.env),
-  origin: (request) => getTrustedAppOrigin(request.url),
+  requireConfiguration: (context) => {
+    requireHostedCheckoutConfiguration(context.environment, process.env);
+    if (
+      context.environment === 'live' &&
+      hostedPaymentMode('live', process.env) !== 'live'
+    )
+      throw new IntegrationError(
+        503,
+        'LIVE_PAYMENTS_UNAVAILABLE',
+        'Real purchases are not enabled on this server. Use a Test key for a test purchase.',
+      );
+  },
+  origin: (request, context) =>
+    context && usesIntegratedTesting(context.environment, process.env)
+      ? testServiceConfiguration(process.env).checkoutOrigin
+      : getTrustedAppOrigin(request.url),
   create: async (proof, input) => {
     await verifyIntegrationResourceBinding(proof.environment);
-    return integrationRpc('create_hosted_session_v2', {
+    return integrationResourceRpc(proof, 'create_hosted_session_v2', {
       p_key_id: proof.keyId,
       p_digest: proof.digest,
       p_environment: proof.environment,
@@ -113,7 +137,7 @@ export const checkoutSessionDependencies: CheckoutSessionDependencies = {
   },
   status: async (proof, id) => {
     await verifyIntegrationResourceBinding(proof.environment);
-    return integrationRpc('get_integration_checkout_session', {
+    return integrationResourceRpc(proof, 'get_integration_checkout_session', {
       p_key_id: proof.keyId,
       p_digest: proof.digest,
       p_environment: proof.environment,
@@ -155,10 +179,6 @@ export async function getHostedCheckout(
   const sessionId = integrationId(id);
   if (!isHostedSecret(access))
     throw new IntegrationError(404, 'NOT_FOUND', 'Checkout link not found.');
-  const mode = integrationResourceMode(process.env);
-  requireHostedCheckoutConfiguration(mode, process.env);
-  checkoutSigningKeys();
-  await verifyIntegrationResourceBinding(mode);
   const row = await integrationRpc<HostedCheckoutView>(
     'hosted_checkout_details',
     {
@@ -166,9 +186,14 @@ export async function getHostedCheckout(
       p_access: await hostedSecretDigest(access),
     },
   );
+  if (!row?.session)
+    throw new IntegrationError(404, 'NOT_FOUND', 'Checkout link not found.');
+  const mode = row.session.environment;
+  requireHostedCheckoutConfiguration(mode, process.env);
+  checkoutSigningKeys(row.session);
+  await verifyIntegrationResourceBinding(mode);
   if (
     !row?.session ||
-    row.session.environment !== mode ||
     !Array.isArray(row.lines) ||
     row.lines.some(
       (line) =>
@@ -189,8 +214,6 @@ export async function getHostedCheckout(
 // checkout data or new purchase authority. The original capability is required.
 export async function hostedRecoveryReturn(id: string, access: string) {
   if (!isHostedSecret(access)) return null;
-  const mode = integrationResourceMode(process.env);
-  await verifyIntegrationResourceBinding(mode);
   const { data, error } = await getSupabaseAdminClient()
     .from('integration_checkout_sessions')
     .select(
@@ -198,11 +221,12 @@ export async function hostedRecoveryReturn(id: string, access: string) {
     )
     .eq('id', integrationId(id))
     .eq('capability_hash', await hostedSecretDigest(access))
-    .eq('environment', mode)
     .eq('integrations.status', 'active')
     .abortSignal(AbortSignal.timeout(8000))
     .maybeSingle();
   if (error || !data) return null;
+  const mode = data.environment as 'test' | 'live';
+  await verifyIntegrationResourceBinding(mode);
   const allowed = await integrationRpc<boolean>('integration_return_allowed', {
     p_integration_id: data.integration_id,
     p_environment: mode,
@@ -228,7 +252,7 @@ export async function hostedReservation(view: HostedCheckoutView) {
         checkoutToken: await hostedSessionSecret(
           view.session,
           'reservation',
-          checkoutSigningKeys(),
+          checkoutSigningKeys(view.session),
         ),
       }
     : null;
@@ -284,7 +308,11 @@ export async function integrationCompletedUrl(
     );
     target.searchParams.set(
       'access',
-      await hostedSessionSecret(session, 'access', checkoutSigningKeys()),
+      await hostedSessionSecret(
+        session,
+        'access',
+        checkoutSigningKeys(session),
+      ),
     );
     return target.toString();
   } catch {
@@ -424,14 +452,20 @@ export function hostedCheckoutAction(
           p_access_hash: await hostedSecretDigest(body.access),
         });
         return Response.json(
-          { statusUrl: buildIntegrationReturn(result) ?? '/events' },
+          {
+            statusUrl:
+              buildIntegrationReturn({
+                ...result,
+                environment: view.session.environment,
+              }) ?? '/events',
+          },
           { headers },
         );
       }
       const token = await hostedSessionSecret(
         view.session,
         'reservation',
-        checkoutSigningKeys(),
+        checkoutSigningKeys(view.session),
       );
       if (action === 'pay') {
         if (!view.reservation)
@@ -451,6 +485,8 @@ export function hostedCheckoutAction(
           {
             client: getSupabaseAdminClient(),
             initialize: initializePaystackTransaction,
+            paymentEnvironment: (isTest) =>
+              orderPaymentEnvironment(isTest, process.env),
             origin: getTrustedAppOrigin,
             deliver: scheduleDelivery,
             completedUrl: (orderId) =>

@@ -1,5 +1,14 @@
 import { generateIntegrationCredential } from './keys.ts';
 import { integrationRpc } from './store.server.ts';
+import {
+  validateWebsiteSetup,
+  usesIntegratedTesting,
+  testServiceConfiguration,
+} from './testing.ts';
+import {
+  invalidateIntegrationTestCopy,
+  verifyTestService,
+} from './testing.server.ts';
 import type {
   IntegrationApplication,
   IntegrationDashboard,
@@ -22,15 +31,38 @@ export async function saveIntegration(
   id: string | null = null,
 ) {
   const input = parseIntegrationApplication(await readIntegrationJson(request));
-  return integrationRpc<IntegrationApplication>('save_organiser_integration', {
-    p_user_id: userId,
-    p_integration_id: id ? integrationId(id) : null,
-    p_organiser_id: input.organiserId,
-    p_name: input.name,
-    p_status: input.status,
-    p_domains: input.domains,
-    p_event_ids: input.eventIds,
-  });
+  if (input.setupMode)
+    validateWebsiteSetup(
+      input.websiteLocation,
+      input.setupMode,
+      input.domains
+        .filter((d) => d.environment === input.setupMode)
+        .map((d) => d.origin),
+    );
+  if (id) await invalidateIntegrationTestCopy(userId, integrationId(id));
+  return integrationRpc<IntegrationApplication>(
+    input.setupMode
+      ? input.setupPath
+        ? 'save_integration_setup_v2'
+        : 'save_integration_setup'
+      : 'save_organiser_integration',
+    {
+      p_user_id: userId,
+      p_integration_id: id ? integrationId(id) : null,
+      p_organiser_id: input.organiserId,
+      p_name: input.name,
+      p_status: input.status,
+      p_domains: input.domains,
+      p_event_ids: input.eventIds,
+      ...(input.setupMode
+        ? {
+            p_setup_mode: input.setupMode,
+            p_website_location: input.websiteLocation,
+            ...(input.setupPath ? { p_setup_path: input.setupPath } : {}),
+          }
+        : {}),
+    },
+  );
 }
 export async function issueIntegrationKey(
   request: Request,
@@ -51,6 +83,10 @@ export async function issueIntegrationKey(
       }
     : parseIntegrationKey(await readIntegrationJson(request));
   const generated = await generateIntegrationCredential(input.environment);
+  if (usesIntegratedTesting(input.environment, process.env)) {
+    testServiceConfiguration(process.env);
+    await verifyTestService();
+  }
   const application = await integrationRpc<IntegrationApplication>(
     'issue_organiser_integration_key',
     {
@@ -69,11 +105,12 @@ export async function issueIntegrationKey(
   // No raw secret is persisted, and failed writes never return one.
   return { application, secret: generated.credential, keyId: generated.id };
 }
-export function revokeIntegrationKey(
+export async function revokeIntegrationKey(
   userId: string,
   id: string,
   keyId: string,
 ) {
+  await invalidateIntegrationTestCopy(userId, integrationId(id));
   return integrationRpc<IntegrationApplication>(
     'revoke_organiser_integration_key',
     {
@@ -90,6 +127,7 @@ export async function setIntegrationStatus(
   id: string,
 ) {
   const status = parseIntegrationStatus(await readIntegrationJson(request));
+  await invalidateIntegrationTestCopy(userId, integrationId(id));
   return integrationRpc<IntegrationApplication>(
     'change_organiser_integration_lifecycle',
     {
@@ -99,7 +137,8 @@ export async function setIntegrationStatus(
     },
   );
 }
-export function removeIntegration(userId: string, id: string) {
+export async function removeIntegration(userId: string, id: string) {
+  await invalidateIntegrationTestCopy(userId, integrationId(id));
   return integrationRpc<{ id: string; removed: true }>(
     'change_organiser_integration_lifecycle',
     {

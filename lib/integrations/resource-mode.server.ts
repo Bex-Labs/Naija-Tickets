@@ -1,10 +1,16 @@
 import { requireIntegrationResourceMode } from './resource-mode.ts';
 import { integrationRpc } from './store.server.ts';
 import { IntegrationError } from './errors.ts';
+import { usesIntegratedTesting } from './testing.ts';
+import { verifyTestService } from './testing.server.ts';
 
 export async function verifyIntegrationResourceBinding(
   environment: 'test' | 'live',
 ) {
+  if (usesIntegratedTesting(environment, process.env)) {
+    await verifyTestService();
+    return;
+  }
   requireIntegrationResourceMode(environment, process.env);
   const stored = await integrationRpc<{
     environment: string;

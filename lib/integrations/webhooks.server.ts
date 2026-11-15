@@ -17,6 +17,7 @@ import {
 import { verifyIntegrationResourceBinding } from './resource-mode.server.ts';
 import { WEBHOOK_EVENTS, type WebhookDashboard } from './webhook-types.ts';
 import { IntegrationError } from './errors.ts';
+import { usesIntegratedTesting } from './testing.ts';
 export function listWebhooks(
   user: string,
   app: string,
@@ -39,6 +40,12 @@ export async function createWebhook(
   const input = (await readIntegrationJson(request)) as Record<string, unknown>;
   const mode = integrationEnvironment(input?.environment),
     url = webhookUrl(input?.url);
+  if (usesIntegratedTesting(mode, process.env))
+    throw new IntegrationError(
+      503,
+      'TEST_WEBHOOKS_UNAVAILABLE',
+      'Test webhook delivery needs a separately configured public receiver and dispatcher. Use checkout session status to verify local test purchases.',
+    );
   const events = input?.events;
   if (
     !Array.isArray(events) ||

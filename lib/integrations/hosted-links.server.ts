@@ -8,6 +8,11 @@ import { hostedSessionSecret, hostedSecretDigest } from './checkout-access.ts';
 import { getTrustedAppOrigin } from '@/lib/paystack';
 import { enforceIntegrationLimit } from './api.ts';
 import type { StoredCheckoutSession } from './checkout-sessions.ts';
+import { usesIntegratedTesting } from './testing.ts';
+import {
+  startIntegratedTestLink,
+  verifyTestService,
+} from './testing.server.ts';
 export const HOSTED_LINK_PATTERN = /^nt_link_[a-f0-9]{32}$/;
 export type HostedLink = {
   id: string;
@@ -20,6 +25,7 @@ export type HostedLink = {
   cancelUrl: string;
   revision: number;
   event: { title: string };
+  managedBy?: string;
 };
 export async function readHostedLink(id: string) {
   if (
@@ -32,6 +38,21 @@ export async function readHostedLink(id: string) {
       'This hosted checkout link is unavailable.',
     );
   await enforceIntegrationLimit(integrationApiDependencies, 'global:v1', 600);
+  if (
+    usesIntegratedTesting('test', process.env) &&
+    (process.env.INTEGRATIONS_TEST_ENABLED === 'true' ||
+      process.env.INTEGRATIONS_LOCAL_TESTING_ENABLED === 'true')
+  ) {
+    const testLink = await integrationRpc<HostedLink | null>(
+      'read_main_test_link',
+      { p_public: id },
+    );
+    if (testLink) {
+      requireHostedCheckoutConfiguration('test', process.env);
+      await verifyTestService();
+      return testLink;
+    }
+  }
   const link = await integrationRpc<HostedLink>('read_hosted_link', {
     p_public: id,
   });
@@ -86,6 +107,21 @@ export async function startHostedLink(request: Request, id: string) {
   const nonce = integrationId(body.intent_id),
     link = await readHostedLink(id);
   await hostedLinkBudget(request, link);
+  if (
+    link.environment === 'test' &&
+    usesIntegratedTesting('test', process.env)
+  ) {
+    if (!link.managedBy)
+      throw new IntegrationError(
+        404,
+        'NOT_FOUND',
+        'This test link is unavailable.',
+      );
+    return startIntegratedTestLink(
+      { ...link, managedBy: link.managedBy },
+      nonce,
+    );
+  }
   const signing = checkoutSigningKeys(),
     session = {
       id: crypto.randomUUID(),
