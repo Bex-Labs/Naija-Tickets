@@ -3,6 +3,8 @@
 import { LockKeyhole } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { OrganiserWorkspace } from '@/components/organiser-workspace';
+import { OrganiserIdleGuard } from '@/components/organiser-idle-guard';
+import { organiserIdleIdentity } from '@/lib/organiser-idle-session';
 import { accountHomeFromMetadata } from '@/lib/auth-destination';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
@@ -10,6 +12,7 @@ type AccessState = 'loading' | 'signed-out' | 'signed-in';
 
 export function OrganiserAccess() {
   const [userId, setUserId] = useState('');
+  const [idleSession, setIdleSession] = useState('');
   const [access, setAccess] = useState<AccessState>('loading');
 
   useEffect(() => {
@@ -18,6 +21,15 @@ export function OrganiserAccess() {
     const { data: listener } = client.auth.onAuthStateChange(
       (_event, session) => {
         setUserId(session?.user.id ?? '');
+        setIdleSession(
+          session
+            ? organiserIdleIdentity(
+                session.user.id,
+                session.access_token,
+                session.user.last_sign_in_at || session.user.created_at,
+              )
+            : '',
+        );
         if (
           session &&
           accountHomeFromMetadata(session.user.user_metadata) === '/account'
@@ -65,5 +77,9 @@ export function OrganiserAccess() {
     );
   }
 
-  return <OrganiserWorkspace key={userId} />;
+  return (
+    <OrganiserIdleGuard key={idleSession} session={idleSession}>
+      <OrganiserWorkspace key={userId} />
+    </OrganiserIdleGuard>
+  );
 }

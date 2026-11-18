@@ -1,6 +1,7 @@
 /** Proxies and the framework may reject uploads with plain text or HTML. */
 export async function readImageUploadResponse(
   response: Response,
+  maximumSize = '5 MB',
 ): Promise<string> {
   const body: unknown = await response.json().catch(() => null);
   const result =
@@ -11,7 +12,7 @@ export async function readImageUploadResponse(
     }
     if (response.status === 413) {
       throw new Error(
-        'This image is too large to upload. Choose an image smaller than 5 MB.',
+        `This image is too large to upload. Choose an image ${maximumSize} or smaller.`,
       );
     }
     if (response.status === 401) {

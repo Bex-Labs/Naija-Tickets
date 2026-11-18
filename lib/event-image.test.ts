@@ -36,6 +36,6 @@ void test('rejects disguised and unsupported image files', () => {
   );
 });
 
-void test('limits event images to five megabytes', () => {
-  assert.equal(EVENT_IMAGE_MAX_BYTES, 5_242_880);
+void test('limits event images to 200 KB', () => {
+  assert.equal(EVENT_IMAGE_MAX_BYTES, 204_800);
 });

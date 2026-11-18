@@ -176,7 +176,7 @@ export function OrganiserEventEditor({
       return;
     }
     if (file.size > EVENT_IMAGE_MAX_BYTES) {
-      setImageNotice('Event images must be 5 MB or smaller.');
+      setImageNotice('Event images must be 200 KB or smaller.');
       return;
     }
 
@@ -194,7 +194,7 @@ export function OrganiserEventEditor({
         headers: { Authorization: `Bearer ${data.session.access_token}` },
         body: formData,
       });
-      const url = await readImageUploadResponse(response);
+      const url = await readImageUploadResponse(response, '200 KB');
       update('imageName', url);
       setImageNotice('Image uploaded and ready to use.');
     } catch (error) {
@@ -449,7 +449,7 @@ export function OrganiserEventEditor({
                   {imageUploading ? 'Uploading…' : 'Choose image'}
                 </label>
                 <p className="mt-2 text-xs leading-5 text-slate-500">
-                  JPEG, PNG or WebP. Maximum file size 5 MB.
+                  JPEG, PNG or WebP. Maximum file size 200 KB.
                 </p>
                 {imageNotice && (
                   <p
@@ -528,6 +528,23 @@ export function OrganiserEventEditor({
               onChange={(event) => update('directionsUrl', event.target.value)}
               className="auth-input"
             />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="auth-label" htmlFor="eventWebsite">
+              Event website (optional)
+            </label>
+            <Input
+              id="eventWebsite"
+              type="url"
+              maxLength={2048}
+              value={value.websiteUrl}
+              placeholder="https://your-event-site.com/event"
+              onChange={(event) => update('websiteUrl', event.target.value)}
+              className="auth-input"
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              You can use this address when connecting a website later.
+            </p>
           </div>
         </div>
 

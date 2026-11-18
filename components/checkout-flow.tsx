@@ -15,7 +15,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { accountHomeFromMetadata } from '@/lib/auth-destination';
 import { formatNaira } from '@/lib/events';
+import type { CheckoutReservation } from '@/lib/checkout-service';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { isPaymentEmail, PAYMENT_EMAIL_ERROR } from '@/lib/payment-email';
 
 export type CheckoutLine = {
   ticketTypeId?: string;
@@ -37,6 +39,11 @@ export function CheckoutFlow({
   lines,
   subtotalKobo,
   feeKobo,
+  hostedCheckout,
+  initialReservation,
+  standalone = false,
+  initialCustomer,
+  onReserved,
 }: {
   eventId?: string;
   eventSlug: string;
@@ -46,7 +53,17 @@ export function CheckoutFlow({
   lines: CheckoutLine[];
   subtotalKobo: number;
   feeKobo: number;
+  hostedCheckout?: {
+    sessionId: string;
+    access: string;
+    promoCode: string | null;
+  };
+  standalone?: boolean;
+  onReserved?: () => void;
+  initialCustomer?: Partial<Attendee>;
+  initialReservation?: CheckoutReservation | null;
 }) {
+  const Heading = standalone ? 'h2' : 'h1';
   const hasGroupTickets = lines.some(
     (line) => (line.admissionsPerTicket || 1) > 1,
   );
@@ -78,30 +95,32 @@ export function CheckoutFlow({
     ],
     [lines, hasGroupTickets],
   );
-  const [attendees, setAttendees] = useState<Record<string, Attendee>>({});
+  const [attendees, setAttendees] = useState<Record<string, Attendee>>(() =>
+    initialCustomer && admissions[0]
+      ? {
+          [admissions[0].key]: {
+            name: initialCustomer.name ?? '',
+            email: initialCustomer.email ?? '',
+            phone: initialCustomer.phone ?? '',
+          },
+        }
+      : {},
+  );
   const [status, setStatus] = useState<'idle' | 'saving' | 'reserved'>('idle');
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'starting'>(
     'idle',
   );
   const [error, setError] = useState('');
-  const [promoCode, setPromoCode] = useState('');
+  const [promoCode, setPromoCode] = useState(hostedCheckout?.promoCode ?? '');
   const [accountPrefill, setAccountPrefill] = useState('');
   const [accountState, setAccountState] = useState<
     'checking' | 'guest' | 'signed-in'
   >('checking');
   const [checkoutLoginUrl, setCheckoutLoginUrl] = useState('/login');
   const [signedInCustomer, setSignedInCustomer] = useState(false);
-  const [reservation, setReservation] = useState<{
-    orderId: string;
-    reference: string;
-    expiresAt: string;
-    subtotalKobo: number;
-    feeKobo: number;
-    totalKobo: number;
-    checkoutToken: string;
-    discountKobo: number;
-    promoCode: string | null;
-  } | null>(null);
+  const [reservation, setReservation] = useState<CheckoutReservation | null>(
+    initialReservation ?? null,
+  );
 
   useEffect(() => {
     const firstAdmission = admissions[0];
@@ -162,6 +181,13 @@ export function CheckoutFlow({
   const submit = async (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!event.currentTarget.reportValidity()) return;
+    if (
+      subtotalKobo + feeKobo > 0 &&
+      !isPaymentEmail(attendees[admissions[0]?.key]?.email)
+    ) {
+      setError(PAYMENT_EMAIL_ERROR);
+      return;
+    }
     setStatus('saving');
     setError('');
     try {
@@ -186,16 +212,26 @@ export function CheckoutFlow({
       if (data.session) {
         headers.Authorization = `Bearer ${data.session.access_token}`;
       }
-      const response = await fetch('/api/checkout/reservations', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          eventId,
-          items,
-          purchaser: firstAttendee,
-          promoCode,
-        }),
-      });
+      const response = await fetch(
+        hostedCheckout
+          ? `/api/integrations/checkout/${hostedCheckout.sessionId}/reserve`
+          : '/api/checkout/reservations',
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            ...(hostedCheckout
+              ? {
+                  access: hostedCheckout.access,
+                }
+              : {}),
+            eventId,
+            items,
+            purchaser: firstAttendee,
+            promoCode,
+          }),
+        },
+      );
       const result = (await response.json()) as {
         reservation?: {
           orderId: string;
@@ -214,6 +250,7 @@ export function CheckoutFlow({
         throw new Error(result.error || 'Tickets could not be reserved.');
       }
       setReservation(result.reservation);
+      onReserved?.();
       setStatus('reserved');
     } catch (submitError) {
       setError(
@@ -230,16 +267,26 @@ export function CheckoutFlow({
     setPaymentStatus('starting');
     setError('');
     try {
-      const response = await fetch('/api/payments/paystack/initialize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        hostedCheckout
+          ? `/api/integrations/checkout/${hostedCheckout.sessionId}/pay`
+          : '/api/payments/paystack/initialize',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...(hostedCheckout
+              ? {
+                  access: hostedCheckout.access,
+                }
+              : {}),
+            orderId: reservation.orderId,
+            checkoutToken: reservation.checkoutToken,
+          }),
         },
-        body: JSON.stringify({
-          orderId: reservation.orderId,
-          checkoutToken: reservation.checkoutToken,
-        }),
-      });
+      );
       const result = (await response.json()) as {
         authorizationUrl?: string;
         completed?: boolean;
@@ -279,7 +326,13 @@ export function CheckoutFlow({
 
   if (reservation) {
     return (
-      <section className="mx-auto max-w-3xl px-4 py-8 sm:px-5 sm:py-16 md:px-10 md:py-24">
+      <section
+        className={
+          standalone
+            ? 'mx-auto max-w-3xl p-4'
+            : 'mx-auto max-w-3xl px-4 py-8 sm:px-5 sm:py-16 md:px-10 md:py-24'
+        }
+      >
         <div className="border border-emerald-500/30 bg-white p-4 shadow-sm sm:p-10">
           <ol className="grid grid-cols-3 border border-[#241b3f]/10 bg-[#fffaf0] p-4 text-center text-xs font-bold">
             {['Tickets', 'Attendees', 'Payment'].map((label, index) => (
@@ -300,9 +353,9 @@ export function CheckoutFlow({
             <TicketCheck className="h-6 w-6" />
           </span>
           <p className="eyebrow mt-5 sm:mt-7">Payment</p>
-          <h1 className="mt-3 text-3xl font-black tracking-[-.04em] sm:text-4xl">
+          <Heading className="mt-3 text-3xl font-black tracking-[-.04em] sm:text-4xl">
             Your tickets are held. Pay securely now.
-          </h1>
+          </Heading>
           <p className="mt-4 leading-7 text-slate-600">
             Reference{' '}
             <strong className="text-[#241b3f]">{reservation.reference}</strong>
@@ -370,14 +423,16 @@ export function CheckoutFlow({
               {error}
             </output>
           )}
-          <div className="mt-7 flex flex-wrap gap-5">
-            <a
-              href={`/events/${eventSlug}`}
-              className="inline-flex min-h-11 items-center gap-2 font-bold text-emerald-700"
-            >
-              <ArrowLeft className="h-4 w-4" /> Back to event
-            </a>
-          </div>
+          {!standalone && (
+            <div className="mt-7 flex flex-wrap gap-5">
+              <a
+                href={`/events/${eventSlug}`}
+                className="inline-flex min-h-11 items-center gap-2 font-bold text-emerald-700"
+              >
+                <ArrowLeft className="h-4 w-4" /> Back to event
+              </a>
+            </div>
+          )}
         </div>
       </section>
     );
@@ -386,7 +441,11 @@ export function CheckoutFlow({
   return (
     <form
       onSubmit={submit}
-      className="mx-auto grid max-w-7xl gap-8 px-4 py-7 sm:px-5 sm:py-10 md:px-10 lg:grid-cols-[1fr_23rem] lg:py-16"
+      className={
+        standalone
+          ? 'mx-auto grid max-w-3xl gap-5 p-4'
+          : 'mx-auto grid max-w-7xl gap-8 px-4 py-7 sm:px-5 sm:py-10 md:px-10 lg:grid-cols-[1fr_23rem] lg:py-16'
+      }
     >
       <section>
         <ol className="grid grid-cols-3 border border-[#241b3f]/10 bg-white p-4 text-center text-xs font-bold sm:p-5">
@@ -410,11 +469,11 @@ export function CheckoutFlow({
         </ol>
         <div className="mt-7">
           <p className="eyebrow">Checkout</p>
-          <h1 className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">
+          <Heading className="mt-2 text-3xl font-black tracking-[-.04em] sm:text-4xl">
             {hasGroupTickets
               ? 'Your booking details'
               : 'Who are the tickets for?'}
-          </h1>
+          </Heading>
           <p className="mt-3 text-sm leading-6 text-slate-600">
             {hasGroupTickets
               ? 'Enter your own details for the group booking. After payment, share the group link so each member can claim their ticket. Any individual tickets are registered below.'
@@ -429,7 +488,7 @@ export function CheckoutFlow({
                 : '.'}
             </p>
           )}
-          {accountState === 'guest' && (
+          {!standalone && accountState === 'guest' && (
             <p className="mt-3 border border-amber-400/30 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-950">
               <a href={checkoutLoginUrl} className="font-black underline">
                 Log in before checkout
@@ -487,6 +546,15 @@ export function CheckoutFlow({
                   }
                   className="auth-input"
                 />
+                {index === 0 &&
+                  subtotalKobo + feeKobo > 0 &&
+                  attendees[admission.key]?.email &&
+                  !isPaymentEmail(attendees[admission.key].email) && (
+                    <p className="mt-2 text-xs leading-5 text-amber-800">
+                      Use your usual email address for payment. A sandbox login
+                      address ending in .test will be rejected.
+                    </p>
+                  )}
               </div>
               <div>
                 <label
@@ -548,7 +616,7 @@ export function CheckoutFlow({
               id="promo-code"
               value={promoCode}
               maxLength={32}
-              disabled={status !== 'idle'}
+              disabled={status !== 'idle' || Boolean(hostedCheckout?.promoCode)}
               autoComplete="off"
               onChange={(event) =>
                 setPromoCode(event.target.value.toUpperCase())

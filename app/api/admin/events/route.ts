@@ -15,6 +15,7 @@ async function listEvents() {
   const { data, error } = await getSupabaseAdminClient()
     .from('events')
     .select(publicEventSelect)
+    .eq('is_test', false)
     .order('created_at', { ascending: false });
   if (error) throw error;
   return ((data || []) as unknown as DatabaseEventRow[])

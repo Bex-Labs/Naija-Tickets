@@ -69,20 +69,25 @@ async function readSetting(key: string) {
 
 async function getLegacyAdminCredentials() {
   try {
-    return (
-      parseStoredCredentials(await readSetting(LEGACY_SETTINGS_KEY)) ||
-      getEnvironmentAdminCredentials()
-    );
-  } catch (error) {
-    console.error('Stored admin credential lookup failed', error);
+    const value = await readSetting(LEGACY_SETTINGS_KEY);
+    if (value !== null && value !== undefined) {
+      const parsed = parseStoredCredentials(value);
+      if (!parsed) throw new Error('Administrator credentials invalid.');
+      return parsed;
+    }
     return getEnvironmentAdminCredentials();
+  } catch {
+    console.warn('Stored administrator credentials unavailable');
+    throw new Error('Administrator credentials unavailable.');
   }
 }
 
 export async function getAdminAccounts() {
   try {
     const value = await readSetting(ACCOUNTS_SETTINGS_KEY);
-    if (value && typeof value === 'object') {
+    if (value !== null && value !== undefined) {
+      if (typeof value !== 'object' || Array.isArray(value))
+        throw new Error('Administrator account configuration invalid.');
       const rawAccounts = (value as { accounts?: unknown }).accounts;
       if (Array.isArray(rawAccounts)) {
         const accounts = rawAccounts
@@ -92,11 +97,19 @@ export async function getAdminAccounts() {
           .filter((account): account is AdminCredentialRecord =>
             Boolean(account),
           );
-        if (accounts.length) return accounts.slice(0, MAX_ADMIN_ACCOUNTS);
+        if (
+          accounts.length !== rawAccounts.length ||
+          accounts.length === 0 ||
+          accounts.length > MAX_ADMIN_ACCOUNTS
+        )
+          throw new Error('Administrator account configuration invalid.');
+        return accounts;
       }
+      throw new Error('Administrator account configuration invalid.');
     }
-  } catch (error) {
-    console.error('Admin account list lookup failed', error);
+  } catch {
+    console.warn('Administrator account configuration unavailable');
+    throw new Error('Administrator credentials unavailable.');
   }
 
   const legacy = await getLegacyAdminCredentials();
@@ -120,7 +133,24 @@ export async function verifyConfiguredAdminCredentials(
       valid: await verifyAdminCredentials(username, password, account),
     })),
   );
-  return results.find((result) => result.valid)?.account || null;
+  let account = results.find((result) => result.valid)?.account || null;
+  if (account && /^[a-f0-9]{64}$/.test(account.passwordHash)) {
+    try {
+      const upgraded = await derivePasswordHash(password, account.passwordSalt);
+      const { data, error } = await getSupabaseAdminClient()
+        .rpc('upgrade_admin_password_hash', {
+          p_id: account.id,
+          p_old: account.passwordHash,
+          p_new: upgraded,
+        })
+        .abortSignal(AbortSignal.timeout(8000));
+      if (error) console.warn('Admin hash upgrade unavailable');
+      else if (data === true) account = { ...account, passwordHash: upgraded };
+    } catch {
+      console.warn('Admin hash upgrade unavailable');
+    }
+  }
+  return account;
 }
 
 function randomHex(byteLength: number) {
@@ -142,8 +172,8 @@ function validateUsername(username: string) {
 }
 
 function validatePassword(password: string) {
-  if (password.length < 12) {
-    throw new Error('The password must contain at least 12 characters.');
+  if (password.length < 12 || password.length > 1024) {
+    throw new Error('The password must contain 12 to 1024 characters.');
   }
 }
 

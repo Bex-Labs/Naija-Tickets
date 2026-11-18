@@ -10,6 +10,7 @@ export type DatabaseEventRow = {
   venue_name: string;
   address: string;
   directions_url?: string | null;
+  website_url?: string | null;
   city: string;
   state: string;
   timezone: string;
@@ -19,6 +20,7 @@ export type DatabaseEventRow = {
   sales_start_at?: string | null;
   sales_end_at?: string | null;
   status: OrganiserEvent['status'];
+  external_managed?: boolean;
   featured?: boolean;
   image_path?: string | null;
   rejection_reason?: string | null;
@@ -87,7 +89,7 @@ export type DatabaseEventRow = {
 };
 
 export const publicEventSelect =
-  'id,title,slug,presenter_line,description,venue_name,address,directions_url,city,state,timezone,timezone_label,starts_at,ends_at,sales_start_at,sales_end_at,status,featured,image_path,rejection_reason,organisers(name,verified_at,description,slug,contact_email,logo_path,website_url,instagram_url,x_url,facebook_url,tiktok_url),categories(name),event_schedule_items(id,start_time,item_label,sort_order),event_policies(id,policy_text,sort_order),ticket_types(id,name,description,price_kobo,standard_price_kobo,early_bird_price_kobo,early_bird_ends_at,early_bird_quantity,early_bird_remaining,admissions_per_ticket,quantity_total,quantity_sold,quantity_reserved,min_per_order,max_per_order,sales_start_at,sales_end_at,inclusions,active,sort_order)';
+  'id,title,slug,presenter_line,description,venue_name,address,directions_url,website_url,city,state,timezone,timezone_label,starts_at,ends_at,sales_start_at,sales_end_at,status,featured,image_path,rejection_reason,organisers(name,verified_at,description,slug,contact_email,logo_path,website_url,instagram_url,x_url,facebook_url,tiktok_url),categories(name),event_schedule_items(id,start_time,item_label,sort_order),event_policies(id,policy_text,sort_order),ticket_types(id,name,description,price_kobo,standard_price_kobo,early_bird_price_kobo,early_bird_ends_at,early_bird_quantity,early_bird_remaining,admissions_per_ticket,quantity_total,quantity_sold,quantity_reserved,min_per_order,max_per_order,sales_start_at,sales_end_at,inclusions,active,sort_order)';
 
 export function isRetiredSeedEvent(row: DatabaseEventRow) {
   const organiser = Array.isArray(row.organisers)
@@ -190,6 +192,7 @@ export function databaseRowToOrganiserEvent(
     venue: row.venue_name,
     address: row.address,
     directionsUrl: row.directions_url || '',
+    websiteUrl: row.website_url || '',
     date: dateValue,
     time: timeValue,
     endDate: end.dateValue,

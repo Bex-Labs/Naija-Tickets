@@ -13,6 +13,7 @@ async function listGuestOrders() {
     .select(
       'id,reference,status,currency,total_kobo,purchaser_name,purchaser_email,purchaser_phone,created_at,personal_data_erased_at,events(title),order_items(quantity,admissions_per_ticket)',
     )
+    .eq('is_test', false)
     .is('customer_id', null)
     .is('personal_data_erased_at', null)
     .order('created_at', { ascending: false })

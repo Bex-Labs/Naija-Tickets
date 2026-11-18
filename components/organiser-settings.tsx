@@ -1,7 +1,7 @@
 'use client';
 
 import { readImageUploadResponse } from '@/lib/image-upload-response';
-import { EVENT_IMAGE_MAX_BYTES } from '@/lib/event-image';
+import { PROFILE_IMAGE_MAX_BYTES } from '@/lib/event-image';
 
 import {
   CheckCircle2,
@@ -110,7 +110,7 @@ export function OrganiserSettings() {
       setProfileError('Choose a JPEG, PNG or WebP image.');
       return;
     }
-    if (file.size > EVENT_IMAGE_MAX_BYTES) {
+    if (file.size > PROFILE_IMAGE_MAX_BYTES) {
       setProfileError('Profile images must be 5 MB or smaller.');
       return;
     }

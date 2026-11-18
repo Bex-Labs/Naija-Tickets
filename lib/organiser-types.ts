@@ -7,6 +7,7 @@ export type OrganiserEvent = {
   venue: string;
   address: string;
   directionsUrl: string;
+  websiteUrl: string;
   date: string;
   time: string;
   endDate: string;

@@ -438,6 +438,12 @@ export function SiteFooter() {
           </a>
           <a
             className="inline-flex min-h-11 items-center px-2 hover:text-emerald-400"
+            href="/developers"
+          >
+            Developers
+          </a>
+          <a
+            className="inline-flex min-h-11 items-center px-2 hover:text-emerald-400"
             href="/help"
           >
             Help

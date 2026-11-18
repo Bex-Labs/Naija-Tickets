@@ -1,0 +1,1587 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Naija Tickets API — Phase 2",
+    "version": "1.1.0",
+    "description": "Server-to-server credential introspection and assigned published event/ticket/availability reads. Live resources only; test resource calls fail closed with SANDBOX_NOT_CONFIGURED until an isolated sandbox is provisioned. No checkout, order reads, widget or outgoing webhooks."
+  },
+  "servers": [
+    {
+      "url": "https://naija-tickets.vercel.app",
+      "description": "Requires deploying Phase 2 source and applying migrations to the target project."
+    }
+  ],
+  "paths": {
+    "/api/v1/integration": {
+      "get": {
+        "operationId": "getIntegrationIdentity",
+        "summary": "Inspect the authenticated integration",
+        "security": [
+          {
+            "IntegrationSecret": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Integration identity and currently supported capabilities; no secret material.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "organiser_id",
+                        "environment",
+                        "scopes",
+                        "key_id",
+                        "expires_at",
+                        "capabilities"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "organiser_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "environment": {
+                          "type": "string",
+                          "enum": ["test", "live"]
+                        },
+                        "scopes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "integration:read",
+                              "events:read",
+                              "tickets:read",
+                              "availability:read"
+                            ]
+                          }
+                        },
+                        "key_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "capabilities": {
+                          "type": "object",
+                          "required": [
+                            "introspection",
+                            "event_api",
+                            "hosted_checkout",
+                            "widget",
+                            "sandbox_purchases"
+                          ],
+                          "properties": {
+                            "introspection": {
+                              "type": "boolean",
+                              "const": true
+                            },
+                            "event_api": {
+                              "type": "boolean",
+                              "description": "True for live keys; false for test keys without an isolated sandbox. Individual routes still require their own scopes."
+                            },
+                            "hosted_checkout": {
+                              "type": "boolean",
+                              "const": false
+                            },
+                            "widget": {
+                              "type": "boolean",
+                              "const": false
+                            },
+                            "sandbox_purchases": {
+                              "type": "boolean",
+                              "const": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "required": ["request_id"],
+                      "properties": {
+                        "request_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, missing, expired, revoked or disabled key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing integration:read scope or browser Origin provided.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Shared rate budget exhausted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until the current rate window resets."
+              }
+            }
+          },
+          "503": {
+            "description": "Authentication or limiter dependency unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/events": {
+      "get": {
+        "operationId": "listEvents",
+        "summary": "List assigned, published events that have not ended",
+        "description": "Requires events:read. Event grants, ownership, active credential, issuer management permission and live mode are rechecked in the database. No CORS/browser secret-key use. Unknown/repeated query parameters are rejected.",
+        "security": [
+          {
+            "IntegrationSecret": []
+          }
+        ],
+        "x-required-scope": "events:read",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "Number of records returned."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 1024
+            },
+            "description": "Opaque next_cursor from this same application, mode, resource and filters. Keep filters unchanged; limit may change."
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "description": "Exact city name, case insensitive."
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+            },
+            "description": "Exact category slug, such as concert."
+          },
+          {
+            "name": "starts_from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Inclusive event start lower bound. ISO timezone required; at most three fractional second digits."
+          },
+          {
+            "name": "starts_before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Exclusive event start upper bound. ISO timezone required; at most three fractional second digits."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read-only response. Private, no-store; event changes can affect later pages.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Event"
+                      },
+                      "maxItems": 100
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["request_id", "next_cursor"],
+                      "properties": {
+                        "request_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "next_cursor": {
+                          "type": ["string", "null"]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query or page cursor.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, revoked, expired, disabled or wrong-mode key.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing scope or browser Origin not permitted.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "GET only; Allow: GET.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Shared request budget exceeded; Retry-After seconds.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "SANDBOX_NOT_CONFIGURED for test resources; otherwise dependency outage, excessive catalogue size or invalid unsafe numeric data.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/events/{eventId}": {
+      "get": {
+        "operationId": "getEvent",
+        "summary": "Read public event information",
+        "description": "Requires events:read. Event grants, ownership, active credential, issuer management permission and live mode are rechecked in the database. No CORS/browser secret-key use. Unknown/repeated query parameters are rejected.",
+        "security": [
+          {
+            "IntegrationSecret": []
+          }
+        ],
+        "x-required-scope": "events:read",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read-only response. Private, no-store; event changes can affect later pages.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Event"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["request_id"],
+                      "properties": {
+                        "request_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query or page cursor.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, revoked, expired, disabled or wrong-mode key.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing scope or browser Origin not permitted.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown, foreign, unassigned, unpublished, cancelled or ended event.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "GET only; Allow: GET.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Shared request budget exceeded; Retry-After seconds.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "SANDBOX_NOT_CONFIGURED for test resources; otherwise dependency outage, excessive catalogue size or invalid unsafe numeric data.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/events/{eventId}/tickets": {
+      "get": {
+        "operationId": "listEventTicketTypes",
+        "summary": "Read active ticket types, current package prices and sale restrictions",
+        "description": "Requires tickets:read. Event grants, ownership, active credential, issuer management permission and live mode are rechecked in the database. No CORS/browser secret-key use. Unknown/repeated query parameters are rejected.",
+        "security": [
+          {
+            "IntegrationSecret": []
+          }
+        ],
+        "x-required-scope": "tickets:read",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "description": "Number of records returned."
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 1024
+            },
+            "description": "Opaque next_cursor from this same application, mode, resource and filters. Keep filters unchanged; limit may change."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read-only response. Private, no-store; event changes can affect later pages.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TicketType"
+                      },
+                      "maxItems": 100
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["request_id", "next_cursor"],
+                      "properties": {
+                        "request_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "next_cursor": {
+                          "type": ["string", "null"]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query or page cursor.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, revoked, expired, disabled or wrong-mode key.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing scope or browser Origin not permitted.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown, foreign, unassigned, unpublished, cancelled or ended event.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "GET only; Allow: GET.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Shared request budget exceeded; Retry-After seconds.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "SANDBOX_NOT_CONFIGURED for test resources; otherwise dependency outage, excessive catalogue size or invalid unsafe numeric data.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/events/{eventId}/availability": {
+      "get": {
+        "operationId": "getEventAvailability",
+        "summary": "Read advisory admission and package inventory",
+        "description": "Requires availability:read. Event grants, ownership, active credential, issuer management permission and live mode are rechecked in the database. No CORS/browser secret-key use. Unknown/repeated query parameters are rejected.",
+        "security": [
+          {
+            "IntegrationSecret": []
+          }
+        ],
+        "x-required-scope": "availability:read",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read-only response. Private, no-store; event changes can affect later pages.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["data", "meta"],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Availability"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["request_id"],
+                      "properties": {
+                        "request_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query or page cursor.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, revoked, expired, disabled or wrong-mode key.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing scope or browser Origin not permitted.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown, foreign, unassigned, unpublished, cancelled or ended event.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "GET only; Allow: GET.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Shared request budget exceeded; Retry-After seconds.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "SANDBOX_NOT_CONFIGURED for test resources; otherwise dependency outage, excessive catalogue size or invalid unsafe numeric data.",
+            "headers": {
+              "X-Request-ID": {
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Present for HTTP 429."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "IntegrationSecret": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "nt_test_<id>_<secret> or nt_live_<id>_<secret>",
+        "description": "Requires integration:read. Credentials are secret server keys, not widget identifiers."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message", "request_id"],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        }
+      },
+      "Event": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "slug",
+          "description",
+          "image_url",
+          "venue",
+          "starts_at",
+          "ends_at",
+          "timezone",
+          "sales_start_at",
+          "sales_end_at",
+          "organiser",
+          "category"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "image_url": {
+            "type": ["string", "null"]
+          },
+          "venue": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "address", "city", "state"],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "address": {
+                "type": "string"
+              },
+              "city": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              }
+            }
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "sales_start_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "sales_end_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "organiser": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "name", "verified"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "verified": {
+                "type": "boolean"
+              }
+            }
+          },
+          "category": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "name", "slug"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "slug": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "TicketType": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "event_id",
+          "name",
+          "description",
+          "currency",
+          "price_kobo",
+          "standard_price_kobo",
+          "price_kind",
+          "early_bird_price_kobo",
+          "early_bird_ends_at",
+          "admissions_per_ticket",
+          "min_packages_per_order",
+          "max_packages_per_order",
+          "sales_start_at",
+          "sales_end_at",
+          "sale_status",
+          "fees_included",
+          "promo_discount_included"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": ["string", "null"]
+          },
+          "currency": {
+            "const": "NGN",
+            "type": "string"
+          },
+          "price_kobo": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "standard_price_kobo": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "price_kind": {
+            "type": "string",
+            "enum": ["standard", "early_bird"]
+          },
+          "early_bird_price_kobo": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "early_bird_ends_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "admissions_per_ticket": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "min_packages_per_order": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "max_packages_per_order": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sales_start_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "sales_end_at": {
+            "type": ["string", "null"],
+            "format": "date-time"
+          },
+          "sale_status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "upcoming",
+              "closed",
+              "sold_out",
+              "allocation_limited"
+            ]
+          },
+          "fees_included": {
+            "const": false,
+            "type": "boolean"
+          },
+          "promo_discount_included": {
+            "const": false,
+            "type": "boolean"
+          }
+        }
+      },
+      "TicketAvailability": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ticket_type_id",
+          "admissions_per_ticket",
+          "total_admissions",
+          "sold_admissions",
+          "reserved_admissions",
+          "remaining_admissions",
+          "remaining_packages",
+          "early_bird_remaining_packages",
+          "max_packages_at_current_price",
+          "sale_status"
+        ],
+        "properties": {
+          "ticket_type_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "admissions_per_ticket": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "total_admissions": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sold_admissions": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "reserved_admissions": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "remaining_admissions": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "remaining_packages": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "early_bird_remaining_packages": {
+            "type": ["integer", "null"],
+            "minimum": 0
+          },
+          "max_packages_at_current_price": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sale_status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "upcoming",
+              "closed",
+              "sold_out",
+              "allocation_limited"
+            ]
+          }
+        }
+      },
+      "Availability": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "event_id",
+          "as_of",
+          "advisory",
+          "total_admissions",
+          "sold_admissions",
+          "reserved_admissions",
+          "remaining_admissions",
+          "ticket_types"
+        ],
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "advisory": {
+            "const": true,
+            "type": "boolean"
+          },
+          "total_admissions": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sold_admissions": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "reserved_admissions": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "remaining_admissions": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "ticket_types": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketAvailability"
+            },
+            "maxItems": 100
+          }
+        }
+      },
+      "ReadError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "message", "request_id"],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

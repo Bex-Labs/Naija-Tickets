@@ -1,3 +1,7 @@
+import {
+  paystackWebhookModes,
+  type PaymentEnvironment,
+} from '@/lib/payment-environment';
 import { NextResponse, after } from 'next/server';
 import { parsePaystackRefund } from '@/lib/admin-refunds';
 import { finalizePaystackPayment } from '@/lib/payments';
@@ -23,7 +27,10 @@ const refundEvents = new Set([
   'refund.processed',
 ]);
 
-async function reconcileRecordedRefund(data: unknown) {
+async function reconcileRecordedRefund(
+  data: unknown,
+  mode: PaymentEnvironment,
+) {
   if (!data || typeof data !== 'object') return 'invalid';
   const values = data as Record<string, unknown>;
   const transactionReference = values.transaction_reference;
@@ -61,7 +68,7 @@ async function reconcileRecordedRefund(data: unknown) {
 
   const refundId = refunds[0].provider_refund_id as string;
   const provider = parsePaystackRefund(
-    (await getPaystackRefund(refundId)).data,
+    (await getPaystackRefund(refundId, mode)).data,
     refundId,
   );
   const { error: updateError } = await client.rpc('record_admin_refund', {
@@ -83,15 +90,24 @@ export async function POST(request: Request) {
   const rawPayload = new TextDecoder().decode(rawBytes);
   const suppliedSignature = request.headers.get('x-paystack-signature') || '';
 
+  if (rawBytes.byteLength > 262144)
+    return NextResponse.json({ error: 'Payload too large.' }, { status: 413 });
+  let verifiedMode: PaymentEnvironment | null = null;
   try {
-    if (!(await verifyPaystackWebhookSignature(rawBytes, suppliedSignature))) {
+    for (const mode of paystackWebhookModes(process.env)) {
+      if (
+        await verifyPaystackWebhookSignature(rawBytes, suppliedSignature, mode)
+      ) {
+        verifiedMode = mode;
+        break;
+      }
+    }
+    if (!verifiedMode)
       return NextResponse.json(
         { error: 'Invalid signature.' },
         { status: 401 },
       );
-    }
-  } catch (error) {
-    console.error('Paystack webhook signature check failed', error);
+  } catch {
     return NextResponse.json(
       { error: 'Webhook verification is unavailable.' },
       { status: 503 },
@@ -108,7 +124,7 @@ export async function POST(request: Request) {
     try {
       return NextResponse.json({
         received: true,
-        outcome: await reconcileRecordedRefund(event.data),
+        outcome: await reconcileRecordedRefund(event.data, verifiedMode),
       });
     } catch (error) {
       console.error('Paystack refund reconciliation failed', error);
@@ -126,6 +142,11 @@ export async function POST(request: Request) {
   }
 
   const transaction = event.data as Record<string, unknown>;
+  if (transaction.domain !== verifiedMode)
+    return NextResponse.json(
+      { error: 'Payment environment mismatch.' },
+      { status: 400 },
+    );
   const reference = transaction.reference;
   const status = transaction.status;
   const amount = Number(transaction.amount);

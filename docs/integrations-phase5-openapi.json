@@ -1,0 +1,1243 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Naija Tickets Phase 5 ticket widgets",
+    "version": "2026-10-16",
+    "description": "Additive widget and organiser-management contract. Public widget IDs are not API credentials. See integrations-phase5.md; existing Phase 3 private checkout/API and Phase 4 webhook contracts remain in force."
+  },
+  "paths": {
+    "/embed/events/{eventId}": {
+      "get": {
+        "summary": "Render a public iframe for an assigned published event",
+        "security": [],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "widget",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^nt_widget_[a-f0-9]{32}$"
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "test",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "parent_origin",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "return_url",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Standalone no-store event/ticket HTML with exact frame-ancestors and optional signed checkout form.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Safe request identifier.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "private, no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields, environment, origin or return path."
+          },
+          "403": {
+            "description": "Wrong origin or current permission denied."
+          },
+          "404": {
+            "description": "Widget/application/event unavailable."
+          },
+          "405": {
+            "description": "Method not allowed."
+          },
+          "409": {
+            "description": "Configuration, inventory or idempotency conflict."
+          },
+          "429": {
+            "description": "Shared rate limit exceeded; Retry-After header."
+          },
+          "503": {
+            "description": "Feature, resource binding, limiter or hosted configuration unavailable."
+          }
+        }
+      }
+    },
+    "/api/integrations/widgets/{widgetId}/events/{eventId}": {
+      "get": {
+        "summary": "Read public widget configuration without secret credentials",
+        "security": [],
+        "parameters": [
+          {
+            "name": "widgetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^nt_widget_[a-f0-9]{32}$"
+            }
+          },
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "test",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact registered website origin in the selected environment. No Authorization header is accepted."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exact-origin CORS; no credentials or checkout proof/private capability. Quantities/prices are advisory.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Safe request identifier.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "private, no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/WidgetSnapshot"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields, environment, origin or return path.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Wrong origin or current permission denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Widget/application/event unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Configuration, inventory or idempotency conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Shared rate limit exceeded; Retry-After header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Feature, resource binding, limiter or hosted configuration unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "options": {
+        "summary": "Validate a GET-only, header-free CORS preflight",
+        "security": [],
+        "parameters": [
+          {
+            "name": "widgetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^nt_widget_[a-f0-9]{32}$"
+            }
+          },
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "test",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact registered website origin in the selected environment. No Authorization header is accepted."
+          },
+          {
+            "name": "Access-Control-Request-Method",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "const": "GET"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Exact-origin Access-Control-Allow-Origin; Allow-Methods GET; max-age 60. No custom request headers or credentials permitted."
+          },
+          "400": {
+            "description": "Invalid fields, environment, origin or return path."
+          },
+          "403": {
+            "description": "Wrong origin or current permission denied."
+          },
+          "404": {
+            "description": "Widget/application/event unavailable."
+          },
+          "405": {
+            "description": "Method not allowed."
+          },
+          "409": {
+            "description": "Configuration, inventory or idempotency conflict."
+          },
+          "429": {
+            "description": "Shared rate limit exceeded; Retry-After header."
+          },
+          "503": {
+            "description": "Feature, resource binding, limiter or hosted configuration unavailable."
+          }
+        }
+      }
+    },
+    "/integrations/widget-checkout": {
+      "post": {
+        "summary": "Submit a native user-activated form and navigate to existing hosted checkout",
+        "description": "Not a cross-origin JSON API. Requires Naija frame Origin, no Authorization and, when present, Sec-Fetch-Dest=document. Five-minute signed proof; no prices, customer IDs or attendee details. Duplicate proof/intent replays the existing session. Max 16 KiB/five seconds, 20 selected tiers, 20 packages/tier and 400 admissions.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Trusted Naija deployment origin, not the embedding partner origin."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "proof"
+                ],
+                "properties": {
+                  "proof": {
+                    "type": "string",
+                    "maxLength": 8192
+                  },
+                  "promo_code": {
+                    "type": "string",
+                    "maxLength": 32
+                  }
+                },
+                "patternProperties": {
+                  "^quantity_[a-f0-9-]{36}$": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]?)$"
+                  }
+                },
+                "additionalProperties": false,
+                "maxProperties": 102
+              }
+            }
+          }
+        },
+        "responses": {
+          "303": {
+            "description": "Private/no-store redirect to existing signed hosted URL. Middleware exchanges access into a first-party HttpOnly cookie and cleans the URL. Never publish/log the Location capability.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Safe request identifier.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "private, no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Location": {
+                "schema": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields, environment, origin or return path.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Safe request identifier.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "private, no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Wrong origin or current permission denied.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Safe request identifier.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "private, no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Widget/application/event unavailable.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Safe request identifier.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "private, no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method not allowed.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Safe request identifier.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "private, no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Configuration, inventory or idempotency conflict.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Safe request identifier.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "private, no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Shared rate limit exceeded; Retry-After header.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Safe request identifier.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "private, no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Feature, resource binding, limiter or hosted configuration unavailable.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Safe request identifier.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "private, no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Expired/invalid selection proof; refresh the widget.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Safe request identifier.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "private, no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Selection body too large.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Safe request identifier.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "private, no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Use application/x-www-form-urlencoded.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Safe request identifier.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "private, no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organiser/integrations/{id}/widget": {
+      "get": {
+        "summary": "Read per-environment widget settings; disabled defaults do not create a row",
+        "security": [
+          {
+            "OrganiserJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "test",
+                "live"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Normal private management envelope. Canonical widgetOrigin is server-derived.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/WidgetSettings"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "request_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "required": [
+                        "request_id"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Confirmed organiser sign-in required."
+          },
+          "400": {
+            "description": "Invalid fields, environment, origin or return path."
+          },
+          "403": {
+            "description": "Wrong origin or current permission denied."
+          },
+          "404": {
+            "description": "Widget/application/event unavailable."
+          },
+          "405": {
+            "description": "Method not allowed."
+          },
+          "409": {
+            "description": "Configuration, inventory or idempotency conflict."
+          },
+          "429": {
+            "description": "Shared rate limit exceeded; Retry-After header."
+          },
+          "503": {
+            "description": "Feature, resource binding, limiter or hosted configuration unavailable."
+          }
+        }
+      },
+      "patch": {
+        "summary": "Opt widget/checkout permission in or out; increments configuration revision",
+        "description": "Confirmed organiser JWT and explicit integration-manager grant required. Current resource mode must match. Saving invalidates old unpaid widget actions; already-authorised payment completion and paid receipt access remain safe.",
+        "security": [
+          {
+            "OrganiserJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WidgetUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated settings in normal data/meta management envelope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/WidgetSettings"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "request_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      },
+                      "required": [
+                        "request_id"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Confirmed organiser sign-in required."
+          },
+          "400": {
+            "description": "Invalid fields, environment, origin or return path."
+          },
+          "403": {
+            "description": "Wrong origin or current permission denied."
+          },
+          "404": {
+            "description": "Widget/application/event unavailable."
+          },
+          "405": {
+            "description": "Method not allowed."
+          },
+          "409": {
+            "description": "Configuration, inventory or idempotency conflict."
+          },
+          "429": {
+            "description": "Shared rate limit exceeded; Retry-After header."
+          },
+          "503": {
+            "description": "Feature, resource binding, limiter or hosted configuration unavailable."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "OrganiserJWT": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Supabase user JWT"
+      }
+    },
+    "schemas": {
+      "Event": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "slug",
+          "description",
+          "image_url",
+          "venue",
+          "starts_at",
+          "ends_at",
+          "timezone",
+          "sales_start_at",
+          "sales_end_at",
+          "organiser",
+          "category"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "image_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "venue": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "address",
+              "city",
+              "state"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "address": {
+                "type": "string"
+              },
+              "city": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              }
+            }
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "sales_start_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "sales_end_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "organiser": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "name",
+              "verified"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "verified": {
+                "type": "boolean"
+              }
+            }
+          },
+          "category": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "name",
+              "slug"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "slug": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "WidgetTicketType": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "event_id",
+          "name",
+          "description",
+          "currency",
+          "price_kobo",
+          "standard_price_kobo",
+          "price_kind",
+          "early_bird_price_kobo",
+          "early_bird_ends_at",
+          "admissions_per_ticket",
+          "min_packages_per_order",
+          "max_packages_per_order",
+          "sales_start_at",
+          "sales_end_at",
+          "sale_status",
+          "fees_included",
+          "promo_discount_included",
+          "max_packages_available"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "currency": {
+            "const": "NGN",
+            "type": "string"
+          },
+          "price_kobo": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "standard_price_kobo": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "price_kind": {
+            "type": "string",
+            "enum": [
+              "standard",
+              "early_bird"
+            ]
+          },
+          "early_bird_price_kobo": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "early_bird_ends_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "admissions_per_ticket": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "min_packages_per_order": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "max_packages_per_order": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sales_start_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "sales_end_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "sale_status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "upcoming",
+              "closed",
+              "sold_out",
+              "allocation_limited"
+            ]
+          },
+          "fees_included": {
+            "const": false,
+            "type": "boolean"
+          },
+          "promo_discount_included": {
+            "const": false,
+            "type": "boolean"
+          },
+          "max_packages_available": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20,
+            "description": "Advisory packages available at current price, clipped to the per-selection cap; rechecked on reservation."
+          }
+        }
+      },
+      "WidgetSnapshot": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "widget_id": {
+            "type": "string",
+            "pattern": "^nt_widget_[a-f0-9]{32}$"
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "test",
+              "live"
+            ]
+          },
+          "checkout_enabled": {
+            "type": "boolean",
+            "description": "Organiser grant only; HTML additionally checks hosted server configuration."
+          },
+          "event": {
+            "$ref": "#/components/schemas/Event"
+          },
+          "tickets": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/WidgetTicketType"
+            }
+          }
+        },
+        "required": [
+          "widget_id",
+          "environment",
+          "checkout_enabled",
+          "event",
+          "tickets"
+        ]
+      },
+      "WidgetSettings": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "environment": {
+            "type": "string",
+            "enum": [
+              "test",
+              "live"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "checkoutEnabled": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "widgetOrigin": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "environment",
+          "enabled",
+          "checkoutEnabled",
+          "revision",
+          "widgetOrigin"
+        ]
+      },
+      "WidgetUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "environment": {
+            "type": "string",
+            "enum": [
+              "test",
+              "live"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "checkoutEnabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "environment",
+          "enabled",
+          "checkoutEnabled"
+        ]
+      },
+      "PublicError": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      }
+    }
+  }
+}

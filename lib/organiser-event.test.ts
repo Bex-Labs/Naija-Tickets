@@ -166,6 +166,28 @@ void test('rejects invalid URLs and event end times', () => {
   );
 });
 
+void test('event website is optional and accepts a separate event page', () => {
+  const input = validEvent();
+  assert.equal(parseOrganiserEventInput(input).value?.websiteUrl, null);
+  const withWebsite = {
+    ...input,
+    websiteUrl: 'https://events.example.com/squad-night',
+  };
+  assert.equal(
+    parseOrganiserEventInput(withWebsite).value?.websiteUrl,
+    'https://events.example.com/squad-night',
+  );
+  for (const websiteUrl of [
+    'javascript:alert(1)',
+    'https://user:password@events.example.com',
+  ]) {
+    assert.match(
+      parseOrganiserEventInput({ ...input, websiteUrl }).error || '',
+      /event website link/i,
+    );
+  }
+});
+
 void test('group packages use a package price and admission-based capacity validation', () => {
   const input = validEvent();
   input.ticketTypes[1].name = 'Squad Pass';

@@ -1,0 +1,228 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Naija Tickets API \u2014 Phase 1",
+    "version": "1.0.0",
+    "description": "Credential introspection only. Events, checkout, widgets and webhooks are not available. Keep secrets server-side; CORS is not enabled."
+  },
+  "servers": [
+    {
+      "url": "https://naija-tickets.vercel.app",
+      "description": "Requires deploying the Phase 1 source."
+    }
+  ],
+  "paths": {
+    "/api/v1/integration": {
+      "get": {
+        "operationId": "getIntegrationIdentity",
+        "summary": "Inspect the authenticated integration",
+        "security": [
+          {
+            "IntegrationSecret": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current integration identity only; no event/order/ticket access.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "organiser_id",
+                        "environment",
+                        "scopes",
+                        "key_id",
+                        "expires_at",
+                        "capabilities"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "organiser_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "environment": {
+                          "type": "string",
+                          "enum": [
+                            "test",
+                            "live"
+                          ]
+                        },
+                        "scopes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "integration:read"
+                            ]
+                          }
+                        },
+                        "key_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "capabilities": {
+                          "type": "object",
+                          "required": [
+                            "introspection",
+                            "event_api",
+                            "hosted_checkout",
+                            "widget",
+                            "sandbox_purchases"
+                          ],
+                          "properties": {
+                            "introspection": {
+                              "type": "boolean",
+                              "const": true
+                            },
+                            "event_api": {
+                              "type": "boolean",
+                              "const": false
+                            },
+                            "hosted_checkout": {
+                              "type": "boolean",
+                              "const": false
+                            },
+                            "widget": {
+                              "type": "boolean",
+                              "const": false
+                            },
+                            "sandbox_purchases": {
+                              "type": "boolean",
+                              "const": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "required": [
+                        "request_id"
+                      ],
+                      "properties": {
+                        "request_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid, missing, expired, revoked or disabled key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing integration:read scope or browser Origin provided.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Shared rate budget exhausted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": "Seconds until the current rate window resets."
+              }
+            }
+          },
+          "503": {
+            "description": "Authentication or limiter dependency unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "IntegrationSecret": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "nt_test_<id>_<secret> or nt_live_<id>_<secret>",
+        "description": "Requires integration:read. Credentials are secret server keys, not widget identifiers."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "request_id"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

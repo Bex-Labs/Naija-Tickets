@@ -10,15 +10,28 @@ import {
   isValidPaystackReference,
   verifyPaystackTransaction,
 } from '@/lib/paystack';
+import { integrationReturnForReference } from '@/lib/integrations/checkout-sessions.server';
 import { deliverOrderTickets } from '@/lib/ticket-delivery';
 
-function statusRedirect(
+async function statusRedirect(
   request: Request,
   result: string,
   reference = '',
   delivery = '',
   paymentReference = '',
 ) {
+  if (reference) {
+    const destination = await integrationReturnForReference(
+      reference,
+      request.url,
+    );
+    if (destination) {
+      const response = NextResponse.redirect(destination, 303);
+      response.headers.set('Referrer-Policy', 'no-referrer');
+      response.headers.set('Cache-Control', 'private, no-store');
+      return response;
+    }
+  }
   const url = new URL('/payment/status', getTrustedAppOrigin(request.url));
   url.searchParams.set('result', result);
   if (reference) url.searchParams.set('reference', reference);
@@ -44,7 +57,10 @@ export async function GET(request: Request) {
     orderReference = (await findOrderReference(expectedPayment.order_id)) || '';
     if (!orderReference) return statusRedirect(request, 'invalid');
 
-    const verification = await verifyPaystackTransaction(reference);
+    const verification = await verifyPaystackTransaction(
+      reference,
+      expectedPayment.payment_environment || undefined,
+    );
     const transaction = verification.data;
     if (transaction.reference !== reference) {
       return statusRedirect(request, 'invalid');
@@ -113,7 +129,12 @@ export async function GET(request: Request) {
       reference,
     );
   } catch (error) {
-    console.error('Paystack callback verification failed', error);
+    console.error('Paystack callback verification failed', {
+      code:
+        error && typeof error === 'object' && 'code' in error
+          ? String(error.code)
+          : 'VERIFICATION_UNAVAILABLE',
+    });
     return statusRedirect(request, 'pending', orderReference, '', reference);
   }
 }

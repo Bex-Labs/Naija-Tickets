@@ -15,5 +15,11 @@ export function authenticatedDestination(
     return requestedPath;
   }
   if (requestedPath.startsWith('/checkout/')) return requestedPath;
+  if (
+    /^\/integrations\/checkout\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(
+      requestedPath,
+    )
+  )
+    return requestedPath;
   return accountHome;
 }
